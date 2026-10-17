@@ -97,6 +97,10 @@ scripts/github/             GitHub fetcher
 - Never run `git commit`, `git push`, or `git add` — the user makes all commits themselves. At the end
   of each task, propose a Conventional Commits message (`feat:`, `fix:`, `chore:`, `docs:`) and the
   exact git commands to run, then stop. Read-only git commands (`status`, `diff`, `log`) are fine.
+- The user runs commands in Windows Command Prompt (cmd), not bash. Proposed git commands must be
+  cmd-compatible: use a separate `-m` flag per paragraph for multi-line commit messages (e.g.
+  `git commit -m "feat: subject" -m "Body line one." -m "Body line two."`), never a bash heredoc or
+  `$(...)` command substitution.
 - If the design doc is wrong or outdated, say so and propose an edit to it rather than silently diverging.
 
 ## Definition of done
