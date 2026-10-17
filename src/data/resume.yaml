@@ -1,0 +1,98 @@
+# Shahar Asher – Resume
+# This file is the single source of truth for the resume.
+# It feeds: the Word file, the PDF, and (later) the /resume page on the website.
+# Structure is based on the JSON Resume standard: https://jsonresume.org/schema
+
+basics:
+  name: Shahar Asher
+  label: Software Engineer
+  email: shaharas30@gmail.com
+  # Phone is intentionally not stored here — this repo will go public. It's supplied to
+  # create_cv.js via the CV_PHONE environment variable instead (see scripts/cv/create_cv.js, .env.example).
+  location: Israel
+  summary: >-
+    Software Engineer with production experience on real-time, high-throughput
+    ad-tech systems at Taboola. Skilled in Java, Spring Boot, and microservices.
+    Currently building an event-driven log analytics pipeline with Kafka.
+  profiles:
+    - network: LinkedIn
+      url: https://www.linkedin.com/in/shahar-asher30
+    - network: GitHub
+      url: https://github.com/ShaharAshe
+
+work:
+  - company: Taboola
+    position: Software Engineer
+    startDate: "2025-04"
+    endDate: "2026-04"
+    highlights:
+      - text: >-
+          Led the migration of a core publishers table to a single source of truth
+          across 6+ subsystems, using data backfill, a new cache, and per-subsystem
+          feature flags, with zero production incidents or rollbacks
+        featured: true
+      - text: >-
+          Implemented features in a real-time bidding engine (Java) handling tens of
+          thousands of requests per second with millisecond-level latency, including
+          device-based request filtering and hot-path performance optimization of
+          locale targeting
+        featured: true
+      - text: >-
+          Owned and developed an internal publisher onboarding platform (Java + React),
+          building REST APIs, a validation layer, and DB schema that replaced manual
+          database entry across multiple ad exchanges, significantly reducing
+          onboarding time and data-entry errors
+        featured: true
+      - text: >-
+          Built an isolated on-demand Kubernetes test environment for the onboarding
+          platform, preloaded with relevant DB data, cutting setup time from 30–60
+          minutes to 5 minutes
+        featured: true
+      - text: >-
+          Improved production observability by replacing generic 500 errors with
+          dedicated exception types and custom metrics, fixed a filter-precedence bug
+          that reported the wrong reason for blocked requests, and investigated
+          production issues using Grafana, Vertica, and Kusto
+      - text: >-
+          Enhanced an internal RTB simulator (Java + AngularJS) for debugging bid
+          requests, replacing hardcoded endpoints with DB-backed configuration, fixing
+          Prebid Server parsing bugs, and adding Kusto integration
+
+projects:
+  - name: Log Analytics Platform
+    status: In Progress
+    description: >-
+      Event-driven log pipeline with Spring Boot microservices, Kafka, and Docker,
+      featuring per-service partitioning, consumer-group processing with
+      at-least-once delivery, and documented architecture decisions
+    url: https://github.com/ShaharAshe/log-analytics-platform
+  - name: Scam Reporting Application
+    description: >-
+      Full-stack web platform with Spring Boot backend, MySQL database, and
+      responsive frontend for reporting and tracking online scams
+
+skills:
+  - category: Languages
+    items: [Java, JavaScript, SQL, C++, Python]
+  - category: Frameworks & Architecture
+    items: [Spring Boot, Kafka, React, Microservices, REST APIs, OpenRTB]
+  - category: Databases
+    items: [MySQL, PostgreSQL, Vertica, Kusto (Azure Data Explorer)]
+  - category: DevOps & Tools
+    items: [Kubernetes, Docker, Jenkins, Git, CI/CD, Grafana, Kibana, Airflow, Linux]
+  - category: AI Tools
+    items: [Claude Code, Cursor]
+
+languages:
+  - language: Hebrew
+    fluency: Native
+  - language: English
+    fluency: Fluent
+
+education:
+  - institution: Hadassah Academic College, Jerusalem
+    degree: B.Sc. Computer Science
+    startDate: "2021"
+    endDate: "2024"
+    highlights:
+      - "GPA: 91.5/100"
