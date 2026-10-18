@@ -1,3 +1,25 @@
 # Local secrets — never commit. See .env.example for the expected keys.
 .env
 .env.*.local
+
+# Dependencies
+node_modules/
+
+# Build output and Astro's generated types
+dist/
+.astro/
+
+# Generated at build time (CLAUDE.md hard rule 6)
+.generated/
+src/data/projects.json
+*.docx
+*.pdf
+
+# Logs
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

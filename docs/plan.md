@@ -98,10 +98,24 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
 
 ## Milestone 1 — Risky infrastructure first
 
-- [ ] **1.1 Scaffold the project** — Astro + TypeScript (strict) + Tailwind v4 + React islands, buildable, nothing real on the page yet. Node version pinned.
+- [x] **1.1 Scaffold the project** — Astro + TypeScript (strict) + Tailwind v4 + React islands, buildable, nothing real on the page yet. Node version pinned.
   - Files: `package.json`, `astro.config.mjs`, `tsconfig.json`, `src/styles/global.css` (stub), `src/pages/index.astro` (stub), `.gitignore`, `.nvmrc` (`22`), git repo init.
   - Verify: `git init` done; `npm run dev` serves a blank page; `npm run build` produces `dist/`; `node -v` matches `.nvmrc`.
   - Depends on: nothing.
+  - Done (2026-10-18). Notes / deviations:
+    - Repo already existed, so no `git init`. Set up by hand instead of `npm create astro` (directory not empty).
+    - Versions: `astro@7.4.0`, `@astrojs/react@7.1.0`, `react`/`react-dom@19.3.1`, `tailwindcss` +
+      `@tailwindcss/vite@4.3.3`. Dev: `@types/react` + `@types/react-dom` (required peers of
+      `@astrojs/react`).
+    - **TypeScript pinned to 6.x (`6.0.3`), not the latest 7.x**: `@astrojs/check` (Task 1.4) only
+      supports `typescript ^5 || ^6`.
+    - **`package.json` has no `"type": "module"`** so `scripts/cv/create_cv.js` (CommonJS, `require`)
+      keeps working in Task 1.2. Astro config is `.mjs`, so it's ESM regardless. New `.ts` scripts are
+      unaffected (run via `tsx`).
+    - `engines.node`: `>=22.22.0 <23` (Astro 7 needs ≥ 22.22.0).
+    - Scripts for now: `dev`, `build` (`astro build` only), `preview`. `build` gains `cv` + `projects`
+      in Tasks 1.2/1.3; `check` is added in Task 1.4.
+    - `.gitignore` also ignores `.generated/`, `*.docx`, `*.pdf` (generated resume files).
 
 - [ ] **1.2 Resume → Word → PDF pipeline, wired and checked** — Confirm the already-verified `create_cv.js` (now reading phone from `CV_PHONE`, not `resume.yaml` — this repo is public) + a new PDF conversion + one-page check work as an `npm run cv` script; add schema validation for `resume.yaml` (no `phone` field in the schema).
   - Files: `scripts/cv/create_cv.js` (existing, phone now sourced from `CV_PHONE` env var), `scripts/cv/to-pdf.js` (new — resolves `soffice`, spawns `--headless --convert-to pdf`), `scripts/cv/check-pdf.ts` (new, `pdf-lib`), `src/data/resume.schema.ts` or inline in `src/content.config.ts` (zod via `astro:content`), `package.json` (`cv` script — invokes `node --env-file-if-exists=.env`).
