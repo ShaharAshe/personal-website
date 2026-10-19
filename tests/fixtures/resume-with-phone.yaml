@@ -1,0 +1,31 @@
+# Test fixture: invalid — basics.phone must never be a field (the phone comes only from CV_PHONE).
+
+basics:
+  name: Jane Example
+  label: Software Engineer
+  email: jane@example.com
+  phone: "000-0000000"
+  location: Nowhere
+  summary: Example.
+  profiles:
+    - network: GitHub
+      url: https://github.com/jane-example
+
+work:
+  - company: Example Corp
+    position: Software Engineer
+    startDate: "2024-01"
+    highlights:
+      - text: Example highlight
+
+projects: []
+
+skills:
+  - category: Languages
+    items: [Java]
+
+education:
+  - institution: Example University
+    degree: B.Sc. Computer Science
+    startDate: "2019"
+    endDate: "2023"

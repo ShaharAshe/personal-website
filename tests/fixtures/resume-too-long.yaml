@@ -1,0 +1,52 @@
+# Test fixture: valid against the schema, but far too long to fit on one page.
+
+basics:
+  name: Jane Example
+  label: Software Engineer
+  email: jane@example.com
+  location: Nowhere
+  summary: Backend engineer whose example resume is deliberately much too long.
+  profiles:
+    - network: GitHub
+      url: https://github.com/jane-example
+
+work:
+  - company: Example Corp
+    position: Software Engineer
+    startDate: "2020-01"
+    highlights:
+      - text: &long >-
+          Built and operated an example service that handles a large number of example requests,
+          wrote design documents, reviewed code, mentored colleagues, and kept the on-call rotation
+          calm by improving dashboards, alerts, and runbooks across several example teams
+      - text: *long
+      - text: *long
+      - text: *long
+      - text: *long
+      - text: *long
+      - text: *long
+      - text: *long
+      - text: *long
+      - text: *long
+      - text: *long
+      - text: *long
+      - text: *long
+      - text: *long
+      - text: *long
+      - text: *long
+      - text: *long
+      - text: *long
+      - text: *long
+      - text: *long
+
+projects: []
+
+skills:
+  - category: Languages
+    items: [Java]
+
+education:
+  - institution: Example University
+    degree: B.Sc. Computer Science
+    startDate: "2016"
+    endDate: "2020"

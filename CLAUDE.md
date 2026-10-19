@@ -28,7 +28,8 @@ These npm scripts must exist and keep working (create them during scaffolding):
 - `npm run dev`: local dev server
 - `npm run cv`: generate the resume `.docx` and `.pdf` from `resume.yaml`, then check the PDF is exactly one page
 - `npm run projects`: fetch public repos from GitHub into `src/data/projects.json`
-- `npm run check`: `astro check` + lint + the site checks (see "Definition of done")
+- `npm test`: unit + integration tests (`node:test`, `tests/**/*.test.ts`); LibreOffice tests skip if `soffice` isn't found
+- `npm run check`: `astro check` + lint + `npm test` + the site checks (see "Definition of done")
 - `npm run build`: `cv` + `projects` + `astro build`
 - `npm run preview`: serve the production build locally
 
@@ -43,6 +44,7 @@ src/content/case-studies/   case studies (e.g. table-migration.mdx)
 src/components/             .astro components; islands/ for React
 src/styles/global.css       design tokens (CSS custom properties)
 scripts/cv/                 resume generator (create_cv.js) + PDF page check
+tests/                      node:test tests (npm test); fixtures/ holds test inputs and golden files
 scripts/github/             GitHub fetcher
 .github/workflows/          deploy.yml (push, daily schedule, manual)
 ```
@@ -92,6 +94,8 @@ scripts/github/             GitHub fetcher
 
 - One task at a time, following the roadmap in design-doc §16. Don't jump ahead.
 - For anything touching more than a few files, propose a short plan first and wait for approval.
+- New logic comes with automated tests (`node:test`, in `tests/`, run by `npm test`). Verify behavior
+  through tests kept in the repo, not throwaway scripts, so the check keeps running after the task.
 - After UI changes, take Playwright screenshots at 375px and 1280px, in both dark and light themes,
   and look at them before saying the task is done.
 - Never run `git commit`, `git push`, or `git add` — the user makes all commits themselves. At the end

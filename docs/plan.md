@@ -36,7 +36,7 @@ Reality check performed before this plan:
 
 - Lint/format: ESLint + `typescript-eslint` + `eslint-plugin-astro`, plus Prettier +
   `prettier-plugin-astro` + `prettier-plugin-tailwindcss`.
-- PDF page-count check: `pdf-lib`.
+- PDF page-count check: ~~`pdf-lib`~~ `pdf-parse` (changed in Task 1.2, also used for the phone-text check in 1.4).
 - GitHub repo metadata fixes (descriptions, `portfolio-*` topics, README typo) — user does these
   themselves, outside Claude Code, before Milestone 2 Task 2.8 needs real data.
 - Milestone 1 includes an early, CI-only deploy spike: scaffold → `npm run cv` → deploy to Cloudflare,
@@ -88,8 +88,8 @@ Reality check performed before this plan:
 (beyond what `create_cv.js` already needs: `docx`, `js-yaml`)
 
 `astro`, `typescript`, `tailwindcss` + `@tailwindcss/vite`, `@astrojs/react` + `react` + `react-dom`,
-`@astrojs/mdx`, `@astrojs/sitemap`, `pdf-lib`, `tsx` (to run the `.ts` utility scripts directly —
-`check-pdf.ts`, `fetch-projects.ts`, `no-phone-in-dist.ts`), `eslint` + `typescript-eslint` +
+`@astrojs/mdx`, `@astrojs/sitemap`, `pdf-parse` (replaced `pdf-lib` in Task 1.2), `@types/js-yaml`
+(dev), ~~`tsx`~~ (dropped in Task 1.2: Node 22 runs the `.ts` scripts natively), `eslint` + `typescript-eslint` +
 `eslint-plugin-astro`, `prettier` + `prettier-plugin-astro` + `prettier-plugin-tailwindcss`,
 `@playwright/test` (dev, required by CLAUDE.md's screenshot workflow). `@astrojs/cloudflare` is added
 later, only in Milestone 3 when the contact form needs a server-rendered route.
@@ -117,17 +117,51 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       in Tasks 1.2/1.3; `check` is added in Task 1.4.
     - `.gitignore` also ignores `.generated/`, `*.docx`, `*.pdf` (generated resume files).
 
-- [ ] **1.2 Resume → Word → PDF pipeline, wired and checked** — Confirm the already-verified `create_cv.js` (now reading phone from `CV_PHONE`, not `resume.yaml` — this repo is public) + a new PDF conversion + one-page check work as an `npm run cv` script; add schema validation for `resume.yaml` (no `phone` field in the schema).
+- [x] **1.2 Resume → Word → PDF pipeline, wired and checked** — Confirm the already-verified `create_cv.js` (now reading phone from `CV_PHONE`, not `resume.yaml` — this repo is public) + a new PDF conversion + one-page check work as an `npm run cv` script; add schema validation for `resume.yaml` (no `phone` field in the schema).
   - Files: `scripts/cv/create_cv.js` (existing, phone now sourced from `CV_PHONE` env var), `scripts/cv/to-pdf.js` (new — resolves `soffice`, spawns `--headless --convert-to pdf`), `scripts/cv/check-pdf.ts` (new, `pdf-lib`), `src/data/resume.schema.ts` or inline in `src/content.config.ts` (zod via `astro:content`), `package.json` (`cv` script — invokes `node --env-file-if-exists=.env`).
   - Verify: With LibreOffice and a local `.env`/`CV_PHONE` in place (action items #1, #10), `npm run cv` produces the `.docx`/`.pdf` locally with the phone present, and confirms 1 page (content/layout preview only, real Arial on Windows, not the shipped font). With `CV_PHONE` unset, it warns and generates without a phone instead of failing. A deliberately-bad YAML fails schema validation clearly. Full font-fidelity verification happens in CI (Task 1.5).
   - Depends on: 1.1.
+  - Done (2026-10-19). Notes / deviations:
+    - `cv` = `validate-resume.ts` → `create_cv.js` → `to-pdf.js` → `check-pdf.ts`, output in
+      `.generated/cv/`. `create_cv.js` and `to-pdf.js` run with `--env-file-if-exists=.env` (so
+      `SOFFICE_PATH` can live in `.env` too). `build` is now `npm run cv && astro build`.
+    - **Page check uses `pdf-parse` (v2), not `pdf-lib`**, so one PDF library covers both the page count
+      and the phone-text check in Task 1.4.
+    - **Schema is `src/data/resume.schema.ts`, zod from `astro/zod`** (not `astro:content`, which only
+      exists inside the Astro build), so the same file works in the `cv` script and in
+      `src/content.config.ts` (Task 2.4). Objects are strict: an unknown key (e.g. `basics.phone`) fails.
+    - New files not in the original list: `scripts/cv/validate-resume.ts` (runs the schema check),
+      `scripts/cv/paths.js` (shared `.generated/cv` paths/file names), `scripts/cv/format.js` (date/URL
+      helpers moved out of `create_cv.js` so they can be unit-tested). `create_cv.js` only changed
+      where it gets paths and helpers from; its design and output are unchanged (golden test below).
+    - **Tests (`npm test`, `node:test`, no new dependency)** in `tests/`: schema (real `resume.yaml`
+      passes; phone field, unquoted date, missing field rejected — fixtures in `tests/fixtures/`),
+      date/URL formatting, soffice resolution order, and LibreOffice integration tests (over-long
+      fixture fails the 1-page check; no `CV_PHONE` warns but succeeds) that skip with a message if
+      soffice isn't found. A golden test pins `create_cv.js`'s Word XML (`document.xml`, `styles.xml`)
+      for a fixture resume, so any design change fails; refresh with `UPDATE_GOLDEN=1 npm test` only
+      when a design change is asked for. **Task 1.4 adds `npm test` to `npm run check`, so CI runs it.**
+    - `.env.example` documents the optional `SOFFICE_PATH` override.
+    - **No `tsx`**: Node 22.22 runs `.ts` natively (type stripping). The `.ts` scripts are run with
+      `--disable-warning=MODULE_TYPELESS_PACKAGE_JSON` because `package.json` has no `"type"` (kept
+      that way for CommonJS `create_cv.js`). Relative TS imports use the `.ts` extension.
+    - Deps added, all `devDependencies` (build-time only): `docx@9`, `js-yaml@4` (needed by
+      `create_cv.js`; never installed before), `pdf-parse@2` (pulls `pdfjs-dist` + `@napi-rs/canvas`,
+      ~90 MB in `node_modules`), `@types/js-yaml` (strict type-check).
+    - `to-pdf.js` deletes any stale PDF first and fails if soffice exits 0 without writing one (happens
+      when another LibreOffice window is open). LibreOffice on Windows prints a harmless
+      "Could not find platform independent libraries" line.
+    - Verified: phone present in the PDF with `.env` (checked, not printed); `CV_PHONE` empty → warns,
+      no phone in PDF; bad YAML (extra `phone`, unquoted year, missing field, syntax error) fails with
+      the path of each problem; an over-long resume fails the 1-page check; `npm run build` passes;
+      phone not found in `dist/` or source.
 
 - [ ] **1.3 GitHub project fetch script** — `scripts/github/fetch-projects.ts` pulls public repos for `ShaharAshe` via native `fetch` + `GITHUB_TOKEN`, filters/sorts/maps per `.claude/rules/github-projects.md`, writes `src/data/projects.json`, fails loudly on missing descriptions or API errors.
   - Files: `scripts/github/fetch-projects.ts`, `package.json` (`projects` script).
   - Verify: Run against the real account now (empty filtered list expected); fixture-based check proves filter/sort/description logic; confirms non-zero exit on missing description or API error.
   - Depends on: 1.1. Full end-to-end correctness depends on action item #2 but isn't blocked by it.
 
-- [ ] **1.4 Site checks wired into `npm run check`** — Combine `astro check`, lint, and five site checks into one real command, built before the first CI pipeline: PDF one page, phone not present in `dist/`, descriptions present, **`CV_PHONE` not committed**, and **the generated PDF actually contains `CV_PHONE`**.
+- [ ] **1.4 Site checks wired into `npm run check`** — Combine `astro check`, lint, `npm test` (added in Task 1.2), and five site checks into one real command, built before the first CI pipeline: PDF one page, phone not present in `dist/`, descriptions present, **`CV_PHONE` not committed**, and **the generated PDF actually contains `CV_PHONE`**.
   - Files: `package.json` (`check` script), `scripts/checks/no-phone-in-dist.ts` (scans only `dist/**/*.{html,js,json,xml,txt}`, never the published `.pdf`/`.docx`), `scripts/checks/no-phone-in-source.ts` (new — when `CV_PHONE` is set, runs `git ls-files`, reads each tracked file, fails if the literal `CV_PHONE` value appears anywhere; catches it being hardcoded back in by accident, e.g. into `create_cv.js`; skips with a warning if `CV_PHONE` is unset, same as `create_cv.js`'s local behavior), `scripts/checks/pdf-contains-phone.ts` (new — when `CV_PHONE` is set, extracts text from the generated PDF and fails if the value is *not* found, proving the phone really made it into the published resume; needs a text-extraction library — `pdf-lib` alone can't reliably read text out of LibreOffice's compressed PDF streams, so this likely adds `pdf-parse` as a second small PDF dependency; confirm at task time).
   - Verify: `npm run check` passes on the stub; reintroducing the phone number into a component, or hardcoding it back into `create_cv.js`, each make the respective check fail; confirms the phone-in-dist check does *not* fail on `Shahar_Asher_Resume.pdf` itself; with `CV_PHONE` set, deleting the phone from the generated PDF (or not generating it) makes `pdf-contains-phone.ts` fail.
   - Depends on: 1.2, 1.3.

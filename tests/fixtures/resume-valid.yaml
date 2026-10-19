@@ -1,0 +1,55 @@
+# Test fixture: a small, valid resume with made-up content. Covers every field the generator uses:
+# a project with and without status/url, an open-ended job (no endDate), languages, education highlights.
+
+basics:
+  name: Jane Example
+  label: Software Engineer
+  email: jane@example.com
+  location: Nowhere
+  summary: Backend engineer who writes example resumes for tests.
+  profiles:
+    - network: LinkedIn
+      url: https://www.linkedin.com/in/jane-example
+    - network: GitHub
+      url: https://github.com/jane-example
+
+work:
+  - company: Example Corp
+    position: Software Engineer
+    startDate: "2024-01"
+    highlights:
+      - text: Built a service that handles example requests
+        featured: true
+      - text: Fixed a bug in an example pipeline
+  - company: Sample Ltd
+    position: Intern
+    startDate: "2023-06"
+    endDate: "2023-09"
+    highlights:
+      - text: Wrote example tests
+
+projects:
+  - name: Example Project
+    status: In Progress
+    description: A project used in tests
+    url: https://github.com/jane-example/example-project
+  - name: Other Project
+    description: A project without a link
+
+skills:
+  - category: Languages
+    items: [Java, SQL]
+  - category: Tools
+    items: [Docker, Git]
+
+languages:
+  - language: English
+    fluency: Native
+
+education:
+  - institution: Example University
+    degree: B.Sc. Computer Science
+    startDate: "2019"
+    endDate: "2023"
+    highlights:
+      - "GPA: 90/100"

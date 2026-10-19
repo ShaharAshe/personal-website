@@ -1,0 +1,29 @@
+# Test fixture: invalid — work[0] has no `position` (a required field).
+
+basics:
+  name: Jane Example
+  label: Software Engineer
+  email: jane@example.com
+  location: Nowhere
+  summary: Example.
+  profiles:
+    - network: GitHub
+      url: https://github.com/jane-example
+
+work:
+  - company: Example Corp
+    startDate: "2024-01"
+    highlights:
+      - text: Example highlight
+
+projects: []
+
+skills:
+  - category: Languages
+    items: [Java]
+
+education:
+  - institution: Example University
+    degree: B.Sc. Computer Science
+    startDate: "2019"
+    endDate: "2023"

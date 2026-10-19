@@ -284,7 +284,8 @@ basics:
   name: Shahar Asher
   label: Software Engineer
   email: shaharas30@gmail.com
-  phone: "..."            # מופיע רק ב-Word/PDF. האתר מתעלם מהשדה
+  # אין שדה phone: הריפו ציבורי. הטלפון מגיע רק ממשתנה הסביבה CV_PHONE
+  # (.env מקומית, secret ב-CI), ומופיע רק ב-Word/PDF. ה-schema דוחה שדה phone.
   location: Israel
   summary: >
     Software Engineer with production experience on real-time,
@@ -298,8 +299,8 @@ basics:
 work:
   - company: Taboola
     position: Software Engineer
-    startDate: 2025-04
-    endDate: 2026-04
+    startDate: "2025-04"    # תאריכים תמיד במרכאות: "YYYY-MM" או "YYYY"
+    endDate: "2026-04"      # בלי endDate → "Present"
     highlights:
       - text: Led the migration of a core publishers table to a single source of truth...
         featured: true    # מוצג גם בדף הבית
@@ -319,12 +320,12 @@ skills:
 education:
   - institution: Hadassah Academic College, Jerusalem
     degree: B.Sc. Computer Science
-    startDate: 2021
-    endDate: 2024
+    startDate: "2021"
+    endDate: "2024"
     highlights: ["GPA: 91.5/100"]
 ```
 
-המבנה מבוסס על הסטנדרט הפתוח [JSON Resume](https://jsonresume.org/schema), עם שדה `featured` נוסף. Astro מאמת את הקובץ מול schema, כך ששדה חסר או שגוי נתפס ב-build.
+המבנה מבוסס על הסטנדרט הפתוח [JSON Resume](https://jsonresume.org/schema), עם שדה `featured` נוסף. הקובץ מאומת מול schema (`src/data/resume.schema.ts`, zod מ-`astro/zod`) כבר בתחילת `npm run cv`, ושוב ב-Astro דרך `src/content.config.ts`, כך ששדה חסר, שגוי או לא מוכר נתפס ב-build.
 
 > **הערה:** סקשן ה-Projects בקורות החיים נשאר ב-YAML ולא נמשך מ-GitHub. קורות חיים הם מסמך שאתה אוצר ידנית, והפרויקטים בו מנוסחים במיוחד בשבילו.
 
@@ -572,15 +573,19 @@ portfolio/
 │   └── fonts/
 ├── scripts/
 │   ├── cv/
+│   │   ├── validate-resume.ts       # אימות resume.yaml מול ה-schema
 │   │   ├── create_cv.js             # העיצוב הנוכחי, קורא מ-resume.yaml
+│   │   ├── format.js                # פורמט תאריכים וכתובות (לשימוש create_cv.js)
+│   │   ├── paths.js                 # נתיבי קלט/פלט משותפים (.generated/cv/)
 │   │   ├── to-pdf.js                # הרצת soffice (Word → PDF)
-│   │   └── check-pdf.ts             # בדיקה שה-PDF הוא עמוד אחד
+│   │   └── check-pdf.ts             # בדיקה שה-PDF הוא עמוד אחד (pdf-parse)
 │   └── github/
 │       └── fetch-projects.ts        # משיכה מ-GitHub API → src/data/projects.json
 ├── src/
 │   ├── content.config.ts            # Schemas ל-YAML ול-MDX
 │   ├── data/
 │   │   ├── resume.yaml              # ⭐ המקור היחיד לקורות החיים
+│   │   ├── resume.schema.ts         # Schema ל-resume.yaml (משותף לסקריפטים ול-content.config.ts)
 │   │   ├── projects.json            # נוצר ב-build (לא נשמר ב-git)
 │   │   └── site.ts                  # הגדרות כלליות (כתובת האתר, מטא-דאטה)
 │   ├── content/
@@ -612,6 +617,7 @@ portfolio/
 │   │   └── api/contact.ts           # שלב 2: הפונקציה של הטופס
 │   └── styles/
 │       └── global.css               # Design tokens
+├── tests/                           # בדיקות node:test (npm test), fixtures/ לקבצי בדיקה
 └── .github/workflows/
     └── deploy.yml
 ```
