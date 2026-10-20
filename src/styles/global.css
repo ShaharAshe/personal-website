@@ -1,2 +1,2 @@
 /* Global stylesheet. Design tokens (--bg, --surface, --text, ...) are added in Task 2.1. */
-@import "tailwindcss";
+@import 'tailwindcss';

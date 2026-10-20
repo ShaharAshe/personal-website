@@ -145,7 +145,7 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       date/URL formatting, soffice resolution order, and LibreOffice integration tests (over-long
       fixture fails the 1-page check; no `CV_PHONE` warns but succeeds) that skip with a message if
       soffice isn't found. A golden test pins `create_cv.js`'s Word XML (`document.xml`, `styles.xml`)
-      for a fixture resume, so any design change fails; refresh with `UPDATE_GOLDEN=1 npm test` only
+      for a fixture resume, so any design change fails; refresh with `npm run test:update-golden` only
       when a design change is asked for. **Task 1.4 adds `npm test` to `npm run check`, so CI runs it.**
     - `.env.example` documents the optional `SOFFICE_PATH` override.
     - **No `tsx`**: Node 22.22 runs `.ts` natively (type stripping). The `.ts` scripts are run with

@@ -29,7 +29,11 @@ try {
   if (!token) console.log('GITHUB_TOKEN not set; calling the GitHub API unauthenticated.');
   data = await fetchProjects(user, { token, apiUrl: process.env.GITHUB_API_URL || DEFAULT_API_URL });
 } catch (error) {
-  if (error instanceof GitHubProfileError || error instanceof GitHubApiError || error instanceof MissingDescriptionError) {
+  if (
+    error instanceof GitHubProfileError ||
+    error instanceof GitHubApiError ||
+    error instanceof MissingDescriptionError
+  ) {
     console.error(error.message);
     process.exit(1);
   }

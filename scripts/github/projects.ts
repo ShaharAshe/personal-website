@@ -227,7 +227,9 @@ async function getJson(url: string, { token, fetchImpl = fetch }: ClientOptions)
     const body = await response.text().catch(() => '');
     let hint = '';
     if ((response.status === 403 || response.status === 429) && response.headers.get('x-ratelimit-remaining') === '0') {
-      hint = token ? '\nGitHub API rate limit exceeded.' : '\nGitHub API rate limit exceeded. Set GITHUB_TOKEN to raise the limit.';
+      hint = token
+        ? '\nGitHub API rate limit exceeded.'
+        : '\nGitHub API rate limit exceeded. Set GITHUB_TOKEN to raise the limit.';
     } else if (response.status === 401) {
       hint = '\nGITHUB_TOKEN was rejected. Check that it is valid.';
     }

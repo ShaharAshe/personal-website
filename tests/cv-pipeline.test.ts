@@ -6,7 +6,7 @@
 //
 // The golden test pins the generated Word XML for a fixture resume, so any change to the resume's
 // design (fonts, sizes, spacing, page setup) fails here. If a design change is intended (and asked
-// for), refresh the golden files with: UPDATE_GOLDEN=1 npm test
+// for), refresh the golden files with: npm run test:update-golden
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -52,7 +52,9 @@ function sofficeSkipReason(): string | false {
     return `LibreOffice not available: ${(error as Error).message}`;
   }
   if (soffice !== 'soffice') return false;
-  return spawnSync('soffice', ['--version']).error ? 'LibreOffice (soffice) not found; install it or set SOFFICE_PATH' : false;
+  return spawnSync('soffice', ['--version']).error
+    ? 'LibreOffice (soffice) not found; install it or set SOFFICE_PATH'
+    : false;
 }
 const skipPdf = sofficeSkipReason();
 

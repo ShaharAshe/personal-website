@@ -16,7 +16,10 @@ function dateRange(item) {
 
 // "https://www.linkedin.com/in/x" -> "linkedin.com/in/x"
 function displayUrl(url) {
-  return url.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '');
+  return url
+    .replace(/^https?:\/\//, '')
+    .replace(/^www\./, '')
+    .replace(/\/$/, '');
 }
 
 module.exports = { formatDate, dateRange, displayUrl };

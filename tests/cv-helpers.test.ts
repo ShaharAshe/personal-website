@@ -21,13 +21,22 @@ test('displayUrl strips scheme, www and trailing slash', () => {
 });
 
 test('resolveSoffice: SOFFICE_PATH wins over everything', () => {
-  const soffice = resolveSoffice({ env: { SOFFICE_PATH: 'D:\\lo\\soffice.exe' }, platform: 'win32', exists: () => true });
+  const soffice = resolveSoffice({
+    env: { SOFFICE_PATH: 'D:\\lo\\soffice.exe' },
+    platform: 'win32',
+    exists: () => true,
+  });
   assert.equal(soffice, 'D:\\lo\\soffice.exe');
 });
 
 test('resolveSoffice: SOFFICE_PATH that does not exist is an error, not a fallback', () => {
   assert.throws(
-    () => resolveSoffice({ env: { SOFFICE_PATH: 'D:\\missing.exe' }, platform: 'win32', exists: (p) => p === WINDOWS_DEFAULT }),
+    () =>
+      resolveSoffice({
+        env: { SOFFICE_PATH: 'D:\\missing.exe' },
+        platform: 'win32',
+        exists: (p) => p === WINDOWS_DEFAULT,
+      }),
     /SOFFICE_PATH is set but does not exist/,
   );
 });

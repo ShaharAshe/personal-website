@@ -86,11 +86,14 @@ test('githubUserFromUrl: anything that is not a GitHub profile URL fails clearly
     'github.com/ShaharAshe',
     'not a url',
   ]) {
-    assert.throws(() => githubUserFromUrl(url), (error: unknown) => {
-      assert.ok(error instanceof GitHubProfileError, url);
-      assert.match(error.message, /not a profile like https:\/\/github\.com\/<username>/, url);
-      return true;
-    });
+    assert.throws(
+      () => githubUserFromUrl(url),
+      (error: unknown) => {
+        assert.ok(error instanceof GitHubProfileError, url);
+        assert.match(error.message, /not a profile like https:\/\/github\.com\/<username>/, url);
+        return true;
+      },
+    );
   }
 });
 
@@ -111,11 +114,14 @@ test('githubUserFromResume: no GitHub profile fails clearly', () => {
 
 test('githubUserFromResume: a GitHub profile with a non-profile URL fails clearly', () => {
   const resume = resumeWith([{ network: 'GitHub', url: 'https://github.com/ShaharAshe/some-repo' }]);
-  assert.throws(() => githubUserFromResume(resume, 'resume.yaml'), (error: unknown) => {
-    assert.ok(error instanceof GitHubProfileError);
-    assert.match(error.message, /^resume\.yaml: GitHub profile URL is not a profile/);
-    return true;
-  });
+  assert.throws(
+    () => githubUserFromResume(resume, 'resume.yaml'),
+    (error: unknown) => {
+      assert.ok(error instanceof GitHubProfileError);
+      assert.match(error.message, /^resume\.yaml: GitHub profile URL is not a profile/);
+      return true;
+    },
+  );
 });
 
 test('readGitHubUser: reads a resume YAML file (fixture), and the real resume.yaml', () => {
@@ -242,7 +248,9 @@ test('listRepos: follows Link rel="next" pagination', async () => {
     calls.push(url);
     if (url.includes('page=2')) return Response.json(rest);
     return Response.json([first], {
-      headers: { link: '<https://api.github.com/user/1/repos?per_page=100&page=2>; rel="next", <https://api.github.com/user/1/repos?per_page=100&page=2>; rel="last"' },
+      headers: {
+        link: '<https://api.github.com/user/1/repos?per_page=100&page=2>; rel="next", <https://api.github.com/user/1/repos?per_page=100&page=2>; rel="last"',
+      },
     });
   }) as typeof fetch;
   const repos = await listRepos('ShaharAshe', { fetchImpl });
@@ -258,7 +266,13 @@ test('API errors: non-2xx, rate limit, network failure and a malformed response 
       fakeGitHub([], { status: 403, body: '{}', headers: { 'x-ratelimit-remaining': '0' } }).fetchImpl,
       /rate limit exceeded\. Set GITHUB_TOKEN/,
     ],
-    ['network', (async () => { throw new TypeError('fetch failed'); }) as typeof fetch, /request failed[\s\S]*fetch failed/],
+    [
+      'network',
+      (async () => {
+        throw new TypeError('fetch failed');
+      }) as typeof fetch,
+      /request failed[\s\S]*fetch failed/,
+    ],
     ['malformed', fakeGitHub({ not: 'an array' }).fetchImpl, /Unexpected GitHub API response/],
   ];
   for (const [name, fetchImpl, message] of cases) {
@@ -271,7 +285,9 @@ test('API errors: non-2xx, rate limit, network failure and a malformed response 
 });
 
 test('API errors: a failed languages request fails the whole fetch', async () => {
-  const repos = reposFixture().map((repo) => (repo.name === 'web_tool' ? { ...repo, full_name: 'ShaharAshe/gone' } : repo));
+  const repos = reposFixture().map((repo) =>
+    repo.name === 'web_tool' ? { ...repo, full_name: 'ShaharAshe/gone' } : repo,
+  );
   await assert.rejects(fetchProjects('ShaharAshe', { fetchImpl: fakeGitHub(repos).fetchImpl }), /returned 404/);
 });
 
