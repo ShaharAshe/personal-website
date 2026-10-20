@@ -8,8 +8,9 @@
   "scripts": {
     "dev": "astro dev",
     "cv": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/cv/validate-resume.ts && node --env-file-if-exists=.env scripts/cv/create_cv.js && node --env-file-if-exists=.env scripts/cv/to-pdf.js && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/cv/check-pdf.ts",
+    "projects": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env scripts/github/fetch-projects.ts",
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"tests/**/*.test.ts\"",
-    "build": "npm run cv && astro build",
+    "build": "npm run cv && npm run projects && astro build",
     "preview": "astro preview",
     "astro": "astro"
   },

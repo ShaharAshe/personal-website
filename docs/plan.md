@@ -156,10 +156,41 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       the path of each problem; an over-long resume fails the 1-page check; `npm run build` passes;
       phone not found in `dist/` or source.
 
-- [ ] **1.3 GitHub project fetch script** — `scripts/github/fetch-projects.ts` pulls public repos for `ShaharAshe` via native `fetch` + `GITHUB_TOKEN`, filters/sorts/maps per `.claude/rules/github-projects.md`, writes `src/data/projects.json`, fails loudly on missing descriptions or API errors.
+- [x] **1.3 GitHub project fetch script** — `scripts/github/fetch-projects.ts` pulls public repos for `ShaharAshe` via native `fetch` + `GITHUB_TOKEN`, filters/sorts/maps per `.claude/rules/github-projects.md`, writes `src/data/projects.json`, fails loudly on missing descriptions or API errors.
   - Files: `scripts/github/fetch-projects.ts`, `package.json` (`projects` script).
   - Verify: Run against the real account now (empty filtered list expected); fixture-based check proves filter/sort/description logic; confirms non-zero exit on missing description or API error.
   - Depends on: 1.1. Full end-to-end correctness depends on action item #2 but isn't blocked by it.
+  - Done (2026-10-20). Notes / deviations:
+    - Action item #2 (descriptions + topics) was already done, so the real run returned the full
+      tiers, not an empty list: featured `log-analytics-platform`; portfolio `diff-checker`,
+      `scam-reporting-app`, `Cryptography_modules`; practice `LeetCode`, `NeetCode`, `project_euler`.
+    - Split in two: `scripts/github/projects.ts` (filter/sort/map/validate + a small API client with
+      an injectable `fetch`) and `fetch-projects.ts` (CLI: writes the JSON, sets the exit code).
+    - **The GitHub username is not hardcoded**: it's parsed from the `network: GitHub` profile URL in
+      `src/data/resume.yaml` (`basics.profiles`), so the resume stays the single source of truth.
+      Accepts `https://github.com/<user>` with or without `www.` / trailing slash; a missing GitHub
+      profile or a URL that isn't a profile URL fails the fetch with a clear message.
+    - `GITHUB_TOKEN` optional: sent as `Authorization: Bearer` when set; unauthenticated otherwise.
+      `npm run projects` loads `.env` if present, so a local token can go there. `GITHUB_API_URL`
+      overrides the API base (tests point it at a local fake server; GitHub Actions sets it to the
+      real API anyway).
+    - Output shape: `{ featured: Project[], portfolio: Project[], practice: PracticeLink[] }`.
+      `Project` = `name`, `title` (prettified), `description`, `url`, `homepage` (`""` → `null`),
+      `languages` (from the languages endpoint, most bytes first), `topics` (minus `portfolio` and
+      `portfolio-*`), `stars`, `pushedAt`. Practice entries are links only (`name`, `title`,
+      `description` — optional, `url`, `pushedAt`), so no languages request for them.
+    - Rules beyond `github-projects.md`: private repos excluded too (defensive); a repo with several
+      tier topics goes to the highest tier only; the API response is validated with zod
+      (`astro/zod`), so an unexpected shape fails loudly. Pagination follows `Link: rel="next"`.
+    - Descriptions are checked right after the repo list, before the languages requests. On any
+      failure nothing is written (a stale `projects.json` from an earlier run is left as is; the
+      build stops anyway). Zero tagged repos → warning + empty tiers, exit 0.
+    - MDX deep-dive linking (`src/content/projects/<repo>.mdx`) is not in this script — it belongs
+      to Tasks 2.4/2.8.
+    - Tests: `tests/github-projects.test.ts` + `tests/fixtures/github/` (no real network). Unit tests
+      use a fake `fetch`; CLI tests spawn `fetch-projects.ts` against a local `node:http` server to
+      prove exit codes (missing description, 503 → non-zero, nothing written; zero tagged → 0).
+    - `build` is now `npm run cv && npm run projects && astro build`.
 
 - [ ] **1.4 Site checks wired into `npm run check`** — Combine `astro check`, lint, `npm test` (added in Task 1.2), and five site checks into one real command, built before the first CI pipeline: PDF one page, phone not present in `dist/`, descriptions present, **`CV_PHONE` not committed**, and **the generated PDF actually contains `CV_PHONE`**.
   - Files: `package.json` (`check` script), `scripts/checks/no-phone-in-dist.ts` (scans only `dist/**/*.{html,js,json,xml,txt}`, never the published `.pdf`/`.docx`), `scripts/checks/no-phone-in-source.ts` (new — when `CV_PHONE` is set, runs `git ls-files`, reads each tracked file, fails if the literal `CV_PHONE` value appears anywhere; catches it being hardcoded back in by accident, e.g. into `create_cv.js`; skips with a warning if `CV_PHONE` is unset, same as `create_cv.js`'s local behavior), `scripts/checks/pdf-contains-phone.ts` (new — when `CV_PHONE` is set, extracts text from the generated PDF and fails if the value is *not* found, proving the phone really made it into the published resume; needs a text-extraction library — `pdf-lib` alone can't reliably read text out of LibreOffice's compressed PDF streams, so this likely adds `pdf-parse` as a second small PDF dependency; confirm at task time).
