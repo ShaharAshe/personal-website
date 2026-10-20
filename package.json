@@ -10,6 +10,12 @@
     "cv": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/cv/validate-resume.ts && node --env-file-if-exists=.env scripts/cv/create_cv.js && node --env-file-if-exists=.env scripts/cv/to-pdf.js && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/cv/check-pdf.ts",
     "projects": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env scripts/github/fetch-projects.ts",
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"tests/**/*.test.ts\"",
+    "test:update-golden": "node -e \"process.env.UPDATE_GOLDEN = '1'; const r = require('node:child_process').spawnSync('npm', ['test'], { stdio: 'inherit', shell: true }); process.exit(r.status ?? 1);\"",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check:site": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env scripts/checks/no-phone-in-dist.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env scripts/checks/no-phone-in-source.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env scripts/checks/pdf-contains-phone.ts",
+    "check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/checks/require-build.ts && astro check && npm run lint && npm test && npm run check:site && npm run format:check",
     "build": "npm run cv && npm run projects && astro build",
     "preview": "astro preview",
     "astro": "astro"
@@ -23,12 +29,19 @@
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.11",
     "@types/js-yaml": "^4.0.9",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "docx": "^9.12.0",
+    "eslint": "^10.13.0",
+    "eslint-plugin-astro": "^3.2.1",
     "js-yaml": "^4.3.2",
     "pdf-parse": "^2.4.5",
-    "typescript": "^6.0.3"
+    "prettier": "^3.9.10",
+    "prettier-plugin-astro": "^1.1.1",
+    "prettier-plugin-tailwindcss": "^0.8.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.0"
   }
 }

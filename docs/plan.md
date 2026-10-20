@@ -45,6 +45,12 @@ Reality check performed before this plan:
 - **Phone check** (`npm run check`) scans only site-rendered files under `dist/` — `.html`, `.js`,
   `.json`, `.xml`, `.txt` — and explicitly excludes the resume `.pdf`/`.docx`, which are supposed to
   contain the phone number.
+- **Phone matching rule** (all phone checks, `scripts/checks/phone.ts`): the phone is found by the
+  **last 9 digits** of `CV_PHONE`, with separators (spaces, `-`, `.`, `(`, `)`) allowed between digits.
+  `CV_PHONE` is stored in international form (`+972 …`), but a leak is just as likely in the local
+  Israeli form (`0XX-…`); matching the last 9 digits catches both, whichever form either side uses, and
+  tolerates PDF text extracted with spaces between characters. A `CV_PHONE` with fewer than 9 digits is
+  a config error. Check output never prints the value or the matching line, only `file:line`.
 - **PDF font fidelity**: CI runs on `ubuntu-24.04` (pinned, not `ubuntu-latest`), installs
   `libreoffice-writer` + `fonts-liberation`, and the job fails if `fc-match Arial` doesn't resolve to
   Liberation Sans. The CI-built PDF is the only one ever published. Locally-built PDFs (real Arial, on
@@ -91,7 +97,7 @@ Reality check performed before this plan:
 `@astrojs/mdx`, `@astrojs/sitemap`, `pdf-parse` (replaced `pdf-lib` in Task 1.2), `@types/js-yaml`
 (dev), ~~`tsx`~~ (dropped in Task 1.2: Node 22 runs the `.ts` scripts natively), `eslint` + `typescript-eslint` +
 `eslint-plugin-astro`, `prettier` + `prettier-plugin-astro` + `prettier-plugin-tailwindcss`,
-`@playwright/test` (dev, required by CLAUDE.md's screenshot workflow). `@astrojs/cloudflare` is added
+`@astrojs/check` (added in Task 1.4, needed by `astro check`), `@playwright/test` (dev, required by CLAUDE.md's screenshot workflow). `@astrojs/cloudflare` is added
 later, only in Milestone 3 when the contact form needs a server-rendered route.
 
 ---
@@ -192,10 +198,45 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       prove exit codes (missing description, 503 → non-zero, nothing written; zero tagged → 0).
     - `build` is now `npm run cv && npm run projects && astro build`.
 
-- [ ] **1.4 Site checks wired into `npm run check`** — Combine `astro check`, lint, `npm test` (added in Task 1.2), and five site checks into one real command, built before the first CI pipeline: PDF one page, phone not present in `dist/`, descriptions present, **`CV_PHONE` not committed**, and **the generated PDF actually contains `CV_PHONE`**.
-  - Files: `package.json` (`check` script), `scripts/checks/no-phone-in-dist.ts` (scans only `dist/**/*.{html,js,json,xml,txt}`, never the published `.pdf`/`.docx`), `scripts/checks/no-phone-in-source.ts` (new — when `CV_PHONE` is set, runs `git ls-files`, reads each tracked file, fails if the literal `CV_PHONE` value appears anywhere; catches it being hardcoded back in by accident, e.g. into `create_cv.js`; skips with a warning if `CV_PHONE` is unset, same as `create_cv.js`'s local behavior), `scripts/checks/pdf-contains-phone.ts` (new — when `CV_PHONE` is set, extracts text from the generated PDF and fails if the value is *not* found, proving the phone really made it into the published resume; needs a text-extraction library — `pdf-lib` alone can't reliably read text out of LibreOffice's compressed PDF streams, so this likely adds `pdf-parse` as a second small PDF dependency; confirm at task time).
+- [x] **1.4 Site checks wired into `npm run check`** — Combine `astro check`, lint, `npm test` (added in Task 1.2), and the site checks into one real command, built before the first CI pipeline: phone not present in `dist/`, **`CV_PHONE` not committed**, and **the generated PDF actually contains `CV_PHONE`**. (PDF one page and descriptions present already run inside `npm run build`, see notes.)
+  - Files: `package.json` (`check` script), `scripts/checks/no-phone-in-dist.ts` (scans only `dist/**/*.{html,js,json,xml,txt}`, never the published `.pdf`/`.docx`), `scripts/checks/no-phone-in-source.ts` (new — when `CV_PHONE` is set, runs `git ls-files`, reads each tracked file, fails if the `CV_PHONE` number appears anywhere; catches it being hardcoded back in by accident, e.g. into `create_cv.js`; skips with a warning if `CV_PHONE` is unset locally, same as `create_cv.js`), `scripts/checks/pdf-contains-phone.ts` (new — when `CV_PHONE` is set, extracts text from the generated PDF with `pdf-parse`, already installed in Task 1.2, and fails if the number is *not* found, proving the phone really made it into the published resume).
   - Verify: `npm run check` passes on the stub; reintroducing the phone number into a component, or hardcoding it back into `create_cv.js`, each make the respective check fail; confirms the phone-in-dist check does *not* fail on `Shahar_Asher_Resume.pdf` itself; with `CV_PHONE` set, deleting the phone from the generated PDF (or not generating it) makes `pdf-contains-phone.ts` fail.
   - Depends on: 1.2, 1.3.
+  - Done (2026-10-20). Notes / deviations:
+    - **Out-of-date text corrected:** no new PDF dependency (`pdf-parse` from Task 1.2 does the text
+      extraction; `pdf-lib` was never used). "PDF is one page" (`check-pdf.ts`, in `npm run cv`) and
+      "repos have descriptions" (`fetch-projects.ts`, in `npm run projects`) are **not repeated in
+      `check`**: both already fail `npm run build`, which CI runs before `check`.
+    - `check` = `require-build.ts` → `astro check` → `lint` (ESLint) → `npm test` → `check:site` (the three
+      phone checks, `.env` loaded) → `format:check` (`prettier --check .`). It runs against an existing
+      build: `require-build.ts` fails with "run npm run build first" if `dist/` or `.generated/` is
+      missing. Prettier runs last so everything else still reports until the separate formatting commit.
+    - Phone checks: `CV_PHONE` unset → warning + exit 0 locally, exit 1 in CI (`CI` set). Matching rule:
+      last 9 digits, separators allowed (see "Decisions"). Shared logic in `scripts/checks/phone.ts`.
+      `no-phone-in-source.ts` only sees tracked files, so a newly created file is covered once it's `git add`ed.
+    - Also added: `lint`, `format` (`prettier --write .`), `format:check`, `check:site`, and
+      `test:update-golden` (sets `UPDATE_GOLDEN=1` from inside `node -e`, so it works in cmd, PowerShell
+      and bash; replaces `UPDATE_GOLDEN=1 npm test`, which is bash-only).
+    - Configs: `eslint.config.mjs` (`typescript-eslint` + `eslint-plugin-astro` recommended; `scripts/cv/*.js`
+      treated as CommonJS), `.prettierrc.json` (single quotes, width 120, trailing commas — matches the
+      existing code; YAML keeps double quotes so `resume.yaml`'s dates are untouched; Tailwind v4
+      stylesheet set), `.prettierignore` (`docs/`, `**/*.md` — Markdown here is prose and instructions,
+      not code — `tests/fixtures/`, `package-lock.json`, `dist/`, `.generated/`, `.astro/`).
+    - `astro check` type-checks `scripts/` and `tests/` too (tsconfig includes `**/*`): 0 errors, 4
+      hints (CommonJS files in `scripts/cv/`).
+    - Deps (dev): `eslint@10`, `typescript-eslint@8` (supports TS `<6.1`, fine with 6.0.3),
+      `eslint-plugin-astro@3`, `prettier@3`, `prettier-plugin-astro@1`, `prettier-plugin-tailwindcss@0.8`,
+      `@astrojs/check@0.9`. `astro-eslint-parser@3.2` (via `eslint-plugin-astro`) declares Node
+      `^22.22.3`; local Node 22.22.2 gets an install warning but lint works. CI's `.nvmrc` `22` resolves
+      to the latest 22.x.
+    - Tests: `tests/site-checks.test.ts` (+ `tests/helpers/pdf.ts`, a hand-built text PDF, so no
+      LibreOffice needed), made-up number only: phone in a dist HTML/JS file fails, the resume
+      `.pdf`/`.docx` in dist don't; `+972` ↔ `0XX` cross-format matches; phone in a tracked file of a
+      temp git repo fails, an untracked `.env` doesn't; a PDF without the phone fails, with it passes;
+      unset/CI/too-short `CV_PHONE`; missing build. Every test also asserts the check's output never
+      contains the number.
+    - Existing files not formatted yet (separate commit, `npm run format`). Golden files unaffected:
+      `tests/fixtures/` is in `.prettierignore`.
 
 - [ ] **1.5 CI/CD: GitHub Actions → Cloudflare, deployed empty** — One workflow, two paths: PRs/non-main branches run `cv` → `projects` → `astro build` → the real `check` only; pushes to `main` additionally deploy to Cloudflare Workers (static assets, no adapter yet). Runner pinned to `ubuntu-24.04`; installs `libreoffice-writer` + `fonts-liberation`; fails if `fc-match Arial` doesn't resolve to Liberation Sans.
   - Files: `.github/workflows/deploy.yml`, `wrangler.jsonc`, `public/_headers` (stub).

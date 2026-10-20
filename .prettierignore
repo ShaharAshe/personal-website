@@ -1,0 +1,9 @@
+# Not formatted by Prettier (npm run format / format:check). .gitignore'd files are skipped too.
+docs/
+# Markdown here is prose and instructions (CLAUDE.md, README.md, .claude/rules/), not code.
+**/*.md
+tests/fixtures/
+package-lock.json
+dist/
+.generated/
+.astro/

@@ -1,0 +1,11 @@
+{
+  "singleQuote": true,
+  "printWidth": 120,
+  "trailingComma": "all",
+  "plugins": ["prettier-plugin-astro", "prettier-plugin-tailwindcss"],
+  "tailwindStylesheet": "./src/styles/global.css",
+  "overrides": [
+    { "files": "*.astro", "options": { "parser": "astro" } },
+    { "files": ["*.yaml", "*.yml"], "options": { "singleQuote": false } }
+  ]
+}
