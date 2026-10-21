@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint';
 import astro from 'eslint-plugin-astro';
 
 export default defineConfig(
-  { ignores: ['dist/', '.astro/', '.generated/'] },
+  { ignores: ['dist/', '.astro/', '.generated/', '.wrangler/'] },
   tseslint.configs.recommended,
   astro.configs.recommended,
   {

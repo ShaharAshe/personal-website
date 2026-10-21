@@ -537,10 +537,11 @@ education:
 
 ### 13.3 CI/CD (GitHub Actions)
 
-**Workflow אחד, שלושה טריגרים:**
+**Workflow אחד, ארבעה טריגרים:**
 | טריגר | מתי | למה |
 |---|---|---|
 | `push` ל-`main` | בכל שינוי | deploy רגיל |
+| `pull_request` | בכל PR | build ו-checks בלבד, בלי deploy |
 | `schedule` | פעם ביום | משיכת פרויקטים חדשים מ-GitHub |
 | `workflow_dispatch` | ידני | עדכון מיידי |
 
@@ -551,12 +552,13 @@ education:
 3. יצירת Word מה-YAML (`create_cv.js`)
 4. המרת Word ל-PDF (LibreOffice) + בדיקה שהוא עמוד אחד
 5. משיכת נתוני הפרויקטים מ-GitHub API (עם `GITHUB_TOKEN`) + בדיקת תיאורים
-6. Build של Astro
+6. Build של Astro, והעתקת ה-PDF ל-`dist/resume.pdf` (`publish-pdf.ts`). `_headers` מגיש אותו
+   `inline` עם שם הקובץ `Shahar_Asher_Resume.pdf`
 7. בדיקות: lint, type-check, שהטלפון לא מופיע בקבצי האתר
-8. **רק ב-push ל-`main`:** Deploy ל-Cloudflare
+8. **רק על `main`** (push, schedule, הרצה ידנית): Deploy ל-Cloudflare
 
-**Pull Requests ו-branches אחרים:** מריצים build ו-checks בלבד (כולל `fc-match`), בלי deploy ובלי
-preview deployment, בשלב הזה.
+**Pull Requests:** מריצים build ו-checks בלבד (כולל `fc-match`), בלי deploy ובלי preview deployment,
+בשלב הזה. push ל-branch אחר לא מריץ את ה-workflow בעצמו (כדי ש-PR לא ירוץ פעמיים); ה-PR מריץ אותו.
 
 ---
 
@@ -578,7 +580,8 @@ portfolio/
 │   │   ├── format.js                # פורמט תאריכים וכתובות (לשימוש create_cv.js)
 │   │   ├── paths.js                 # נתיבי קלט/פלט משותפים (.generated/cv/)
 │   │   ├── to-pdf.js                # הרצת soffice (Word → PDF)
-│   │   └── check-pdf.ts             # בדיקה שה-PDF הוא עמוד אחד (pdf-parse)
+│   │   ├── check-pdf.ts             # בדיקה שה-PDF הוא עמוד אחד (pdf-parse)
+│   │   └── publish-pdf.ts           # העתקת ה-PDF ל-dist/resume.pdf (סוף ה-build)
 │   └── github/
 │       └── fetch-projects.ts        # משיכה מ-GitHub API → src/data/projects.json
 ├── src/

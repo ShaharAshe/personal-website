@@ -1,0 +1,12 @@
+# Response headers for Cloudflare Workers static assets (copied to dist/_headers by astro build).
+# Stub: the real security headers (CSP etc.) come in Task 2.14.
+# X-Robots-Tag: noindex keeps search engines out until launch. Removed in Task 4.3.
+/*
+  X-Robots-Tag: noindex
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
+# Opens in the browser; saving it uses the published file name. The "Download Resume" buttons use the
+# <a download> attribute to download instead.
+/resume.pdf
+  Content-Disposition: inline; filename="Shahar_Asher_Resume.pdf"

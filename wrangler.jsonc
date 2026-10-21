@@ -1,0 +1,13 @@
+// Cloudflare Workers config. Static assets only for now: no Worker script and no Astro adapter until
+// the contact form needs a server route (Task 3.3). Deployed by .github/workflows/deploy.yml on main.
+// https://developers.cloudflare.com/workers/wrangler/configuration/
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "personal-website",
+  "compatibility_date": "2026-10-19",
+  // https://personal-website.shaharasher.workers.dev
+  "workers_dev": true,
+  "assets": {
+    "directory": "./dist",
+  },
+}
