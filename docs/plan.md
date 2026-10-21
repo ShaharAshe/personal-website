@@ -97,7 +97,7 @@ Reality check performed before this plan:
 `@astrojs/mdx`, `@astrojs/sitemap`, `pdf-parse` (replaced `pdf-lib` in Task 1.2), `@types/js-yaml`
 (dev), ~~`tsx`~~ (dropped in Task 1.2: Node 22 runs the `.ts` scripts natively), `eslint` + `typescript-eslint` +
 `eslint-plugin-astro`, `prettier` + `prettier-plugin-astro` + `prettier-plugin-tailwindcss`,
-`@astrojs/check` (added in Task 1.4, needed by `astro check`), `@playwright/test` (dev, required by CLAUDE.md's screenshot workflow). `@astrojs/cloudflare` is added
+`@astrojs/check` (added in Task 1.4, needed by `astro check`), `wrangler` (dev, added in Task 1.5 for the Cloudflare deploy), `@playwright/test` (dev, required by CLAUDE.md's screenshot workflow). `@astrojs/cloudflare` is added
 later, only in Milestone 3 when the contact form needs a server-rendered route.
 
 ---
@@ -242,6 +242,39 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
   - Files: `.github/workflows/deploy.yml`, `wrangler.jsonc`, `public/_headers` (stub).
   - Verify: PR runs build+check (incl. font-match) but does not deploy. Push to `main` deploys; Cloudflare `*.workers.dev` URL live with `/resume.pdf` downloadable as a real 1-page PDF. One-time task: visually compare the CI-built PDF against the current real resume PDF, confirm match. Because `CV_PHONE` is only ever set in CI (action item #10) and locally via `.env`, this is also the first real run of 1.4's two new phone-safety checks — confirm both pass here (phone not in any tracked file, phone present in the published PDF).
   - Depends on: 1.2, 1.3, 1.4. Needs action items #3, #4, and #10 (`CV_PHONE` secret) first — without it, `create_cv.js` fails the CI job by design (`process.env.CI` set).
+  - Implemented (2026-10-21), **waiting for the first CI run to be verified** — notes so far:
+    - **Gap fixed:** nothing put the PDF on the site. New `scripts/cv/publish-pdf.ts` (last step of
+      `build`) copies `.generated/cv/Shahar_Asher_Resume.pdf` → `dist/resume.pdf`; fails if either is
+      missing. `check:site` now runs `pdf-contains-phone.ts` on `dist/resume.pdf` (the file actually
+      published). Tests: `tests/publish-pdf.test.ts` (copy, missing PDF, missing `dist/`, `_headers` rule).
+    - `public/_headers` (stub): `/*` → `X-Robots-Tag: noindex` (until launch, **removed in Task 4.3**),
+      `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`;
+      `/resume.pdf` → `Content-Disposition: inline; filename="Shahar_Asher_Resume.pdf"` (opens in the
+      browser, saves with that name; see Tasks 2.5/2.11 for the download button). CSP stays in Task 2.14.
+    - `wrangler.jsonc`: worker `personal-website`, `assets.directory: ./dist`, `workers_dev: true`, no
+      Worker script, no adapter. Expected URL: https://personal-website.shaharasher.workers.dev
+    - `.github/workflows/deploy.yml`: triggers `push` (**`main` only**, so a PR doesn't run twice —
+      CI minutes are limited on the private repo), `pull_request`, daily `schedule` (03:17 UTC),
+      `workflow_dispatch`. `ubuntu-24.04`, Node from `.nvmrc` with npm cache, `apt-get update` +
+      `libreoffice-writer fonts-liberation`, `fc-match Arial` must contain "Liberation Sans", `npm ci` →
+      `npm run build` → upload `dist/resume.pdf` as artifact `resume-pdf` (7 days, before `check` so it
+      exists even if check fails) → `npm run check` → `wrangler deploy` only when
+      `ref == main` and not a PR. `permissions: contents: read`; concurrency cancels an older run of the
+      same ref. Actions: `checkout@v7`, `setup-node@v7`, `upload-artifact@v7` (latest majors, checked
+      2026-10-21).
+    - New dev dependency: `wrangler@4` (4.151.3; pulls the `workerd` binary, ~140 MB in
+      `node_modules`). Used for the deploy and for local `wrangler deploy --dry-run` / `wrangler dev`.
+      `.wrangler/` added to `.gitignore`.
+    - Verified locally: `npm run build` + `npm run check` pass, `dist/resume.pdf` exists,
+      `wrangler deploy --dry-run` OK, `wrangler dev` serves the headers above and 404s `/_headers`.
+  - **Verify after push (together):**
+    - [ ] A PR runs build + check (incl. the `fc-match Arial` step) and the deploy step is skipped.
+    - [ ] A push to `main` runs the deploy step and it succeeds.
+    - [ ] https://personal-website.shaharasher.workers.dev is live with `X-Robots-Tag: noindex`, and
+          `/resume.pdf` opens as a real 1-page PDF that saves as `Shahar_Asher_Resume.pdf`.
+    - [ ] One-time: download the `resume-pdf` artifact from the run and compare it with the real resume.
+    - [ ] Both phone-safety checks pass in the CI log ("No phone number in N tracked files.",
+          "dist/resume.pdf contains the phone number.").
 
 ## Milestone 2 — MVP (design-doc §16 Phase 1, remainder)
 
@@ -268,6 +301,8 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
 - [ ] **2.5 Hero** — Name, title, one-line summary (from `basics.summary`, trimmed), CTAs (Download Resume primary, View Projects secondary), social icons. No phone.
   - Files: `src/components/Hero.astro`.
   - Verify: Download Resume links to `/resume.pdf`; phone never rendered.
+  - Note (from 1.5): the button is `<a href="/resume.pdf" download="Shahar_Asher_Resume.pdf">`, so it
+    downloads, while a direct link to `/resume.pdf` opens in the browser (`_headers` serves it `inline`).
   - Depends on: 2.2, 2.4.
 
 - [ ] **2.6 Experience section** — Homepage shows `featured: true` highlights only (timeline layout), link to full `/resume`.
@@ -295,6 +330,8 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
 - [ ] **2.11 `/resume` page** — Full resume in site styling, Download PDF button at top, print stylesheet. Reuses the same `CopyEmail` island as Contact (2.9) for the email — never plain text.
   - Files: `src/pages/resume.astro`.
   - Verify: Ctrl+P produces a clean printed page; phone never rendered; email not plain text on this page either (confirm `CopyEmail` island used).
+  - Note (from 1.5): the Download PDF button is `<a href="/resume.pdf" download="Shahar_Asher_Resume.pdf">`,
+    so it downloads, while a direct link to `/resume.pdf` opens in the browser.
   - Depends on: 2.4, 2.2, 2.9.
 
 - [ ] **2.12 404 page**
@@ -350,4 +387,5 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
   - Depends on: 4.1.
 
 - [ ] **4.3 Final QA** — Lighthouse 95+ all categories, every section at 375px, WCAG AA contrast both themes, every link resolves, full keyboard pass.
+  - Before launch: remove `X-Robots-Tag: noindex` from `public/_headers` (added in 1.5).
   - Depends on: 4.2.
