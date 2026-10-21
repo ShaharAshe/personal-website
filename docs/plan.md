@@ -238,11 +238,11 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
     - Existing files not formatted yet (separate commit, `npm run format`). Golden files unaffected:
       `tests/fixtures/` is in `.prettierignore`.
 
-- [ ] **1.5 CI/CD: GitHub Actions → Cloudflare, deployed empty** — One workflow, two paths: PRs/non-main branches run `cv` → `projects` → `astro build` → the real `check` only; pushes to `main` additionally deploy to Cloudflare Workers (static assets, no adapter yet). Runner pinned to `ubuntu-24.04`; installs `libreoffice-writer` + `fonts-liberation`; fails if `fc-match Arial` doesn't resolve to Liberation Sans.
+- [x] **1.5 CI/CD: GitHub Actions → Cloudflare, deployed empty** — One workflow, two paths: PRs run `cv` → `projects` → `astro build` → the real `check` only; pushes to `main` additionally deploy to Cloudflare Workers (static assets, no adapter yet). Runner pinned to `ubuntu-24.04`; installs `libreoffice-writer` + `fonts-liberation`; fails if `fc-match Arial` doesn't resolve to Liberation Sans.
   - Files: `.github/workflows/deploy.yml`, `wrangler.jsonc`, `public/_headers` (stub).
   - Verify: PR runs build+check (incl. font-match) but does not deploy. Push to `main` deploys; Cloudflare `*.workers.dev` URL live with `/resume.pdf` downloadable as a real 1-page PDF. One-time task: visually compare the CI-built PDF against the current real resume PDF, confirm match. Because `CV_PHONE` is only ever set in CI (action item #10) and locally via `.env`, this is also the first real run of 1.4's two new phone-safety checks — confirm both pass here (phone not in any tracked file, phone present in the published PDF).
   - Depends on: 1.2, 1.3, 1.4. Needs action items #3, #4, and #10 (`CV_PHONE` secret) first — without it, `create_cv.js` fails the CI job by design (`process.env.CI` set).
-  - Implemented (2026-10-21), **waiting for the first CI run to be verified** — notes so far:
+  - Done (2026-10-21, merged as PR #1). Notes / deviations:
     - **Gap fixed:** nothing put the PDF on the site. New `scripts/cv/publish-pdf.ts` (last step of
       `build`) copies `.generated/cv/Shahar_Asher_Resume.pdf` → `dist/resume.pdf`; fails if either is
       missing. `check:site` now runs `pdf-contains-phone.ts` on `dist/resume.pdf` (the file actually
@@ -264,17 +264,23 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       2026-10-21).
     - New dev dependency: `wrangler@4` (4.151.3; pulls the `workerd` binary, ~140 MB in
       `node_modules`). Used for the deploy and for local `wrangler deploy --dry-run` / `wrangler dev`.
-      `.wrangler/` added to `.gitignore`.
+      `.wrangler/` added to `.gitignore` and to the ESLint ignores (`eslint.config.mjs`): ESLint doesn't
+      read `.gitignore`, so the files `wrangler dev` generates there broke `npm run check` locally.
     - Verified locally: `npm run build` + `npm run check` pass, `dist/resume.pdf` exists,
       `wrangler deploy --dry-run` OK, `wrangler dev` serves the headers above and 404s `/_headers`.
   - **Verify after push (together):**
-    - [ ] A PR runs build + check (incl. the `fc-match Arial` step) and the deploy step is skipped.
-    - [ ] A push to `main` runs the deploy step and it succeeds.
-    - [ ] https://personal-website.shaharasher.workers.dev is live with `X-Robots-Tag: noindex`, and
+    - [x] A PR runs build + check (incl. the `fc-match Arial` step) and the deploy step is skipped.
+          PR run #1: build and check passed, "Deploy to Cloudflare" skipped; `fc-match Arial` printed
+          "Liberation Sans"; LibreOffice 24.2.7.2.
+    - [x] A push to `main` runs the deploy step and it succeeds. (Push run after squash-merging PR #1.)
+    - [x] https://personal-website.shaharasher.workers.dev is live with `X-Robots-Tag: noindex`, and
           `/resume.pdf` opens as a real 1-page PDF that saves as `Shahar_Asher_Resume.pdf`.
-    - [ ] One-time: download the `resume-pdf` artifact from the run and compare it with the real resume.
-    - [ ] Both phone-safety checks pass in the CI log ("No phone number in N tracked files.",
-          "dist/resume.pdf contains the phone number.").
+          `curl -I /resume.pdf`: 200, `Content-Type: application/pdf`,
+          `Content-Disposition: inline; filename="Shahar_Asher_Resume.pdf"`, `x-robots-tag: noindex`.
+    - [x] One-time: download the `resume-pdf` artifact from the run and compare it with the real resume.
+          Pixel-identical to the original: same Liberation Sans fonts, identical text.
+    - [x] Both phone-safety checks pass in the CI log ("No phone number in 57 tracked files.",
+          "dist/resume.pdf contains the phone number."). The phone never appears anywhere in the log.
 
 ## Milestone 2 — MVP (design-doc §16 Phase 1, remainder)
 
@@ -388,4 +394,7 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
 
 - [ ] **4.3 Final QA** — Lighthouse 95+ all categories, every section at 375px, WCAG AA contrast both themes, every link resolves, full keyboard pass.
   - Before launch: remove `X-Robots-Tag: noindex` from `public/_headers` (added in 1.5).
+  - When the repo becomes public: enable branch protection on `main` — block force pushes and
+    deletion, and require the `build` check to pass before merging. It waits until launch because on a
+    private repo with a free GitHub plan these rules aren't enforced.
   - Depends on: 4.2.
