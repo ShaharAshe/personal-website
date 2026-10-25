@@ -1,2 +1,72 @@
-/* Global stylesheet. Design tokens (--bg, --surface, --text, ...) are added in Task 2.1. */
-@import 'tailwindcss';
+/*
+ * Global stylesheet: design tokens (design-doc §9.2) + Tailwind.
+ *
+ * Theme resolution:
+ *   1. <html data-theme="dark|light"> wins (set by the no-flash script in Task 2.2, toggle in 2.3).
+ *   2. No data-theme: follow prefers-color-scheme.
+ *   3. Otherwise dark (the default).
+ *
+ * tests/design-tokens.test.ts reads the three token blocks below and checks WCAG AA contrast, so keep
+ * their selectors as they are and keep values as 6-digit hex.
+ */
+
+/* Scan only src/ for class names (not docs/, scripts/, tests/ ...). Path is relative to this file. */
+@import 'tailwindcss' source('../');
+
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0b0d10;
+  --surface: #14171c;
+  --text: #e6e8eb;
+  --text-muted: #8b93a1;
+  --accent: #4f9dff;
+  --border: #23272f;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --text: #111418;
+  --text-muted: #5b6472;
+  --accent: #1f6fd1;
+  --border: #e5e7eb;
+}
+
+/* Fallback when no data-theme is set. Must match the light block above (the test enforces it). */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    color-scheme: light;
+    --bg: #fafafa;
+    --surface: #ffffff;
+    --text: #111418;
+    --text-muted: #5b6472;
+    --accent: #1f6fd1;
+    --border: #e5e7eb;
+  }
+}
+
+/*
+ * Tailwind utilities: bg-bg, bg-surface, text-text, text-text-muted, text-accent, border-border, ...
+ * `inline` makes them use var(--bg) etc. directly, so they follow the theme switch.
+ * The default palette is removed so components can only use these tokens, never raw colors.
+ */
+@theme inline {
+  --color-*: initial;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-border: var(--border);
+  /* Text on an accent-filled button (text-on-accent). */
+  --color-on-accent: var(--bg);
+}
+
+@layer base {
+  html {
+    background-color: var(--bg);
+    color: var(--text);
+  }
+}

@@ -284,10 +284,44 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
 
 ## Milestone 2 — MVP (design-doc §16 Phase 1, remainder)
 
-- [ ] **2.1 Design tokens + global stylesheet** — `--bg/--surface/--text/--text-muted/--accent/--border` as CSS custom properties for both themes, Tailwind v4 `@theme` wired to them.
+- [x] **2.1 Design tokens + global stylesheet** — `--bg/--surface/--text/--text-muted/--accent/--border` as CSS custom properties for both themes, Tailwind v4 `@theme` wired to them.
   - Files: `src/styles/global.css`.
   - Verify: Toggling `data-theme` on `<html>` swaps every token; contrast checked against §9.2.
   - Depends on: 1.1.
+  - Done (2026-10-25). Notes / deviations:
+    - Theme resolution: `<html data-theme="dark|light">` wins; with no `data-theme`, a
+      `@media (prefers-color-scheme: light)` block on `:root:not([data-theme])` applies light; otherwise
+      dark. Each block also sets `color-scheme` (native scrollbars/form controls follow the theme).
+      Values are the §9.2 ones unchanged; light `--accent` is `#1F6FD1` (the doc's example value).
+    - Tailwind: `@theme inline` maps `--color-bg/surface/text/text-muted/accent/border` to the tokens
+      (`bg-surface`, `text-text-muted`, `border-border`, ...). **The default Tailwind palette is removed**
+      (`--color-*: initial`), so `bg-blue-500` and the like don't exist: components can only use tokens.
+    - **Accent-filled button text** uses `text-on-accent` = `--color-on-accent: var(--bg)` (a Tailwind
+      alias, not a new token): `--bg` on `--accent` is 7.04:1 dark, 4.73:1 light. White on the dark
+      accent would only be 2.76:1.
+    - Tailwind sources limited to `src/` (`@import 'tailwindcss' source('../')`), fixing the 1.1 issue
+      of it scanning `docs/` and the rest of the repo.
+    - Contrast (all ≥ 4.5:1, nothing changed): text on bg/surface 15.85/14.63 dark, 17.69/18.47 light;
+      text-muted 6.29/5.80 dark, 5.73/5.98 light; accent 7.04/6.50 dark, **4.73**/4.94 light (light
+      accent is the tightest pair: darkening it is the fix if it ever fails). `--border` is decorative
+      (card outlines), so no text-contrast requirement applies to it.
+    - Tests: `tests/design-tokens.test.ts` reads `global.css` (no new dependency): both themes define
+      exactly the six tokens as hex and every value differs between them; the prefers-color-scheme
+      fallback equals the light block; values match the design-doc §9.2 table; `@theme` maps each
+      token; Tailwind source is `src/`; WCAG AA for every pair above in both themes.
+    - **Temporary:** `src/pages/index.astro` shows a swatch of every token plus text/link/button samples
+      on `--bg` and `--surface`. **Task 2.10 replaces it** with the real homepage.
+    - Screenshots: Playwright isn't installed yet (`@playwright/test` is still pending, see "New
+      dependencies"), so these were taken with headless Edge and a throwaway `--user-data-dir`:
+      375px (in a 375px iframe, since headless Edge has a ~500px minimum window width) and 1280px,
+      `data-theme` dark/light set against the opposite OS preference, plus no `data-theme` with OS
+      dark/light.
+    - **Fonts → Task 2.2** (they need `<head>`, which `BaseLayout` creates). Plan: Inter + JetBrains
+      Mono through Astro 7's built-in Fonts API (`fonts` in `astro.config.mjs`, Fontsource provider,
+      `<Font />` in `BaseLayout`'s `<head>`). No new dependency: fonts are downloaded at build time and
+      served from the site itself (self-hosted), with preload and metric-matched fallbacks (keeps CLS
+      low). Then `--font-sans`/`--font-mono` in `@theme` point at its CSS variables. Until then, text
+      uses Tailwind's system font stack.
 
 - [ ] **2.2 BaseLayout + no-flash theme script** — Shared layout with `<head>` inline script setting theme before paint (localStorage, try/catch), nav shell, skip link, footer placeholder.
   - Files: `src/layouts/BaseLayout.astro`.
@@ -331,6 +365,7 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
 
 - [ ] **2.10 Footer + homepage assembly** — Wire Hero/Experience/Projects/Skills/Contact/Footer into `index.astro`.
   - Files: `src/pages/index.astro`.
+  - Note (from 2.1): this replaces the temporary design-token swatch page currently in `index.astro`.
   - Depends on: 2.5–2.9.
 
 - [ ] **2.11 `/resume` page** — Full resume in site styling, Download PDF button at top, print stylesheet. Reuses the same `CopyEmail` island as Contact (2.9) for the email — never plain text.
