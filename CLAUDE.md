@@ -69,8 +69,10 @@ scripts/github/             GitHub fetcher
 ## Design (details in design-doc §9)
 
 - Direction: minimal, technical, fast. Lots of whitespace, one accent color.
-- Dark theme by default, toggle to light, choice saved in `localStorage` (wrapped in try/catch).
-  Theme is applied by an inline script in `<head>` before first paint (no flash).
+- Theme: a first-time visitor gets their OS setting (`prefers-color-scheme`; dark if none is reported).
+  The dark/light toggle saves `"light"` or `"dark"` in `localStorage` under the key `theme` (wrapped in
+  try/catch), and from then on the saved choice wins. Key and values live in `src/lib/theme.ts`.
+  The saved theme is applied by an inline script in `<head>` before first paint (no flash).
 - Accent: `#4F9DFF` in dark, a darker blue (e.g. `#1F6FD1`) in light for contrast.
 - Use the tokens in `src/styles/global.css`. Never hardcode colors in components.
 - Fonts: Inter (or Geist Sans) + JetBrains Mono (or Geist Mono), self-hosted.

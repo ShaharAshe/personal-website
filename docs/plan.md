@@ -69,6 +69,10 @@ Reality check performed before this plan:
 - Node version pinned via `.nvmrc` (`22`) + `package.json` `engines.node`, so CI matches local exactly.
 - Milestone 3: for Tasks 3.1 (Log Analytics Platform page) and 3.2 (case study), **the user drafts the
   actual text**; Claude Code builds the layout, MDX wiring, and (for 3.1) the SVG diagram around it.
+- **Theme (changed in Task 2.2, replaces "dark by default"):** a first-time visitor gets their OS setting
+  (`prefers-color-scheme`, dark if none reported). Once they use the toggle (Task 2.3), their choice is
+  saved in `localStorage` under the key **`theme`** (`"light"` | `"dark"`, defined in `src/lib/theme.ts`)
+  and wins from then on. Any other stored value, or blocked storage, is ignored → OS setting.
 - GitHub disables scheduled workflows after 60 days with no repository activity. Regular commits/PRs
   prevent that; if it does get disabled, re-enabling requires a manual click — Actions tab → select the
   workflow → "Enable workflow" banner. A `workflow_dispatch` run or a push does not auto-reinstate a
@@ -323,15 +327,61 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       low). Then `--font-sans`/`--font-mono` in `@theme` point at its CSS variables. Until then, text
       uses Tailwind's system font stack.
 
-- [ ] **2.2 BaseLayout + no-flash theme script** — Shared layout with `<head>` inline script setting theme before paint (localStorage, try/catch), nav shell, skip link, footer placeholder.
+- [x] **2.2 BaseLayout + no-flash theme script** — Shared layout with `<head>` inline script setting theme before paint (localStorage, try/catch), nav shell, skip link, footer placeholder.
   - Files: `src/layouts/BaseLayout.astro`.
   - Verify: Hard refresh in light mode never flashes dark first; keyboard tab order reaches skip link first.
   - Depends on: 2.1.
+  - Done (2026-10-26). Notes / deviations:
+    - **Theme decision changed** (user): OS setting on first visit, saved toggle choice wins after (see
+      "Decisions"). Updated in `CLAUDE.md` (Design), design-doc §0, §7.2, §9.2.
+    - New file beyond the list: `src/lib/theme.ts`, the only place the storage key and values are
+      written: `THEME_STORAGE_KEY = 'theme'`, `THEMES`, and `themeInitScript`, the inline script's text
+      built at build time from those constants (inserted with `JSON.stringify`). BaseLayout renders it
+      with `<script is:inline set:html={themeInitScript} />` — inline, not a module, since an import or
+      `type="module"` would defer it and bring the flash back. A saved `light`/`dark` sets `<html data-theme>`; nothing saved / invalid / storage throwing sets
+      nothing, so `global.css`'s `prefers-color-scheme` fallback applies (and follows OS changes live).
+    - `BaseLayout.astro` props: `title`, `description` (required; Open Graph etc. in 2.13). `<head>`:
+      charset, viewport, theme script (before any stylesheet), title, description, fonts. `<body>`:
+      skip link → `<header><nav aria-label="Main">` (placeholder links `/#experience`, `/#projects`,
+      `/resume` — 404 until 2.11 — and `/#contact`) → `<main id="main" tabindex="-1">` → footer
+      placeholder. No name/resume text hardcoded (hard rule 1), so no home link until 2.4.
+    - **Fonts:** Astro 7's built-in Fonts API (`fonts` in `astro.config.mjs`, Fontsource provider, no new
+      dependency): Inter 400/500/600 (`--font-inter`) + JetBrains Mono 400 (`--font-jetbrains-mono`),
+      latin, normal, woff2, downloaded at build time and served from `/_astro/fonts/` (4 files, ~94 KB
+      total). Only Inter 400 is preloaded. Metric-matched Arial fallbacks generated (low CLS). `@theme`
+      maps `--font-sans`/`--font-mono` to them. **The build now needs network access** to Fontsource
+      (CI has it).
+    - **Type scale (user-revised, 6 sizes, design-doc §9.3 updated):** Tailwind's default sizes removed
+      (`--text-*: initial`); `xs` .75rem, `sm` .875rem, `base` 1rem, `lg` 1.25rem, `xl` 1.75rem,
+      `display` `clamp(2.25rem, 1.5rem + 3.75vw, 3rem)` (Hero title only, line-height 1.1).
+      `index.astro`'s `text-2xl` h1 → `text-xl`.
+    - `global.css`: global `:focus-visible` outline in `--accent`; `main:focus` has no outline (it's
+      only focused by the skip link).
+    - `index.astro` uses BaseLayout; the swatch content is unchanged (its `<main>` became a `<div>`).
+    - Tests: `tests/theme-init.test.ts` runs `themeInitScript` itself in `node:vm` with a fake document
+      and storage: saved `light`/`dark` applied; invalid values, `getItem` throwing, the `localStorage`
+      getter throwing and no `localStorage` all leave `data-theme` unset; nothing saved → unset (OS
+      setting). `tests/base-layout.test.ts` checks `dist/index.html` (skips without a build):
+      `lang="en"`, the inlined script equals `themeInitScript`, has no attributes and comes before any stylesheet, the skip link is the first focusable element and
+      targets `<main id="main">`, nav links + footer, fonts self-hosted with one preload.
+      `tests/design-tokens.test.ts`: font mapping and exactly the 6 sizes.
+    - Skip link: `fixed` + `-translate-y-[200%]`, `focus:translate-y-0` (not `sr-only`/`not-sr-only`:
+      Tailwind v4's `not-sr-only` resets padding to 0, so the focused link lost its padding).
+    - Screenshots: headless Edge again (Playwright still not installed) with a temporary
+      `--user-data-dir`, against a scratch copy of `dist/` plus a helper page that sets
+      `localStorage.theme` and frames the page (iframe, for 375px): saved dark and saved light at 375px
+      and 1280px, each against the *opposite* OS preference (saved choice wins); nothing saved with OS
+      dark / OS light (follows the OS); the skip link focused (1280 dark, 375 light). Inter and
+      JetBrains Mono render; the skip link is hidden until focused.
 
 - [ ] **2.3 ThemeToggle island** — React island, `client:visible`, flips `data-theme` + persists choice.
   - Files: `src/components/islands/ThemeToggle.tsx`.
   - Verify: Toggle works, persists across reload, respects `prefers-reduced-motion`.
   - Depends on: 2.2.
+  - Note (from 2.2): import `THEME_STORAGE_KEY`/`THEMES` from `src/lib/theme.ts` (never retype them; the
+    no-flash script `themeInitScript` is built from the same constants). Write `"light"`/`"dark"` under
+    the key (try/catch) and set `document.documentElement.dataset.theme`. With no `data-theme` yet (first visit), the current
+    theme is the OS one: read it from `matchMedia('(prefers-color-scheme: light)')`.
 
 - [ ] **2.4 Content collections for resume + projects + MDX** — `resume` as a single-entry collection (or validated module) over `resume.yaml`; `projects.json` read at build time; `projects`/`case-studies` MDX collections with schemas.
   - Files: `src/content.config.ts`.
@@ -387,6 +437,12 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
   - Files: `public/_headers`.
   - Verify: Headers present in a deployed response; CSP doesn't break islands or fonts.
   - Depends on: 1.5.
+  - Note (from 2.2): every page has the **inline no-flash theme script** (`themeInitScript` in
+    `src/lib/theme.ts`, inlined by BaseLayout), so `script-src` needs its `'sha256-…'` hash, computed
+    from the script text exactly as it appears in the built HTML (a test can recompute it from
+    `themeInitScript`, so changing the script or the constants without updating the CSP fails). Astro's `<Font />` also emits **inline `<style>`** blocks (`@font-face`)
+    → `style-src` needs their hashes or `'unsafe-inline'`; same for any small CSS Astro inlines. Fonts
+    are self-hosted, so `font-src 'self'` is enough.
 
 - [ ] **2.15 Cloudflare Web Analytics** — Beacon script in `BaseLayout`.
   - Files: `src/layouts/BaseLayout.astro`.

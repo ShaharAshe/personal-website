@@ -2,9 +2,10 @@
  * Global stylesheet: design tokens (design-doc §9.2) + Tailwind.
  *
  * Theme resolution:
- *   1. <html data-theme="dark|light"> wins (set by the no-flash script in Task 2.2, toggle in 2.3).
- *   2. No data-theme: follow prefers-color-scheme.
- *   3. Otherwise dark (the default).
+ *   1. <html data-theme="dark|light"> wins: the visitor's saved choice, applied before first paint by
+ *      themeInitScript (src/lib/theme.ts, inlined by BaseLayout), written by the theme toggle (Task 2.3).
+ *   2. No data-theme (nothing saved): follow prefers-color-scheme.
+ *   3. No data-theme and no OS preference reported: dark.
  *
  * tests/design-tokens.test.ts reads the three token blocks below and checks WCAG AA contrast, so keep
  * their selectors as they are and keep values as 6-digit hex.
@@ -62,11 +63,44 @@
   --color-border: var(--border);
   /* Text on an accent-filled button (text-on-accent). */
   --color-on-accent: var(--bg);
+
+  /* Fonts (design-doc §9.3): CSS variables from Astro's Fonts API (astro.config.mjs, <Font /> in BaseLayout). */
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+
+  /*
+   * Type scale (design-doc §9.3): exactly these six sizes; Tailwind's default sizes are removed.
+   * text-xs: tags, captions, dates. text-xl: section headings. text-display: the Hero title only.
+   */
+  --text-*: initial;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1.25rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl: 1.75rem;
+  --text-xl--line-height: 1.25;
+  --text-display: clamp(2.25rem, 1.5rem + 3.75vw, 3rem);
+  --text-display--line-height: 1.1;
 }
 
 @layer base {
   html {
     background-color: var(--bg);
     color: var(--text);
+  }
+
+  /* Visible keyboard focus everywhere (WCAG 2.4.7). */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* <main tabindex="-1"> is only focused by the skip link, never by Tab: no ring around the whole page. */
+  main:focus {
+    outline: none;
   }
 }

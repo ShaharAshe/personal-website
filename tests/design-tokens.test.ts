@@ -88,6 +88,19 @@ test('Tailwind @theme maps a color to each token and removes the default palette
   assert.match(theme['--color-on-accent'], /^var\(--[\w-]+\)$/);
 });
 
+test('Tailwind @theme maps the fonts to the Astro Fonts API variables', () => {
+  assert.equal(theme['--font-sans'], 'var(--font-inter)');
+  assert.equal(theme['--font-mono'], 'var(--font-jetbrains-mono)');
+});
+
+test('the type scale has exactly the six design-doc §9.3 sizes, each with a line-height', () => {
+  assert.equal(theme['--text-*'], 'initial');
+  const sizes = Object.keys(theme).filter((name) => /^--text-[\w]+$/.test(name) && name !== '--text-*');
+  assert.deepEqual(sizes, ['--text-xs', '--text-sm', '--text-base', '--text-lg', '--text-xl', '--text-display']);
+  for (const size of sizes) assert.ok(theme[`${size}--line-height`], `${size} has no line-height`);
+  assert.match(theme['--text-display'], /^clamp\(/);
+});
+
 test('Tailwind scans only src/ for class names', () => {
   assert.match(css, /^@import 'tailwindcss' source\('\.\.\/'\);$/m);
 });

@@ -1,0 +1,68 @@
+---
+// Shared page shell: <head> (no-flash theme script, fonts, title/description), skip link, nav, footer.
+// Full SEO tags (Open Graph, JSON-LD, ...) come in Task 2.13.
+import { Font } from 'astro:assets';
+import { themeInitScript } from '../lib/theme';
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description: string;
+}
+
+const { title, description } = Astro.props;
+
+// Placeholder targets: the sections and /resume are built in Tasks 2.5–2.11.
+const navLinks = [
+  { label: 'Experience', href: '/#experience' },
+  { label: 'Projects', href: '/#projects' },
+  { label: 'Resume', href: '/resume' },
+  { label: 'Contact', href: '/#contact' },
+];
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {/* Must stay before any stylesheet: sets data-theme before first paint (src/lib/theme.ts). */}
+    <script is:inline set:html={themeInitScript} />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {/* Preload only body text (Inter 400); other weights load on demand. */}
+    <Font cssVariable="--font-inter" preload={[{ weight: 400 }]} />
+    <Font cssVariable="--font-jetbrains-mono" />
+  </head>
+  <body class="flex min-h-screen flex-col">
+    {/* Skip link: first Tab stop, moved above the viewport until focused. */}
+    <a
+      href="#main"
+      class="fixed top-4 left-4 z-50 -translate-y-[200%] rounded-md bg-accent px-4 py-2 font-medium text-on-accent focus:translate-y-0"
+    >
+      Skip to content
+    </a>
+
+    <header class="border-b border-border">
+      <nav aria-label="Main" class="mx-auto max-w-[1100px] px-4 py-4">
+        <ul class="flex flex-wrap justify-end gap-x-6 gap-y-2 text-sm">
+          {navLinks.map(({ label, href }) => (
+            <li>
+              <a href={href} class="text-text-muted hover:text-text">
+                {label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </header>
+
+    <main id="main" tabindex="-1" class="flex-1">
+      <slot />
+    </main>
+
+    <footer class="border-t border-border">
+      <!-- Placeholder: the real footer comes in Task 2.10. -->
+      <p class="mx-auto max-w-[1100px] px-4 py-6 text-xs text-text-muted">Footer placeholder</p>
+    </footer>
+  </body>
+</html>
