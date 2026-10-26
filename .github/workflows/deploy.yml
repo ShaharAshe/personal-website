@@ -23,6 +23,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    # A normal run takes about a minute; cap a stuck run (default is 6 hours) to save CI minutes.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
 
@@ -32,9 +34,10 @@ jobs:
           cache: npm
 
       - name: Install LibreOffice and Liberation fonts
+        # Retries and a per-request timeout so a slow Ubuntu mirror doesn't stall the job.
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libreoffice-writer fonts-liberation
+          sudo apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout=30
+          sudo apt-get install -y --no-install-recommends -o Acquire::Retries=3 -o Acquire::http::Timeout=30 libreoffice-writer fonts-liberation
 
       - name: Check Arial resolves to Liberation Sans
         run: |

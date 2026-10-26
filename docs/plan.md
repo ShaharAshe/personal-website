@@ -285,6 +285,10 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
           Pixel-identical to the original: same Liberation Sans fonts, identical text.
     - [x] Both phone-safety checks pass in the CI log ("No phone number in 57 tracked files.",
           "dist/resume.pdf contains the phone number."). The phone never appears anywhere in the log.
+  - Follow-up (2026-10-26, CI robustness): a run hung 6+ minutes in the LibreOffice install step on a
+    slow Ubuntu mirror (normally ~25 s; whole run ~1 min). The `build` job now has
+    `timeout-minutes: 15` (default is 6 hours), and both `apt-get update` and `apt-get install` use
+    `-o Acquire::Retries=3 -o Acquire::http::Timeout=30`. Nothing else in the workflow changed.
 
 ## Milestone 2 — MVP (design-doc §16 Phase 1, remainder)
 
