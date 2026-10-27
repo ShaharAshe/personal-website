@@ -15,7 +15,9 @@ stays an accurate record of what's done and what's next.
 ## Stack
 
 - Astro + TypeScript (strict) + Tailwind CSS
-- React only for interactive islands (`src/components/islands/`). Everything else is `.astro`, zero JS by default
+- Interactivity: prefer an `.astro` component with a small `<script>` for simple interactions (theme
+  toggle, copy button). React islands (`src/components/islands/`) only for complex interaction, such
+  as the contact form. Everything else ships zero JS.
 - Content: `src/data/resume.yaml` (resume), GitHub API at build time (project cards), MDX in `src/content/` (deep-dive pages)
 - Hosting: Cloudflare (static assets + one function for the contact form, phase 2)
 - CI/CD: GitHub Actions builds everything (including the resume PDF via LibreOffice) and deploys to Cloudflare
@@ -107,6 +109,8 @@ scripts/github/             GitHub fetcher
   cmd-compatible: use a separate `-m` flag per paragraph for multi-line commit messages (e.g.
   `git commit -m "feat: subject" -m "Body line one." -m "Body line two."`), never a bash heredoc or
   `$(...)` command substitution.
+- Proposed commit messages never include a `Co-Authored-By` line or any other AI attribution trailer.
+  The message ends with the last `-m` paragraph that describes the change.
 - If the design doc is wrong or outdated, say so and propose an edit to it rather than silently diverging.
 
 ## Definition of done
