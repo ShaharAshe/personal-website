@@ -101,7 +101,7 @@ Reality check performed before this plan:
 `@astrojs/mdx`, `@astrojs/sitemap`, `pdf-parse` (replaced `pdf-lib` in Task 1.2), `@types/js-yaml`
 (dev), ~~`tsx`~~ (dropped in Task 1.2: Node 22 runs the `.ts` scripts natively), `eslint` + `typescript-eslint` +
 `eslint-plugin-astro`, `prettier` + `prettier-plugin-astro` + `prettier-plugin-tailwindcss`,
-`@astrojs/check` (added in Task 1.4, needed by `astro check`), `wrangler` (dev, added in Task 1.5 for the Cloudflare deploy), `@playwright/test` (dev, required by CLAUDE.md's screenshot workflow). `@astrojs/cloudflare` is added
+`@astrojs/check` (added in Task 1.4, needed by `astro check`), `wrangler` (dev, added in Task 1.5 for the Cloudflare deploy), `@playwright/test` (dev, added in Task 2.3a for e2e tests and review screenshots). `@astrojs/cloudflare` is added
 later, only in Milestone 3 when the contact form needs a server-rendered route.
 
 ---
@@ -429,6 +429,50 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       `animation-name` is `none`; at 375 and 1280 in both themes: no horizontal scroll and a 40×40
       button. Screenshots: 375/1280 × dark/light, plus the toggle focused (1280 dark, 1280 light, 375
       light).
+
+- [x] **2.3a Playwright end-to-end tests** — Turn the one-off browser checks of 2.2/2.3 into permanent
+  Playwright tests, run them in CI before deploy, and add a repeatable review-screenshot command.
+  **From now on, every UI task includes e2e tests** for whatever needs a real browser.
+  - Files: `playwright.config.ts`, `tests/e2e/{theme-toggle,base-layout}.spec.ts`, `tests/e2e/helpers.ts`,
+    `tests/e2e/review-screenshots.ts`, `package.json`, `.gitignore`, `.prettierignore`,
+    `eslint.config.mjs`, `tsconfig.json`, `.github/workflows/deploy.yml`, `CLAUDE.md`, design-doc
+    §13.3/§14/§17.2.
+  - Depends on: 2.3.
+  - Done (2026-10-27). Notes / deviations:
+    - Dependency: `@playwright/test` `^1.64.1` (lockfile: 1.64.1; pulls `playwright` + `playwright-core`,
+      ~19 MB unpacked). Locally the tests use the installed Edge (`channel: 'msedge'`), so nothing is
+      downloaded; CI runs `npx playwright install --with-deps --only-shell chromium`.
+    - Scripts: `test:e2e` (project `e2e`, `tests/e2e/*.spec.ts`) and `screenshots` (project `screenshots`,
+      `review-screenshots.ts` → `screenshots/{375,1280}-{dark,light}[-toggle-focused].png`, gitignored,
+      no pixel comparisons). Neither is part of `npm run check` (needs a browser); CI runs `test:e2e`
+      as its own step. `npm test`'s glob (`*.test.ts`) doesn't match `*.spec.ts`.
+    - Server: `require-build.ts && astro preview --port 4322`, reused locally if already running.
+      **Port 4322, not 4321**, so a running `npm run dev` is never mistaken for the build. A missing
+      `dist/` fails with "dist/ not found: run npm run build first."
+    - **`workers: 1`**: measured locally, 1 worker runs the suite in ~11–16 s, 4 workers in ~31 s
+      (parallel Edge instances slow each other). Retries 0.
+    - **Finding (test-side, not a bug):** under parallel load, a headless page sometimes got no rendering
+      update after `emulateMedia`, so the matchMedia `change` event (dispatched during "update the
+      rendering") never reached the toggle; the CSS still followed the OS. Probes showed the event always
+      arrives once the page renders a frame. `changeOsTheme()` in `tests/e2e/helpers.ts` waits for one
+      animation frame after the media change (an event, not a sleep). Stable: 12/12 alone, 57/57 over 3
+      parallel full runs.
+    - 19 tests. Theme toggle: first visit follows the OS (×2); live OS change; click switches + saves
+      under `THEME_STORAGE_KEY` + icon/label (×2); reload keeps the saved theme over the opposite OS,
+      with `data-theme` already set when `<body>` is inserted (no flash) and no animation on load (×2);
+      keyboard (Tab order skip link → 4 links → toggle, Enter and Space, focus ring); reduced motion
+      (`animation-name: none`) + a no-preference control; 375/1280 × dark/light: no horizontal scroll,
+      toggle 40×40. BaseLayout: skip link (off-screen until focused, first Tab stop, Enter focuses
+      `<main>`); nav link focus rings; each self-hosted font (family read from `--font-inter` /
+      `--font-jetbrains-mono`, loaded with `document.fonts.load`, status `loaded`, independent of page
+      content); `/resume.pdf` 200 `application/pdf`.
+    - Break-on-purpose check: with `saveTheme(...)` commented out in `ThemeToggle.astro`, 4 tests failed
+      (both "click saves" and both "reload keeps" tests: storage `null`); restored, all pass.
+    - CI: after `npm run check`: apt retry config (`/etc/apt/apt.conf.d/80-retries`, same values as the
+      LibreOffice step) → install the headless shell → `npm run test:e2e` → on failure upload
+      `playwright-report/` (7 days). Deploy only after it passes. Expected extra time ~35–60 s.
+    - `tsconfig.json` excludes `playwright-report`/`test-results` (Astro's tsconfig has `allowJs`).
+  - **Verify after push:** the CI run passes the e2e step and logs its time; the deploy still runs.
 
 - [ ] **2.4 Content collections for resume + projects + MDX** — `resume` as a single-entry collection (or validated module) over `resume.yaml`; `projects.json` read at build time; `projects`/`case-studies` MDX collections with schemas.
   - Files: `src/content.config.ts`.

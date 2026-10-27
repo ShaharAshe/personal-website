@@ -7,3 +7,6 @@ package-lock.json
 dist/
 .generated/
 .astro/
+playwright-report/
+test-results/
+screenshots/

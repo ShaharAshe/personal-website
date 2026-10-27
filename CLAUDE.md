@@ -34,6 +34,9 @@ These npm scripts must exist and keep working (create them during scaffolding):
 - `npm run check`: `astro check` + lint + `npm test` + the site checks (see "Definition of done")
 - `npm run build`: `cv` + `projects` + `astro build`
 - `npm run preview`: serve the production build locally
+- `npm run test:e2e`: Playwright end-to-end tests (`tests/e2e/*.spec.ts`) against the existing build
+  (`astro preview` on port 4322); locally uses the installed Edge, CI uses Playwright's Chromium
+- `npm run screenshots`: review screenshots (375px/1280px, dark/light) into `screenshots/` (gitignored)
 
 ## Directory map
 
@@ -47,6 +50,7 @@ src/components/             .astro components; islands/ for React
 src/styles/global.css       design tokens (CSS custom properties)
 scripts/cv/                 resume generator (create_cv.js) + PDF page check
 tests/                      node:test tests (npm test); fixtures/ holds test inputs and golden files
+tests/e2e/                  Playwright tests (npm run test:e2e) + review-screenshots.ts (npm run screenshots)
 scripts/github/             GitHub fetcher
 .github/workflows/          deploy.yml (push, daily schedule, manual)
 ```
@@ -100,8 +104,10 @@ scripts/github/             GitHub fetcher
 - For anything touching more than a few files, propose a short plan first and wait for approval.
 - New logic comes with automated tests (`node:test`, in `tests/`, run by `npm test`). Verify behavior
   through tests kept in the repo, not throwaway scripts, so the check keeps running after the task.
-- After UI changes, take Playwright screenshots at 375px and 1280px, in both dark and light themes,
-  and look at them before saying the task is done.
+- UI behavior is covered by Playwright end-to-end tests in `tests/e2e/` (`npm run test:e2e`), for what
+  needs a real browser only (what the built HTML shows is checked by `npm test`). Before saying a UI
+  task is done, run `npm run screenshots` (375px and 1280px, both themes, into `screenshots/`) and
+  look at them.
 - Never run `git commit`, `git push`, or `git add` — the user makes all commits themselves. At the end
   of each task, propose a Conventional Commits message (`feat:`, `fix:`, `chore:`, `docs:`) and the
   exact git commands to run, then stop. Read-only git commands (`status`, `diff`, `log`) are fine.
@@ -119,6 +125,7 @@ A task is done only when all of these pass:
 
 - `npm run build` succeeds
 - `npm run check` succeeds (types, lint, and site checks)
+- `npm run test:e2e` passes (for UI changes)
 - Site checks: resume PDF is one page; phone number not found anywhere in `dist/`;
   every featured/portfolio repo has a description
 - Screenshots reviewed (for UI changes)

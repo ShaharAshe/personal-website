@@ -566,7 +566,9 @@ education:
 6. Build של Astro, והעתקת ה-PDF ל-`dist/resume.pdf` (`publish-pdf.ts`). `_headers` מגיש אותו
    `inline` עם שם הקובץ `Shahar_Asher_Resume.pdf`
 7. בדיקות: lint, type-check, שהטלפון לא מופיע בקבצי האתר
-8. **רק על `main`** (push, schedule, הרצה ידנית): Deploy ל-Cloudflare
+8. בדיקות end-to-end בדפדפן אמיתי (Playwright, `npm run test:e2e`, Chromium headless) מול ה-build
+   עצמו. אם הן נכשלות אין deploy, וה-report נשמר כ-artifact ל-7 ימים
+9. **רק על `main`** (push, schedule, הרצה ידנית): Deploy ל-Cloudflare
 
 **Pull Requests:** מריצים build ו-checks בלבד (כולל `fc-match`), בלי deploy ובלי preview deployment,
 בשלב הזה. push ל-branch אחר לא מריץ את ה-workflow בעצמו (כדי ש-PR לא ירוץ פעמיים); ה-PR מריץ אותו.
@@ -632,6 +634,7 @@ portfolio/
 │   └── styles/
 │       └── global.css               # Design tokens
 ├── tests/                           # בדיקות node:test (npm test), fixtures/ לקבצי בדיקה
+│   └── e2e/                         # בדיקות Playwright בדפדפן (npm run test:e2e)
 └── .github/workflows/
     └── deploy.yml
 ```
@@ -705,7 +708,10 @@ portfolio/
 ### 17.2 שיטת עבודה
 1. **משימה אחת בכל פעם**, לפי ה-Roadmap.
 2. **Plan mode** לפני משימות גדולות.
-3. **אימות ויזואלי:** screenshots (Playwright) בדסקטופ ובנייד, בשני מצבי הצבע.
+3. **בדיקות UI ואימות ויזואלי:** התנהגות שצריכה דפדפן אמיתי (מקלדת, focus, שמירת theme, פונטים)
+   נבדקת בבדיקות Playwright קבועות ב-`tests/e2e/`, שרצות גם ב-CI לפני deploy. בנוסף, screenshots
+   לסקירה (`npm run screenshots`) ב-375px וב-1280px, בשני מצבי הצבע, נבדקים בעין. אין השוואת
+   screenshots אוטומטית: רינדור הפונטים שונה בין Windows ל-Linux.
 4. **Commit אחרי כל שלב** שעובד.
 5. **התוכן שלך:** Claude Code יכול לעזור לנסח, אבל הטקסט הסופי צריך להישמע כמוך.
 

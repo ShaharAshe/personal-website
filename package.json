@@ -11,6 +11,8 @@
     "projects": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env scripts/github/fetch-projects.ts",
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"tests/**/*.test.ts\"",
     "test:update-golden": "node -e \"process.env.UPDATE_GOLDEN = '1'; const r = require('node:child_process').spawnSync('npm', ['test'], { stdio: 'inherit', shell: true }); process.exit(r.status ?? 1);\"",
+    "test:e2e": "playwright test --project=e2e",
+    "screenshots": "playwright test --project=screenshots",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -30,6 +32,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.11",
+    "@playwright/test": "^1.64.1",
     "@types/js-yaml": "^4.0.9",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
