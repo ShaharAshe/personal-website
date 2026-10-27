@@ -1,5 +1,7 @@
-// Theme storage contract, shared by the no-flash script and the theme toggle (Task 2.3). This file is
-// the only place the storage key and the accepted values are written.
+// Theme storage contract, shared by the no-flash script and the theme toggle
+// (src/components/ThemeToggle.astro). This file is the only place the storage key and the accepted
+// values are written. The toggle's logic lives here as pure functions so tests can run it without a
+// browser; the component only wires them to the DOM.
 //
 // BaseLayout inlines themeInitScript in <head> (is:inline, before any stylesheet), so it runs before
 // first paint: a saved "light" or "dark" sets <html data-theme>. Nothing saved, any other value, or
@@ -24,3 +26,38 @@ export const themeInitScript = `(function () {
     // Storage blocked: follow the OS setting.
   }
 })();`;
+
+export function isTheme(value: unknown): value is Theme {
+  return (THEMES as readonly unknown[]).includes(value);
+}
+
+/**
+ * The theme on screen: <html data-theme> if it holds a valid theme, otherwise the OS one, matching
+ * global.css (no data-theme and no light preference reported = dark).
+ */
+export function currentTheme(dataTheme: string | undefined, osPrefersLight: boolean): Theme {
+  if (isTheme(dataTheme)) return dataTheme;
+  return osPrefersLight ? 'light' : 'dark';
+}
+
+export function nextTheme(current: Theme): Theme {
+  return current === 'light' ? 'dark' : 'light';
+}
+
+/** The toggle's aria-label: what a click will do, not the current state. */
+export function toggleLabel(current: Theme): string {
+  return `Switch to ${nextTheme(current)} theme`;
+}
+
+/**
+ * Saves the choice. Storage is passed as a getter because merely reading `localStorage` can throw
+ * when the browser blocks storage; that, and a throwing setItem, are ignored: the theme still applies
+ * for this page view.
+ */
+export function saveTheme(theme: Theme, getStorage: () => Pick<Storage, 'setItem'>): void {
+  try {
+    getStorage().setItem(THEME_STORAGE_KEY, theme);
+  } catch {
+    // Storage blocked or full: the choice just isn't remembered.
+  }
+}

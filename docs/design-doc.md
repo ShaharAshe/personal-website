@@ -94,7 +94,7 @@
 | Framework | **Astro** | אתר תוכן סטטי ומהיר, אפס JS כברירת מחדל, MDX מובנה |
 | שפה | **TypeScript** | type safety לנתונים (schema ל-YAML ולנתוני GitHub) |
 | עיצוב | **Tailwind CSS** | מהיר לפיתוח, עקבי, Claude Code שולט בו היטב |
-| Interactive islands | **React** | רק לרכיבים אינטראקטיביים (מתג Theme, כפתור Copy, טופס) |
+| Interactive islands | **React** | רק לאינטראקציה מורכבת (טופס יצירת קשר). אינטראקציות פשוטות (מתג Theme, כנראה גם כפתור Copy) הן רכיבי Astro עם סקריפט קטן: React היה מוסיף 45–60KB של JS לכל עמוד בשביל כפתור אחד, ושובר את יעד ה-30KB |
 | אנימציות | **CSS**, ו-Motion רק אם יידרש | ראה [§10](#10-אנימציות-וגרפיקה) |
 | תוכן | **YAML** (קורות חיים) + **MDX** (עמודי עומק) + **GitHub API** (כרטיסי פרויקטים) | |
 | אחסון | **Cloudflare** | ראה [§13](#13-אחסון-דומיין-ו-cicd) |
@@ -457,7 +457,7 @@ education:
 | מעבר בין עמודים | View Transitions | מובנה ב-Astro |
 | כרטיסי פרויקטים | Hover: הרמה קלה + border כחול | CSS |
 | כניסת סקשנים | Fade + slide קטן (8–16px), **פעם אחת** | CSS + IntersectionObserver |
-| מתג Theme | מעבר צבעים חלק | CSS transitions |
+| מתג Theme | הצבעים מתחלפים מיד (בלי מעבר, כי מותר להנפיש רק `transform` ו-`opacity`); רק האייקון החדש מסתובב ונכנס ב-fade (200ms), ורק אחרי לחיצה, לא בטעינה | CSS animation |
 | כפתור Copy | שינוי ל-"Copied ✓" | CSS |
 
 ### 10.2 מה לא
@@ -615,8 +615,8 @@ portfolio/
 │   │   ├── Skills.astro
 │   │   ├── Contact.astro
 │   │   ├── ArchitectureDiagram.astro
+│   │   ├── ThemeToggle.astro        # רכיב Astro + סקריפט קטן, לא island
 │   │   └── islands/
-│   │       ├── ThemeToggle.tsx
 │   │       ├── CopyEmail.tsx
 │   │       └── ContactForm.tsx      # שלב 2
 │   ├── layouts/

@@ -1,0 +1,112 @@
+---
+// Dark/light toggle for the nav. An Astro component with a small script, not a React island: React
+// would ship ~45-60KB of JS on every page for one button. Logic lives in src/lib/theme.ts.
+//
+// Both icons are in the markup and CSS shows the one for the theme a click switches to (sun in dark,
+// moon in light), resolved like the color tokens, so the icon is right before any JS runs. The
+// build-time aria-label is neutral; the script replaces it with "Switch to light/dark theme".
+---
+
+<button
+  type="button"
+  data-theme-toggle
+  aria-label="Switch color theme"
+  class="inline-flex size-10 shrink-0 items-center justify-center rounded-md border border-border text-text-muted hover:text-text"
+>
+  <svg
+    data-theme-icon="light"
+    aria-hidden="true"
+    focusable="false"
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <circle cx="12" cy="12" r="4"></circle>
+    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
+  </svg>
+  <svg
+    data-theme-icon="dark"
+    aria-hidden="true"
+    focusable="false"
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+  </svg>
+</button>
+
+<style>
+  /* Dark (also the default with no OS preference): offer light. */
+  [data-theme-icon='dark'] {
+    display: none;
+  }
+
+  :global(:root[data-theme='light']) [data-theme-icon='light'] {
+    display: none;
+  }
+  :global(:root[data-theme='light']) [data-theme-icon='dark'] {
+    display: block;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :global(:root:not([data-theme])) [data-theme-icon='light'] {
+      display: none;
+    }
+    :global(:root:not([data-theme])) [data-theme-icon='dark'] {
+      display: block;
+    }
+  }
+
+  /*
+   * Colors switch instantly; only the new icon turns in. data-animate is set on the first click, so
+   * nothing plays on page load. Each click displays the other <svg>, which restarts the animation.
+   * No rule at all under prefers-reduced-motion: reduce.
+   */
+  @media (prefers-reduced-motion: no-preference) {
+    [data-animate] svg {
+      animation: theme-icon-in 200ms ease-out;
+    }
+  }
+
+  @keyframes theme-icon-in {
+    from {
+      opacity: 0;
+      transform: rotate(-90deg) scale(0.8);
+    }
+  }
+</style>
+
+<script>
+  import { currentTheme, nextTheme, saveTheme, toggleLabel } from '../lib/theme';
+
+  const root = document.documentElement;
+  const osLight = matchMedia('(prefers-color-scheme: light)');
+  const read = () => currentTheme(root.dataset.theme, osLight.matches);
+
+  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-theme-toggle]')) {
+    const updateLabel = () => button.setAttribute('aria-label', toggleLabel(read()));
+    updateLabel();
+
+    button.addEventListener('click', () => {
+      const next = nextTheme(read());
+      root.dataset.theme = next;
+      saveTheme(next, () => localStorage);
+      updateLabel();
+      button.dataset.animate = '';
+    });
+
+    // While nothing is saved the page follows the OS live (CSS); keep the label in step.
+    osLight.addEventListener('change', updateLabel);
+  }
+</script>

@@ -378,14 +378,57 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       dark / OS light (follows the OS); the skip link focused (1280 dark, 375 light). Inter and
       JetBrains Mono render; the skip link is hidden until focused.
 
-- [ ] **2.3 ThemeToggle island** — React island, `client:visible`, flips `data-theme` + persists choice.
-  - Files: `src/components/islands/ThemeToggle.tsx`.
+- [x] **2.3 ThemeToggle (Astro component)** — Astro component with a small script, flips `data-theme` + persists choice.
+  - Files: `src/components/ThemeToggle.astro`, `src/lib/theme.ts`.
   - Verify: Toggle works, persists across reload, respects `prefers-reduced-motion`.
   - Depends on: 2.2.
   - Note (from 2.2): import `THEME_STORAGE_KEY`/`THEMES` from `src/lib/theme.ts` (never retype them; the
     no-flash script `themeInitScript` is built from the same constants). Write `"light"`/`"dark"` under
     the key (try/catch) and set `document.documentElement.dataset.theme`. With no `data-theme` yet (first visit), the current
     theme is the OS one: read it from `matchMedia('(prefers-color-scheme: light)')`.
+  - Done (2026-10-27). Notes / deviations:
+    - **Not a React island** (user decision): React would ship ~45–60KB of JS on every page for one
+      button, which breaks "homepage JS < 30KB gzipped". It's `src/components/ThemeToggle.astro` with a
+      processed `<script>`. Updated: design-doc §3.1 and §14 (tree), and `.claude/rules/ui.md` (that
+      bullet replaced with the user's principle: an Astro component + small script for simple
+      interactions, React islands only for complex ones like the contact form).
+    - **Homepage JS: 0.56 KB gzipped in total** (the inline no-flash script + the toggle script). No
+      React runtime ships, since the page has no islands.
+    - Logic lives in `src/lib/theme.ts` as pure functions: `isTheme`, `currentTheme(dataTheme,
+      osPrefersLight)`, `nextTheme`, `toggleLabel` ("Switch to light/dark theme"), and
+      `saveTheme(theme, getStorage)` (try/catch around both the `localStorage` getter and `setItem`).
+      The component only wires them to the DOM: it sets the label on load, on click (sets `data-theme`,
+      saves, updates the label) and on OS `change` (while nothing is saved, the page follows the OS live).
+    - **Icon = the target theme** (user choice): sun in dark, moon in light. Both SVGs are in the
+      markup, and the component's scoped CSS picks one with the same resolution as the tokens
+      (`data-theme`, else `prefers-color-scheme`), so the icon is right before any JS runs (checked with
+      JS disabled). The build-time `aria-label` is a neutral "Switch color theme", replaced by the exact
+      one when the script runs.
+    - **Motion** (user choice, design-doc §10.1 updated: it said "smooth color transition", which
+      clashes with the transform/opacity-only rule): colors switch instantly. Only the new icon
+      rotates and fades in (200ms, ease-out). It's gated by `data-animate`, which is set on the first
+      click, so nothing plays on load, and it's defined only inside
+      `@media (prefers-reduced-motion: no-preference)`.
+    - **Nav at 375px** (added on approval): the toggle sits inside `<nav aria-label="Main">` after the
+      links (last Tab stop in the header), `size-10 shrink-0` (40×40). With the 2.2 gaps, "Contact"
+      wrapped to a second line at 375px, so the gaps are now `gap-4`/`gap-x-4` below `sm` and
+      `gap-6`/`gap-x-6` from `sm` up. Everything fits on one line at 375px, with no horizontal scroll.
+      `min-w-0` + `flex-wrap` on the `<ul>` keep anything narrower wrapping instead of overflowing. No
+      hamburger menu needed now (see the open item in 2.10).
+    - Tests: `tests/theme-toggle.test.ts`. Pure logic: data-theme wins over the OS; no or invalid
+      data-theme → the OS theme; next theme from light/dark and from the OS light/dark; labels;
+      `saveTheme` writes under the key and doesn't throw when `setItem` or the storage getter throws.
+      On `dist/index.html`: a `<button type="button" data-theme-toggle aria-label="…">` inside the main
+      nav; both icons present with `aria-hidden`; the icon animation is only under
+      `prefers-reduced-motion: no-preference`; **homepage JS < 30KB gzipped** (prints the size).
+    - Browser check: headless Edge (temporary `--user-data-dir`, CDP, no Playwright), against
+      `astro preview`. Verified: first visit follows the OS (icon + label, including a live OS change);
+      click flips, saves, and updates icon and label; reload keeps the saved choice over the opposite OS
+      setting, with no animation on load; with JS disabled, CSS alone shows the right icon; Tab ×6
+      (skip link, 4 links) reaches the toggle, and Enter and Space both switch it; under reduced motion
+      `animation-name` is `none`; at 375 and 1280 in both themes: no horizontal scroll and a 40×40
+      button. Screenshots: 375/1280 × dark/light, plus the toggle focused (1280 dark, 1280 light, 375
+      light).
 
 - [ ] **2.4 Content collections for resume + projects + MDX** — `resume` as a single-entry collection (or validated module) over `resume.yaml`; `projects.json` read at build time; `projects`/`case-studies` MDX collections with schemas.
   - Files: `src/content.config.ts`.
@@ -420,6 +463,11 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
 - [ ] **2.10 Footer + homepage assembly** — Wire Hero/Experience/Projects/Skills/Contact/Footer into `index.astro`.
   - Files: `src/pages/index.astro`.
   - Note (from 2.1): this replaces the temporary design-token swatch page currently in `index.astro`.
+  - Open item (from 2.3): at 375px the nav (4 links + theme toggle) fits on one line with only ~6px
+    to spare. If a home link / name is added to the header (2.4/2.5) or a link is added, it won't fit:
+    the links then wrap to a second line (no overflow, but it looks crowded). Decide here whether
+    that's acceptable or whether the nav needs a small-screen pattern (e.g. a disclosure/hamburger
+    menu, as an Astro component with a small script).
   - Depends on: 2.5–2.9.
 
 - [ ] **2.11 `/resume` page** — Full resume in site styling, Download PDF button at top, print stylesheet. Reuses the same `CopyEmail` island as Contact (2.9) for the email — never plain text.
@@ -447,6 +495,12 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
     `themeInitScript`, so changing the script or the constants without updating the CSP fails). Astro's `<Font />` also emits **inline `<style>`** blocks (`@font-face`)
     → `style-src` needs their hashes or `'unsafe-inline'`; same for any small CSS Astro inlines. Fonts
     are self-hosted, so `font-src 'self'` is enough.
+  - Note (from 2.3): Astro **inlines** the theme toggle's processed script into the HTML as
+    `<script type="module">…</script>` (it's below Vite's 4KB inline limit), not as a `/_astro/*.js`
+    file. So `script-src` needs a hash for it too, and that hash changes with every edit to
+    `ThemeToggle.astro`'s script or `src/lib/theme.ts`. Options: compute the hashes from `dist/` at
+    build time, or set `vite.build.assetsInlineLimit: 0` (or similar) so the script is an external
+    file covered by `'self'`. Pick one here.
 
 - [ ] **2.15 Cloudflare Web Analytics** — Beacon script in `BaseLayout`.
   - Files: `src/layouts/BaseLayout.astro`.

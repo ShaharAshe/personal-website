@@ -3,7 +3,8 @@
  *
  * Theme resolution:
  *   1. <html data-theme="dark|light"> wins: the visitor's saved choice, applied before first paint by
- *      themeInitScript (src/lib/theme.ts, inlined by BaseLayout), written by the theme toggle (Task 2.3).
+ *      themeInitScript (src/lib/theme.ts, inlined by BaseLayout), written by the theme toggle
+ *      (src/components/ThemeToggle.astro).
  *   2. No data-theme (nothing saved): follow prefers-color-scheme.
  *   3. No data-theme and no OS preference reported: dark.
  *
