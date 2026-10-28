@@ -123,6 +123,9 @@ scripts/github/             GitHub fetcher
 - Proposed commit messages never include a `Co-Authored-By` line or any other AI attribution trailer.
   The message ends with the last `-m` paragraph that describes the change.
 - If the design doc is wrong or outdated, say so and propose an edit to it rather than silently diverging.
+- A task that changes commands, setup, prerequisites or architecture also updates `README.md` in the
+  same task. `tests/readme.test.ts` fails if an npm script is missing from it or it names one that
+  doesn't exist.
 
 ## Definition of done
 
@@ -131,6 +134,7 @@ A task is done only when all of these pass:
 - `npm run build` succeeds
 - `npm run check` succeeds (types, lint, and site checks)
 - `npm run test:e2e` passes (for UI changes)
+- README.md updated if commands, setup or architecture changed
 - Site checks: resume PDF is one page; phone number not found anywhere in `dist/`;
   every featured/portfolio repo has a description
 - Screenshots reviewed (for UI changes)

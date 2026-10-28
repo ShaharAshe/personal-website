@@ -522,6 +522,27 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       temporary `.mdx` → the "Add the @astrojs/mdx integration" error.
     - No e2e tests: no UI in this task. `index.astro` (swatch page) unchanged.
 
+- [x] **2.4b Project README** — `README.md` for two readers: a hiring manager opening the repo from the
+  site (once public) and the user setting the project up on a new machine. A summary that links to the
+  design doc, not a copy of it.
+  - Files: `README.md`, `CLAUDE.md`, `tests/readme.test.ts`.
+  - Depends on: 2.4.
+  - Done (2026-10-28). Notes:
+    - Sections: title + live link + work-in-progress line → Notable decisions (first, so a hiring manager
+      sees them on the first screen) → Stack → How it works (Mermaid flow + the three build steps) →
+      Running locally → Scripts (every npm script, one row each) → Testing and CI → Project docs → Roadmap.
+    - Every claim checked against the code, not the docs. E.g. without `CV_PHONE` locally, `build` warns
+      and omits the phone and `check`'s phone checks warn and skip (in CI both fail); setting `CV_PHONE`
+      after such a build fails `pdf-contains-phone` until the next build. No live numbers that go stale
+      (the JS budget is stated, not the current size).
+    - Staleness guards: `CLAUDE.md` "How to work" rule (a task changing commands, setup, prerequisites or
+      architecture updates the README) + a "Definition of done" item. `tests/readme.test.ts`: every
+      `package.json` script appears as `npm run <name>` (or `npm <name>`), and every `npm run <name>` in
+      the README is a real script; failures name the scripts.
+    - Break-on-purpose: with the `test:update-golden` row removed, the test failed with "README.md doesn't
+      mention these npm scripts: test:update-golden"; restored, both pass.
+    - No email, phone or secret values in the README (checked by script, nothing printed).
+
 - [ ] **2.5 Hero** — Name, title, one-line summary (from `basics.summary`, trimmed), CTAs (Download Resume primary, View Projects secondary), social icons. No phone.
   - Files: `src/components/Hero.astro`.
   - Verify: Download Resume links to `/resume.pdf`; phone never rendered.
@@ -637,6 +658,8 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
 
 - [ ] **4.3 Final QA** — Lighthouse 95+ all categories, every section at 375px, WCAG AA contrast both themes, every link resolves, full keyboard pass.
   - Before launch: remove `X-Robots-Tag: noindex` from `public/_headers` (added in 1.5).
+  - README (from 2.4b): add a screenshot of the site and the custom-domain link; replace the
+    `workers.dev` link and the work-in-progress line.
   - When the repo becomes public: enable branch protection on `main` — block force pushes and
     deletion, and require the `build` check to pass before merging. It waits until launch because on a
     private repo with a free GitHub plan these rules aren't enforced.
