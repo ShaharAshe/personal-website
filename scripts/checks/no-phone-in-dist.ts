@@ -6,9 +6,8 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { listSiteFiles } from './dist-files.ts';
 import { findPhone, phonePatternForCli } from './phone.ts';
-
-const SITE_EXTENSIONS = new Set(['.html', '.js', '.json', '.xml', '.txt']);
 
 const distDir = process.argv[2] || path.join(import.meta.dirname, '..', '..', 'dist');
 
@@ -20,10 +19,7 @@ if (!fs.existsSync(distDir)) {
   process.exit(1);
 }
 
-const files = fs
-  .readdirSync(distDir, { recursive: true, encoding: 'utf8' })
-  .filter((file) => SITE_EXTENSIONS.has(path.extname(file).toLowerCase()))
-  .filter((file) => fs.statSync(path.join(distDir, file)).isFile());
+const files = listSiteFiles(distDir);
 
 const hits = files.flatMap((file) =>
   findPhone(fs.readFileSync(path.join(distDir, file), 'utf8'), pattern).map(

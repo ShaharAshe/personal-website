@@ -19,7 +19,8 @@ paths:
   form (task 3.3). Load it only where it's used, with `client:visible` or `client:idle`.
 - Keep the "homepage JS < 30KB gzipped" budget from CLAUDE.md in mind when choosing.
 - Email address: assemble it in the browser so it isn't plain text in the HTML. Copy button shows
-  "Copied" feedback. Keep a `mailto:` link as a secondary option.
+  "Copied" feedback. Keep a `mailto:` link as a secondary option, also assembled in the browser from
+  `getEmailParts()` (`src/lib/resume.ts`), never written into the HTML.
 - Accessibility: semantic landmarks, one `<h1>` per page, labels on every input, `aria-label` on
   icon-only buttons, visible `:focus-visible` styles.
 - Images: AVIF/WebP via Astro's image tools, explicit width/height, lazy loading below the fold.

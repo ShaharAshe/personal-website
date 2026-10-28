@@ -1,6 +1,6 @@
 // Schema for src/data/resume.yaml (JSON Resume structure + a `featured` flag on work highlights).
 // Imports zod from `astro/zod`, not `astro:content`, so it also works outside the Astro build
-// (scripts/cv/validate-resume.ts). src/content.config.ts reuses it.
+// (scripts/cv/validate-resume.ts). src/lib/resume.ts reuses it for the site.
 //
 // Objects are strict: an unknown field fails validation. If you add a field to the YAML, add it here.
 // There is deliberately no `phone` field — the phone comes only from the CV_PHONE env var.

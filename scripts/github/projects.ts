@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import yaml from 'js-yaml';
 import { z } from 'astro/zod';
 import { RESUME_YAML } from '../cv/paths.js';
+import type { PracticeLink, Project, ProjectsData } from '../../src/lib/projects.ts';
 
 export const DEFAULT_API_URL = 'https://api.github.com';
 
@@ -100,32 +101,9 @@ const languagesSchema = z.record(z.string(), z.number());
 export type GitHubRepo = z.infer<typeof repoSchema>;
 export type Languages = z.infer<typeof languagesSchema>;
 
-export interface Project {
-  name: string;
-  title: string;
-  description: string;
-  url: string;
-  homepage: string | null;
-  languages: string[];
-  topics: string[];
-  stars: number;
-  pushedAt: string | null;
-}
-
-// Practice repos are shown as links only, so they need less (and a description is optional).
-export interface PracticeLink {
-  name: string;
-  title: string;
-  description: string | null;
-  url: string;
-  pushedAt: string | null;
-}
-
-export interface ProjectsData {
-  featured: Project[];
-  portfolio: Project[];
-  practice: PracticeLink[];
-}
+// The output types come from the projects.json schema in src/lib/projects.ts (the site's reader), so
+// the writer and the reader can't drift apart.
+export type { Project, PracticeLink, ProjectsData };
 
 export type RepoGroups = Record<Tier, GitHubRepo[]>;
 

@@ -1,6 +1,6 @@
 // Tests for the site checks in scripts/checks/ (run by npm run check). Each CLI runs as a child
-// process against temp fixtures, with a made-up phone number in CV_PHONE and CI unset, so the real
-// number never reaches a test file or test output.
+// process against temp fixtures, with a made-up phone number in CV_PHONE (and a made-up email) and CI
+// unset, so the real number and address never reach a test file or test output.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -16,6 +16,8 @@ import {
   readPhone,
   requireBuild,
 } from '../scripts/checks/phone.ts';
+import { emailPattern, findEmail } from '../scripts/checks/email.ts';
+import { getEmailParts } from '../src/lib/resume.ts';
 import { writeTextPdf } from './helpers/pdf.ts';
 
 const FAKE_LOCAL = '055-555-0199';
@@ -169,6 +171,73 @@ test('no-phone-in-source: an untracked file with the phone (like .env) passes', 
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /No phone number in 1 tracked files/);
 });
+
+// --- no-email-in-dist.ts ---
+// Uses the made-up email in tests/fixtures/resume-valid.yaml. The real-dist test reads the real
+// email only in memory to check the output never contains it.
+
+const FAKE_RESUME = path.join(import.meta.dirname, 'fixtures', 'resume-valid.yaml');
+const FAKE_EMAIL = emailPattern('jane', 'example.com');
+
+function runEmailCheck(args: string[], email = FAKE_EMAIL) {
+  const result = run('no-email-in-dist.ts', args);
+  assert.deepEqual(findEmail(result.stdout + result.stderr, email), [], 'output contains the email');
+  return result;
+}
+
+test('emailPattern matches case-insensitively and the %40-encoded form, not look-alikes', () => {
+  const lines = findEmail(
+    'jane@example.com\nJANE@Example.COM\nmailto:jane%40example.com\njane@example.org\njaneXexample.com',
+    FAKE_EMAIL,
+  );
+  assert.deepEqual(lines, [1, 2, 3]);
+});
+
+test('no-email-in-dist: an email in dist files fails, naming file:line only', () => {
+  const dist = writeFiles(tempDir(), {
+    'index.html': '<p>hello</p>',
+    'contact/index.html': '<p>Write to</p>\n<a href="mailto:Jane@Example.com">me</a>',
+    '_astro/page.js': 'const e="jane%40example.com";',
+  });
+  const result = runEmailCheck([dist, FAKE_RESUME]);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /contact[\\/]index\.html:2/);
+  assert.match(result.stderr, /page\.js:1/);
+});
+
+test('no-email-in-dist: user and domain apart (assembled in the browser) pass', () => {
+  const dist = writeFiles(tempDir(), {
+    'index.html': '<button data-user="jane" data-domain="example.com">Copy</button>',
+  });
+  const result = runEmailCheck([dist, FAKE_RESUME]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /No email address in 1 site files/);
+});
+
+test('no-email-in-dist: the resume PDF/DOCX containing the email does not trigger it', () => {
+  const dist = writeFiles(tempDir(), { 'index.html': '<p>hello</p>', 'Shahar_Asher_Resume.docx': 'jane@example.com' });
+  writeTextPdf(path.join(dist, 'Shahar_Asher_Resume.pdf'), ['jane@example.com']);
+  const result = runEmailCheck([dist, FAKE_RESUME]);
+  assert.equal(result.status, 0, result.stderr);
+});
+
+test('no-email-in-dist: a missing dist/ fails', () => {
+  const result = runEmailCheck([path.join(tempDir(), 'dist'), FAKE_RESUME]);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /run npm run build first/);
+});
+
+const realDist = path.join(import.meta.dirname, '..', 'dist');
+
+test(
+  'no-email-in-dist: passes on the real dist/',
+  { skip: fs.existsSync(realDist) ? false : 'dist/ not built (npm run build)' },
+  () => {
+    const { user, domain } = getEmailParts();
+    const result = runEmailCheck([realDist], emailPattern(user, domain));
+    assert.equal(result.status, 0, result.stderr);
+  },
+);
 
 // --- pdf-contains-phone.ts ---
 

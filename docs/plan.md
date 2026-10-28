@@ -98,7 +98,7 @@ Reality check performed before this plan:
 (beyond what `create_cv.js` already needs: `docx`, `js-yaml`)
 
 `astro`, `typescript`, `tailwindcss` + `@tailwindcss/vite`, `@astrojs/react` + `react` + `react-dom`,
-`@astrojs/mdx`, `@astrojs/sitemap`, `pdf-parse` (replaced `pdf-lib` in Task 1.2), `@types/js-yaml`
+`@astrojs/mdx` (moved from Task 2.4 to Task 3.1, where the first MDX page is written), `@astrojs/sitemap`, `pdf-parse` (replaced `pdf-lib` in Task 1.2), `@types/js-yaml`
 (dev), ~~`tsx`~~ (dropped in Task 1.2: Node 22 runs the `.ts` scripts natively), `eslint` + `typescript-eslint` +
 `eslint-plugin-astro`, `prettier` + `prettier-plugin-astro` + `prettier-plugin-tailwindcss`,
 `@astrojs/check` (added in Task 1.4, needed by `astro check`), `wrangler` (dev, added in Task 1.5 for the Cloudflare deploy), `@playwright/test` (dev, added in Task 2.3a for e2e tests and review screenshots). `@astrojs/cloudflare` is added
@@ -474,10 +474,53 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
     - `tsconfig.json` excludes `playwright-report`/`test-results` (Astro's tsconfig has `allowJs`).
   - **Verify after push:** the CI run passes the e2e step and logs its time; the deploy still runs.
 
-- [ ] **2.4 Content collections for resume + projects + MDX** — `resume` as a single-entry collection (or validated module) over `resume.yaml`; `projects.json` read at build time; `projects`/`case-studies` MDX collections with schemas.
-  - Files: `src/content.config.ts`.
-  - Verify: `astro check` catches an intentionally broken MDX frontmatter field.
+- [x] **2.4 Data layer: resume, projects, project-page frontmatter** — validated `resume` module over `resume.yaml`; `projects.json` read and validated at build time; `projects` collection with a frontmatter schema.
+  - Files: `src/lib/resume.ts`, `src/lib/projects.ts`, `src/lib/project-pages-loader.ts`,
+    `src/data/project-page.schema.ts`, `src/content.config.ts`, `scripts/checks/no-email-in-dist.ts`,
+    `scripts/checks/email.ts`, `scripts/checks/dist-files.ts`; tests `tests/resume-data.test.ts`,
+    `tests/projects-data.test.ts`, `tests/project-page-schema.test.ts`, `tests/project-pages-loader.test.ts`
+    (+ email-check tests in `tests/site-checks.test.ts`).
+  - Verify: `astro check` catches an intentionally broken frontmatter field.
   - Depends on: 1.2, 1.3, 2.1.
+  - **Done — notes / deviations:**
+    - **Resume is a validated module, not a single-entry collection.** `src/lib/resume.ts` reads
+      `resume.yaml` with `js-yaml`, validates it with the existing `resumeSchema`, and fails the build
+      with `z.prettifyError` output naming the field (e.g. `→ at work[0].position`). A plain module gives
+      typed data with no `getEntry()`/id plumbing, and node:test can import it. Exports: `getResume()`,
+      `getEmailParts()`, `RESUME_YAML`, `ResumeDataError`, types `PublicResume`, `ResumeBasics`, `EmailParts`.
+    - **Email rule:** `getResume()` returns `basics` **without** `email` (removed from the object, not only
+      the type). The only way to the address is `getEmailParts()` → `{ user, domain }`, for the CopyEmail
+      button (2.9/2.11) to assemble in the browser. New hard rule 8 in CLAUDE.md; `.claude/rules/ui.md`
+      now says the `mailto:` link is assembled in the browser too.
+    - **New site check `no-email-in-dist`** (in `npm run check:site`): the resume email must not appear in
+      `dist/**/*.{html,js,json,xml,txt}` (case-insensitive, also the `%40` form); PDF/DOCX not read;
+      prints only `file:line`. Shares `listSiteFiles`/`SITE_EXTENSIONS` (`scripts/checks/dist-files.ts`)
+      with `no-phone-in-dist`.
+    - **`scripts/cv/paths.js` can't be imported from `src/`**: tried it, `astro build` failed with
+      `__dirname is not defined in ES module scope` (Vite treats source files as ESM; the file is CommonJS for
+      `create_cv.js`). So `src/lib/resume.ts` and `src/lib/projects.ts` resolve their files from
+      `process.cwd()` (the project root for npm scripts and Astro; `import.meta.url` points at the bundled
+      chunk in a build), and a test asserts the resume path equals `RESUME_YAML`.
+    - **Projects:** `src/lib/projects.ts` holds `projectsDataSchema` (strict; non-empty description on
+      featured/portfolio) and the `Project`/`PracticeLink`/`ProjectsData` types derived from it.
+      `scripts/github/projects.ts` imports those types instead of its own interfaces. Missing file →
+      `run npm run projects first`; bad JSON or shape → `stale? run npm run projects again` + the field.
+      A test checks `fetchProjects` output parses with the schema.
+    - **`projects` collection only.** Frontmatter schema `src/data/project-page.schema.ts` (strict, all
+      optional): `title`, `description` (longer than GitHub's), `status`, `team`. No `resume` and no
+      `case-studies` collection (→ 3.2); no `@astrojs/mdx` (→ 3.1).
+    - **Astro 7.4 can't read `.mdx` without `@astrojs/mdx`**: `glob()` logs "No entry type found" and skips
+      the file, so its frontmatter isn't checked. The collection matches `**/*.{md,mdx}`; `.md` works now.
+    - **Quiet glob wrapper:** `glob()` warns on every build when the folder is missing (git keeps no empty
+      folders) or empty. The `projects` loader calls `projectPagesAction()` (`src/lib/project-pages-loader.ts`,
+      unit-tested): no pages → empty collection, no warning; pages → `glob()`; a `.mdx` page while `.mdx`
+      isn't registered → fails with "Add the @astrojs/mdx integration (task 3.1)". With no pages, `astro dev`
+      sees a newly created first page only after a restart. Build output has no new warnings vs. before.
+    - **Broken-frontmatter check** (temporary `src/content/projects/zz-broken-frontmatter.md`, deleted after):
+      `status: 123` → `astro check` exit 1, `InvalidContentEntryDataError … status: Expected type "string",
+      received "number"` with the file path; an unknown `stars:` field → `Unrecognized key: "stars"`; a
+      temporary `.mdx` → the "Add the @astrojs/mdx integration" error.
+    - No e2e tests: no UI in this task. `index.astro` (swatch page) unchanged.
 
 - [ ] **2.5 Hero** — Name, title, one-line summary (from `basics.summary`, trimmed), CTAs (Download Resume primary, View Projects secondary), social icons. No phone.
   - Files: `src/components/Hero.astro`.
@@ -502,6 +545,8 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
 - [ ] **2.9 Contact section (launch-level: no form yet)** — Email assembled client-side with Copy button (island), LinkedIn card, GitHub link.
   - Files: `src/components/Contact.astro`, `src/components/islands/CopyEmail.tsx`.
   - Verify: Email never appears as plain text in built HTML; Copy button shows "Copied ✓"; works via keyboard.
+  - Note (from 2.4): get the address only from `getEmailParts()` (`src/lib/resume.ts`). The `mailto:` link
+    must be assembled in the browser too: a `mailto:user@domain` href in the HTML fails `no-email-in-dist`.
   - Depends on: 2.2.
 
 - [ ] **2.10 Footer + homepage assembly** — Wire Hero/Experience/Projects/Skills/Contact/Footer into `index.astro`.
@@ -557,11 +602,16 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
 ## Milestone 3 — Depth (design-doc §16 Phase 2)
 
 - [ ] **3.1 Log Analytics Platform project page + architecture diagram** — User drafts TL;DR/problem/decisions/trade-offs text and architecture description; Claude Code builds `ArchitectureDiagram.astro` (SVG) and the MDX/page wiring around it.
-  - Files: `src/content/projects/log-analytics-platform.mdx`, `src/components/ArchitectureDiagram.astro`, `src/pages/projects/[slug].astro`.
+  - Files: `src/content/projects/log-analytics-platform.mdx`, `src/components/ArchitectureDiagram.astro`, `src/pages/projects/[slug].astro`, `astro.config.mjs` + `package.json` (`@astrojs/mdx`).
+  - Note (from 2.4): add `@astrojs/mdx` here (moved from 2.4) and confirm the `projects` collection now
+    reads `.mdx` and validates its frontmatter. Then check whether the quiet glob wrapper
+    (`src/lib/project-pages-loader.ts`) is still needed once the first project page exists; if not,
+    replace it with plain `glob()` in `src/content.config.ts`.
   - Depends on: 2.4; needs action item #7.
 
 - [ ] **3.2 Table-migration case study** — User drafts the narrative; Claude Code handles layout/MDX wiring.
-  - Files: `src/content/case-studies/table-migration.mdx`, `src/pages/case-studies/[slug].astro`.
+  - Files: `src/content/case-studies/table-migration.mdx`, `src/pages/case-studies/[slug].astro`, `src/content.config.ts`.
+  - Note (from 2.4): the `case-studies` collection (with its frontmatter schema) is added here, not in 2.4.
   - Verify: Content reviewed against §12 — no internal names/numbers/screenshots.
   - Depends on: 2.4; needs action item #7.
 

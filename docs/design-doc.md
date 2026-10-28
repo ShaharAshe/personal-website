@@ -325,7 +325,7 @@ education:
     highlights: ["GPA: 91.5/100"]
 ```
 
-המבנה מבוסס על הסטנדרט הפתוח [JSON Resume](https://jsonresume.org/schema), עם שדה `featured` נוסף. הקובץ מאומת מול schema (`src/data/resume.schema.ts`, zod מ-`astro/zod`) כבר בתחילת `npm run cv`, ושוב ב-Astro דרך `src/content.config.ts`, כך ששדה חסר, שגוי או לא מוכר נתפס ב-build.
+המבנה מבוסס על הסטנדרט הפתוח [JSON Resume](https://jsonresume.org/schema), עם שדה `featured` נוסף. הקובץ מאומת מול schema (`src/data/resume.schema.ts`, zod מ-`astro/zod`) כבר בתחילת `npm run cv`, ושוב ב-Astro דרך `src/lib/resume.ts` (מודול מאומת שהקומפוננטות קוראות ממנו, לא content collection), כך ששדה חסר, שגוי או לא מוכר נתפס ב-build. המודול מחזיר את `basics` בלי האימייל; האימייל זמין רק דרך `getEmailParts()` (שם משתמש ודומיין בנפרד), בשביל כפתור ה-Copy שמרכיב אותו בדפדפן (§8.3).
 
 > **הערה:** סקשן ה-Projects בקורות החיים נשאר ב-YAML ולא נמשך מ-GitHub. קורות חיים הם מסמך שאתה אוצר ידנית, והפרויקטים בו מנוסחים במיוחד בשבילו.
 
@@ -334,6 +334,8 @@ education:
 - **ה-YAML תואם ל-schema.**
 - **הטלפון לא מופיע בקבצי האתר** (`dist/**/*.{html,js,json,xml,txt}`) — בדיקה אוטומטית. הבדיקה
   לא בודקת את `Shahar_Asher_Resume.pdf`/`.docx` עצמם, שבהם הטלפון אמור להופיע.
+- **האימייל לא מופיע כטקסט רגיל בקבצי האתר** (אותם קבצים, `no-email-in-dist`) — כולל צורת `%40`
+  ובלי תלות באותיות גדולות/קטנות. גם כאן ה-PDF/DOCX לא נבדקים, והפלט מציג רק קובץ:שורה, אף פעם לא את הכתובת.
 - **נאמנות הפונט ב-PDF שמתפרסם:** ה-PDF שמתפרסם נבנה תמיד ב-CI (`ubuntu-24.04`, עם
   `libreoffice-writer` ו-`fonts-liberation`), ומאומת ש-`fc-match Arial` מצביע על Liberation Sans —
   אחרת ה-build נכשל. זה ה-PDF היחיד שמתפרסם אי-פעם. PDF שנוצר מקומית (למשל ב-Windows, עם Arial
@@ -380,8 +382,9 @@ education:
 
 ### 8.3 Email
 - כפתור **Copy** שמעתיק את הכתובת ומציג "Copied ✓".
-- `mailto:` כאפשרות נוספת בלבד (לרוב המבקרים אין תוכנת מייל מוגדרת).
-- **הגנה מבוטים:** הכתובת מורכבת רק בדפדפן ולא מופיעה כטקסט רגיל ב-HTML.
+- `mailto:` כאפשרות נוספת בלבד (לרוב המבקרים אין תוכנת מייל מוגדרת). גם הקישור הזה מורכב בדפדפן.
+- **הגנה מבוטים:** הכתובת מורכבת רק בדפדפן ולא מופיעה כטקסט רגיל ב-HTML. הקומפוננטות מקבלות אותה רק
+  מ-`getEmailParts()` ב-`src/lib/resume.ts`, ובדיקת `no-email-in-dist` מכשילה את ה-build אם היא מופיעה ב-`dist/`.
 
 ### 8.4 טופס (שלב 2)
 - **שדות:** Name, Email, Message + שדה נסתר (honeypot) נגד בוטים.
@@ -595,13 +598,18 @@ portfolio/
 │   │   ├── to-pdf.js                # הרצת soffice (Word → PDF)
 │   │   ├── check-pdf.ts             # בדיקה שה-PDF הוא עמוד אחד (pdf-parse)
 │   │   └── publish-pdf.ts           # העתקת ה-PDF ל-dist/resume.pdf (סוף ה-build)
+│   ├── checks/                      # בדיקות אתר: טלפון ואימייל לא ב-dist/ וכו' (npm run check)
 │   └── github/
 │       └── fetch-projects.ts        # משיכה מ-GitHub API → src/data/projects.json
 ├── src/
-│   ├── content.config.ts            # Schemas ל-YAML ול-MDX
+│   ├── content.config.ts            # Content collections: עמודי העומק של הפרויקטים (MDX)
+│   ├── lib/
+│   │   ├── resume.ts                # קורות חיים מאומתים לקומפוננטות (בלי אימייל; getEmailParts() בנפרד)
+│   │   └── projects.ts              # projects.json מאומת לקומפוננטות (ה-schema הוא מקור הטיפוסים)
 │   ├── data/
 │   │   ├── resume.yaml              # ⭐ המקור היחיד לקורות החיים
-│   │   ├── resume.schema.ts         # Schema ל-resume.yaml (משותף לסקריפטים ול-content.config.ts)
+│   │   ├── resume.schema.ts         # Schema ל-resume.yaml (משותף לסקריפטים ול-src/lib/resume.ts)
+│   │   ├── project-page.schema.ts   # Schema ל-frontmatter של עמודי הפרויקטים
 │   │   ├── projects.json            # נוצר ב-build (לא נשמר ב-git)
 │   │   └── site.ts                  # הגדרות כלליות (כתובת האתר, מטא-דאטה)
 │   ├── content/

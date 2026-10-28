@@ -44,6 +44,9 @@ These npm scripts must exist and keep working (create them during scaffolding):
 docs/design-doc.md          decisions and reasoning (source of truth for "why")
 src/data/resume.yaml        THE resume content. Single source of truth
 src/data/projects.json      generated at build time, gitignored
+src/lib/resume.ts           typed, validated resume for components (no email; email only via getEmailParts())
+src/lib/projects.ts         typed, validated projects.json for components (schema = source of the types)
+src/content.config.ts       content collections (projects; frontmatter schema in src/data/project-page.schema.ts)
 src/content/projects/       <repo-name>.mdx deep-dive pages, matched to GitHub repos by name
 src/content/case-studies/   case studies (e.g. table-migration.mdx)
 src/components/             .astro components; islands/ for React
@@ -71,6 +74,8 @@ scripts/github/             GitHub fetcher
 5. **No new dependencies without asking.** Say what it is, why it's needed, and its size.
 6. **Generated files are never committed:** `src/data/projects.json`, generated `.docx`/`.pdf`, `dist/`.
 7. **Secrets** only in Cloudflare / GitHub Actions secrets. Never in code or committed files.
+8. **The email never appears as plain text in built HTML.** Components get it only from
+   `getEmailParts()` (src/lib/resume.ts) for the CopyEmail button; `no-email-in-dist` enforces it.
 
 ## Design (details in design-doc §9)
 
