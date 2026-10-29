@@ -1,0 +1,12 @@
+#!/bin/sh
+# Blocks a commit whose staged content contains the CV_PHONE number (CLAUDE.md hard rule 2).
+# Installed by `npm ci` / `npm install` (the "prepare" script sets core.hooksPath to .githooks).
+# Git runs this from the top of the work tree. Never bypass it with git commit --no-verify.
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "pre-commit: node not found, so the phone check cannot run and the commit is blocked." >&2
+  echo "Install Node 22 (see .nvmrc) and commit again. Never bypass this check with git commit --no-verify." >&2
+  exit 1
+fi
+
+exec node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env scripts/checks/no-phone-in-staged.ts

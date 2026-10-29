@@ -17,10 +17,12 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check:site": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env scripts/checks/no-phone-in-dist.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env scripts/checks/no-phone-in-source.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env scripts/checks/pdf-contains-phone.ts dist/resume.pdf && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/checks/no-email-in-dist.ts",
+    "check:staged": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env scripts/checks/no-phone-in-staged.ts",
     "check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/checks/require-build.ts && astro check && npm run lint && npm test && npm run check:site && npm run format:check",
     "build": "npm run cv && npm run projects && astro build && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/cv/publish-pdf.ts",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "prepare": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/git/install-hooks.ts"
   },
   "dependencies": {
     "@astrojs/react": "^7.1.0",

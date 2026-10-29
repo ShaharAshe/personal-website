@@ -55,6 +55,8 @@ scripts/cv/                 resume generator (create_cv.js) + PDF page check
 tests/                      node:test tests (npm test); fixtures/ holds test inputs and golden files
 tests/e2e/                  Playwright tests (npm run test:e2e) + review-screenshots.ts (npm run screenshots)
 scripts/github/             GitHub fetcher
+scripts/checks/             site checks (npm run check:site) + the pre-commit phone check
+.githooks/                  pre-commit hook; npm ci points core.hooksPath here (scripts/git/install-hooks.ts)
 .github/workflows/          deploy.yml (push, daily schedule, manual)
 ```
 
@@ -66,6 +68,8 @@ scripts/github/             GitHub fetcher
    `create_cv.js` only via the `CV_PHONE` environment variable (`.env` locally, a GitHub Actions
    secret in CI) — it is not a field in `resume.yaml`. Components must not reference it. A build
    check enforces that it never appears in `dist/`.
+   A pre-commit hook (`.githooks/pre-commit`) also blocks any commit whose staged content contains it;
+   never bypass it with `--no-verify`.
 3. **Do not change the visual design in `scripts/cv/create_cv.js`** (fonts, sizes, colors, spacing,
    page setup) unless explicitly asked. Content changes go in the YAML.
 4. **Taboola confidentiality.** Describe problems, approaches and decisions in general terms only.

@@ -16,6 +16,8 @@ Source code for my portfolio site. I'm a backend engineer (Java, Spring Boot, Ka
 - **The phone number is in the PDF only: never in git, never on the site.** It comes from the `CV_PHONE`
   environment variable (`.env` locally, a GitHub Actions secret in CI). Three checks enforce this: it's
   not in any site file in `dist/`, it's not in any git-tracked file, and it *is* in the published PDF.
+  Since the repo is public, a pre-commit hook also blocks a commit whose staged content contains it, so
+  it's caught before it's ever pushed, not after.
 - **The email never appears as plain text in the built HTML**, to keep it away from scrapers. Components
   only get it as parts (`getEmailParts()`) to assemble in the browser, and a site check
   (`no-email-in-dist`) fails `npm run check`, and with it the deploy, if it leaks.
@@ -89,6 +91,14 @@ npm run preview
 
 During development, `npm run dev` starts the dev server with hot reload.
 
+**Pre-commit hook.** `npm ci` (or `npm install`) runs `npm run prepare`, which points git at the
+committed `.githooks/` folder (`git config core.hooksPath .githooks`). The hook checks the staged
+content of every added or modified file (the index, not the files on disk; binary files are skipped)
+for the `CV_PHONE` number and blocks the commit if it's there, printing only `file:line`. It needs
+`.env` with `CV_PHONE` set: without it, every commit is blocked until you create `.env` from
+`.env.example`. Never bypass it with `git commit --no-verify`. In CI, `prepare` prints a line and does
+nothing. To run the same check by hand: `npm run check:staged`.
+
 ## Scripts
 
 | Command | What it does |
@@ -104,6 +114,8 @@ During development, `npm run dev` starts the dev server with hot reload.
 | `npm run screenshots` | Review screenshots (375px and 1280px, dark and light) into `screenshots/` |
 | `npm run check` | On an existing build: `astro check` → lint → `npm test` → site checks → format check |
 | `npm run check:site` | Site checks: no phone in `dist/` or tracked files, phone present in the published PDF, no email in `dist/` |
+| `npm run check:staged` | The pre-commit check: no `CV_PHONE` number in staged changes (fails if `CV_PHONE` isn't set) |
+| `npm run prepare` | Runs on `npm ci`/`npm install`: installs the git hooks (`core.hooksPath` → `.githooks`); does nothing in CI |
 | `npm run lint` | ESLint |
 | `npm run format` | Prettier, writing the fixes |
 | `npm run format:check` | Prettier, check only |

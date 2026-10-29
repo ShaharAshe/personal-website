@@ -92,6 +92,8 @@ Reality check performed before this plan:
 | 8 | Decide contact-form email provider: Cloudflare Email Routing vs Resend; provide its secret/API key as a Cloudflare secret | Milestone 3, Task 3.3 |
 | 9 | Choose and purchase the domain via Cloudflare Registrar | Milestone 4, Task 4.1 |
 | 10 | Create a local `.env` (from `.env.example`) with your real `CV_PHONE`; add `CV_PHONE` as a GitHub Actions secret | Before Milestone 1, Task 1.2 (local), and Task 1.5 (CI secret) |
+| 11 | Before making the repo public: delete the stale remote branch `ci/deploy`; then change the repo visibility to public | After Task 2.4c (the pre-commit hook must be in place first) |
+| 12 | Right after making it public: enable secret scanning + push protection and Dependabot alerts; add branch protection on `main` (block force pushes and deletion; no required PRs, and no required status checks, since those would block direct pushes too); check that PRs from forks need approval before they run Actions (Settings → Actions → General) | Right after #11 |
 
 ## New dependencies introduced by this plan
 
@@ -543,6 +545,35 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       mention these npm scripts: test:update-golden"; restored, both pass.
     - No email, phone or secret values in the README (checked by script, nothing printed).
 
+- [x] **2.4c Pre-commit hook: block commits containing the phone** — before the repo goes public, catch
+  the phone on the user's machine instead of in CI after the push (once pushed to a public repo it's
+  exposed even if CI fails).
+  - Files: `.githooks/pre-commit`, `scripts/checks/no-phone-in-staged.ts` + `staged.ts` (pure logic),
+    `scripts/git/install-hooks.ts` + `hooks.ts` (pure logic), `package.json`,
+    `tests/no-phone-in-staged.test.ts`, `README.md`, `CLAUDE.md`.
+  - Depends on: 2.4b.
+  - Done (2026-10-29). Notes:
+    - The hook is POSIX sh (`#!/bin/sh`, LF; `* text=auto eol=lf` already covers it) and runs
+      `node --env-file-if-exists=.env scripts/checks/no-phone-in-staged.ts`. Works with Git for
+      Windows' bundled sh, macOS and Linux (executable bit set via `git add --chmod=+x`).
+    - Checks the index, not the disk: `git diff --cached --name-status -z --no-renames`, then
+      `git cat-file blob :<path>` for every non-deleted file. Binary files (a NUL in the first 8000
+      bytes) are skipped. Reuses `readPhone` / `phonePattern` / `findPhone` from `phone.ts`. Prints only
+      `file:line`, plus what to do and "never --no-verify". A path containing the number is reported
+      without printing the path.
+    - Fails closed: no `CV_PHONE` (no `.env`) blocks the commit with "create .env from .env.example";
+      a git failure or missing `node` blocks too. `npm run check`'s warn-and-skip is unchanged.
+    - Installed by `"prepare"` (runs on `npm install` / `npm ci`): sets local
+      `core.hooksPath=.githooks`. Always exits 0. Skips when `CI` is set (GitHub Actions prints one line
+      and moves on; `no-phone-in-source` still runs there), when git is missing, or outside a git
+      checkout; if `core.hooksPath` is already set to another folder it warns and leaves it.
+    - `npm run check:staged` runs the same check by hand; not part of `npm run check`.
+    - Tests: 17 (pure functions, installer decisions, the hook file, and a real temp git repo —
+      including "staged has it, working tree doesn't → still fails" and missing `CV_PHONE` → fails).
+    - Real-repo verification with a made-up number: a staged scratch file → exit 1 naming
+      `hook-scratch.txt:2`; unstaged and deleted afterwards, index left empty as found.
+    - Branch protection and "make the repo public" moved here from 4.3 as user actions #11–#12.
+
 - [ ] **2.5 Hero** — Name, title, one-line summary (from `basics.summary`, trimmed), CTAs (Download Resume primary, View Projects secondary), social icons. No phone.
   - Files: `src/components/Hero.astro`.
   - Verify: Download Resume links to `/resume.pdf`; phone never rendered.
@@ -660,7 +691,8 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
   - Before launch: remove `X-Robots-Tag: noindex` from `public/_headers` (added in 1.5).
   - README (from 2.4b): add a screenshot of the site and the custom-domain link; replace the
     `workers.dev` link and the work-in-progress line.
-  - When the repo becomes public: enable branch protection on `main` — block force pushes and
-    deletion, and require the `build` check to pass before merging. It waits until launch because on a
-    private repo with a free GitHub plan these rules aren't enforced.
+  - Making the repo public and branch protection on `main` moved out of this task (in 2.4c) to
+    "Things the user needs to do" #11–#12, done right after the pre-commit hook lands. The earlier
+    "require the `build` check before merging" was dropped: a required status check blocks direct pushes
+    to `main`, which amounts to required PRs; the deploy is already gated by CI.
   - Depends on: 4.2.
