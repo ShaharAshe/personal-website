@@ -2,7 +2,7 @@
 // made it into the published resume.
 //
 // Usage: node scripts/checks/pdf-contains-phone.ts [path/to/resume.pdf]
-// Default: .generated/cv/Shahar_Asher_Resume.pdf
+// Default: .generated/cv/Shahar_Asher_CV.pdf
 // Env:   CV_PHONE  skipped with a warning if unset locally; required in CI
 
 import fs from 'node:fs';

@@ -8,7 +8,8 @@ paths:
 # Resume rules
 
 - `src/data/resume.yaml` follows the JSON Resume structure (https://jsonresume.org/schema), plus a
-  `featured: true` flag on work highlights that also appear on the homepage. Keep that structure.
+  `featured: true` flag on work highlights that also appear on the homepage, and a required
+  `basics.tagline` (one line for the homepage Hero; not in the PDF). Keep that structure.
 - The YAML is validated against a schema at build time. If you add a field, update the schema too.
 - `scripts/cv/create_cv.js` was verified to produce a PDF pixel-identical to the original resume.
   Its styles, page size, margins and section order are the design. Don't touch them unless asked.
@@ -18,7 +19,7 @@ paths:
   `soffice --headless --convert-to pdf` converts it. Use LibreOffice 24.2 or later in CI.
 - The PDF must be exactly one page. If an edit makes it two pages, report it and suggest wording
   cuts. Never shrink fonts or margins to make it fit.
-- Published file name: `Shahar_Asher_Resume.pdf`, served at the stable URL `/resume.pdf`.
+- Published file name: `Shahar_Asher_CV.pdf`, served at the stable URL `/resume.pdf`.
 - The phone number is **not** a field in `resume.yaml` — this repo is public. `create_cv.js` reads it
   from the `CV_PHONE` environment variable (`.env` locally, a GitHub Actions secret in CI) and never
   writes it anywhere else. In CI, a missing `CV_PHONE` fails the build; locally it just warns and

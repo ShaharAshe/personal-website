@@ -6,7 +6,7 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..', '..');
 const RESUME_YAML = path.join(ROOT, 'src', 'data', 'resume.yaml');
 const OUTPUT_DIR = path.join(ROOT, '.generated', 'cv');
-const RESUME_BASENAME = 'Shahar_Asher_Resume';
+const RESUME_BASENAME = 'Shahar_Asher_CV';
 const RESUME_DOCX = path.join(OUTPUT_DIR, `${RESUME_BASENAME}.docx`);
 const RESUME_PDF = path.join(OUTPUT_DIR, `${RESUME_BASENAME}.pdf`);
 

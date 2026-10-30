@@ -16,7 +16,7 @@ Source code for my portfolio site. I'm a backend engineer (Java, Spring Boot, Ka
 - **The phone number is in the PDF only: never in git, never on the site.** It comes from the `CV_PHONE`
   environment variable (`.env` locally, a GitHub Actions secret in CI). Three checks enforce this: it's
   not in any site file in `dist/`, it's not in any git-tracked file, and it *is* in the published PDF.
-  Since the repo is public, a pre-commit hook also blocks a commit whose staged content contains it, so
+  This repo is meant to be public, so a pre-commit hook also blocks a commit whose staged content contains it, so
   it's caught before it's ever pushed, not after.
 - **The email never appears as plain text in the built HTML**, to keep it away from scrapers. Components
   only get it as parts (`getEmailParts()`) to assemble in the browser, and a site check

@@ -7,6 +7,7 @@ basics:
   email: jane@example.com
   location: Nowhere
   summary: Backend engineer who writes example resumes for tests.
+  tagline: Example.
   profiles:
     - network: LinkedIn
       url: https://www.linkedin.com/in/jane-example

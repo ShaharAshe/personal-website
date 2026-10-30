@@ -7,6 +7,7 @@ basics:
   phone: "000-0000000"
   location: Nowhere
   summary: Example.
+  tagline: Example.
   profiles:
     - network: GitHub
       url: https://github.com/jane-example

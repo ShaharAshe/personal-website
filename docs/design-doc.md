@@ -130,8 +130,8 @@
 
 #### Hero
 - **שם:** Shahar Asher
-- **כותרת:** Software Engineer, Backend & Distributed Systems
-- **משפט אחד:** נלקח מה-`summary` ב-`resume.yaml`, או גרסה מקוצרת שלו.
+- **כותרת:** Software Engineer, Backend & Distributed Systems (מ-`basics.label` ב-`resume.yaml`; `create_cv.js` לא משתמש בשדה הזה, אז ה-PDF לא משתנה)
+- **משפט אחד:** מ-`basics.tagline` ב-`resume.yaml`, שדה חובה ב-schema: שורה אחת שנכתבת ידנית (המשפט הראשון של `summary` מתחיל ב-"Software Engineer" וחוזר על הכותרת). לא מופיע ב-PDF.
 - **CTAs:** `Download Resume` (ראשי, כחול) · `View Projects` (משני) · אייקוני GitHub / LinkedIn / Email
 - **ויזואל:** רקע עדין לכל היותר (grid או נקודות). בלי תמונה ענקית.
 
@@ -260,8 +260,8 @@
 src/data/resume.yaml          ← התוכן, ורק כאן
    │
    ├──▶ scripts/cv/create_cv.js  (העיצוב הנוכחי, ללא שינוי)
-   │       └──▶ Shahar_Asher_Resume.docx
-   │               └──▶ LibreOffice ──▶ Shahar_Asher_Resume.pdf  → /resume.pdf
+   │       └──▶ Shahar_Asher_CV.docx
+   │               └──▶ LibreOffice ──▶ Shahar_Asher_CV.pdf  → /resume.pdf
    │
    └──▶ Astro
            ├──▶ עמוד /resume  (בעיצוב האתר, Dark/Light, מותאם לנייד)
@@ -282,7 +282,7 @@ Claude Code מעדכן את `resume.yaml`, אתה רואה את ה-diff, מאש�
 ```yaml
 basics:
   name: Shahar Asher
-  label: Software Engineer
+  label: Software Engineer, Backend & Distributed Systems
   email: shaharas30@gmail.com
   # אין שדה phone: הריפו ציבורי. הטלפון מגיע רק ממשתנה הסביבה CV_PHONE
   # (.env מקומית, secret ב-CI), ומופיע רק ב-Word/PDF. ה-schema דוחה שדה phone.
@@ -290,6 +290,9 @@ basics:
   summary: >
     Software Engineer with production experience on real-time,
     high-throughput ad-tech systems at Taboola...
+  # שורה אחת ל-Hero באתר (שדה חובה, לא מופיע ב-PDF)
+  tagline: >-
+    Production experience on real-time, high-throughput ad-tech systems at Taboola; ...
   profiles:
     - network: LinkedIn
       url: https://www.linkedin.com/in/shahar-asher30
@@ -333,7 +336,7 @@ education:
 - **ה-PDF חייב להיות עמוד אחד.** גלישה לעמוד שני → ה-build נכשל.
 - **ה-YAML תואם ל-schema.**
 - **הטלפון לא מופיע בקבצי האתר** (`dist/**/*.{html,js,json,xml,txt}`) — בדיקה אוטומטית. הבדיקה
-  לא בודקת את `Shahar_Asher_Resume.pdf`/`.docx` עצמם, שבהם הטלפון אמור להופיע.
+  לא בודקת את `Shahar_Asher_CV.pdf`/`.docx` עצמם, שבהם הטלפון אמור להופיע.
 - **האימייל לא מופיע כטקסט רגיל בקבצי האתר** (אותם קבצים, `no-email-in-dist`) — כולל צורת `%40`
   ובלי תלות באותיות גדולות/קטנות. גם כאן ה-PDF/DOCX לא נבדקים, והפלט מציג רק קובץ:שורה, אף פעם לא את הכתובת.
 - **נאמנות הפונט ב-PDF שמתפרסם:** ה-PDF שמתפרסם נבנה תמיד ב-CI (`ubuntu-24.04`, עם
@@ -347,7 +350,7 @@ education:
 - Print stylesheet, כך ש-Ctrl+P מוציא דף נקי.
 
 ### 7.7 פרטים
-- **שם הקובץ:** `Shahar_Asher_Resume.pdf`
+- **שם הקובץ:** `Shahar_Asher_CV.pdf`
 - **כתובת קבועה:** `/resume.pdf`, כדי שאפשר לשים אותה ב-LinkedIn ובמיילים.
 - **כפתור ההורדה:** ב-Hero, בתפריט העליון ובעמוד `/resume`.
 
@@ -567,7 +570,7 @@ education:
 4. המרת Word ל-PDF (LibreOffice) + בדיקה שהוא עמוד אחד
 5. משיכת נתוני הפרויקטים מ-GitHub API (עם `GITHUB_TOKEN`) + בדיקת תיאורים
 6. Build של Astro, והעתקת ה-PDF ל-`dist/resume.pdf` (`publish-pdf.ts`). `_headers` מגיש אותו
-   `inline` עם שם הקובץ `Shahar_Asher_Resume.pdf`
+   `inline` עם שם הקובץ `Shahar_Asher_CV.pdf`
 7. בדיקות: lint, type-check, שהטלפון לא מופיע בקבצי האתר
 8. בדיקות end-to-end בדפדפן אמיתי (Playwright, `npm run test:e2e`, Chromium headless) מול ה-build
    עצמו. אם הן נכשלות אין deploy, וה-report נשמר כ-artifact ל-7 ימים

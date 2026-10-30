@@ -1,7 +1,12 @@
 ---
 // Stub homepage. Real sections are assembled in Task 2.10.
-// TEMPORARY (Task 2.1): token swatches to check both themes. Task 2.10 replaces this page.
+// TEMPORARY (Task 2.1): token swatches below the Hero to check both themes. Task 2.10 replaces them.
 import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/Hero.astro';
+import { getResume } from '../lib/resume';
+
+// No resume text in this file (hard rule 1). Full SEO tags come in Task 2.13.
+const { name, label } = getResume().basics;
 
 const swatches = [
   { token: '--bg', className: 'bg-bg' },
@@ -13,9 +18,10 @@ const swatches = [
 ];
 ---
 
-<BaseLayout title="Shahar Asher" description="Shahar Asher – Software Engineer, Backend & Distributed Systems.">
+<BaseLayout title={name} description={`${name} – ${label}.`}>
+  <Hero />
   <div class="mx-auto max-w-[720px] px-4 py-12">
-    <h1 class="text-xl font-semibold">Design tokens</h1>
+    <h2 class="text-xl font-semibold">Design tokens</h2>
     <p class="mt-2 text-text-muted">Temporary swatch page (Task 2.1). Replaced by the homepage in Task 2.10.</p>
 
     <ul class="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3">

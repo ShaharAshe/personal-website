@@ -1,7 +1,7 @@
 // Fails if the resume PDF is not exactly one page.
 //
 // Usage: node scripts/cv/check-pdf.ts [path/to/resume.pdf]
-// Default: .generated/cv/Shahar_Asher_Resume.pdf
+// Default: .generated/cv/Shahar_Asher_CV.pdf
 
 import fs from 'node:fs';
 import { PDFParse } from 'pdf-parse';

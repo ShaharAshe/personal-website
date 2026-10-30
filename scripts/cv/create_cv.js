@@ -2,7 +2,7 @@
 // DESIGN lives here. CONTENT lives in resume.yaml. Don't put resume text in this file.
 //
 // Usage: node --env-file-if-exists=.env scripts/cv/create_cv.js [path/to/resume.yaml] [output.docx]
-// Defaults: src/data/resume.yaml -> .generated/cv/Shahar_Asher_Resume.docx
+// Defaults: src/data/resume.yaml -> .generated/cv/Shahar_Asher_CV.docx
 //
 // The phone number comes from the CV_PHONE env var, never from resume.yaml or git — this repo is
 // public. In CI, CV_PHONE is required. Locally, a missing CV_PHONE just omits the phone and warns.

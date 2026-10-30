@@ -9,4 +9,4 @@
 # Opens in the browser; saving it uses the published file name. The "Download Resume" buttons use the
 # <a download> attribute to download instead.
 /resume.pdf
-  Content-Disposition: inline; filename="Shahar_Asher_Resume.pdf"
+  Content-Disposition: inline; filename="Shahar_Asher_CV.pdf"

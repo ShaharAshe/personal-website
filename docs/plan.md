@@ -92,8 +92,8 @@ Reality check performed before this plan:
 | 8 | Decide contact-form email provider: Cloudflare Email Routing vs Resend; provide its secret/API key as a Cloudflare secret | Milestone 3, Task 3.3 |
 | 9 | Choose and purchase the domain via Cloudflare Registrar | Milestone 4, Task 4.1 |
 | 10 | Create a local `.env` (from `.env.example`) with your real `CV_PHONE`; add `CV_PHONE` as a GitHub Actions secret | Before Milestone 1, Task 1.2 (local), and Task 1.5 (CI secret) |
-| 11 | Before making the repo public: delete the stale remote branch `ci/deploy`; then change the repo visibility to public | After Task 2.4c (the pre-commit hook must be in place first) |
-| 12 | Right after making it public: enable secret scanning + push protection and Dependabot alerts; add branch protection on `main` (block force pushes and deletion; no required PRs, and no required status checks, since those would block direct pushes too); check that PRs from forks need approval before they run Actions (Settings → Actions → General) | Right after #11 |
+| 11 | Before making the repo public: delete the stale remote branch `ci/deploy`; then change the repo visibility to public | Task 2.16 (user decision in 2.5: make it public once the MVP is live; the pre-commit hook from 2.4c is already in place) |
+| 12 | Right after making it public: enable secret scanning + push protection and Dependabot alerts; add branch protection on `main` (block force pushes and deletion; no required PRs, and no required status checks, since those would block direct pushes too); check that PRs from forks need approval before they run Actions (Settings → Actions → General) | Task 2.16 (right after #11) |
 
 ## New dependencies introduced by this plan
 
@@ -574,12 +574,49 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       `hook-scratch.txt:2`; unstaged and deleted afterwards, index left empty as found.
     - Branch protection and "make the repo public" moved here from 4.3 as user actions #11–#12.
 
-- [ ] **2.5 Hero** — Name, title, one-line summary (from `basics.summary`, trimmed), CTAs (Download Resume primary, View Projects secondary), social icons. No phone.
+- [x] **2.5 Hero** — Name, title, one-line summary (from `basics.summary`, trimmed), CTAs (Download Resume primary, View Projects secondary), social icons. No phone.
   - Files: `src/components/Hero.astro`.
   - Verify: Download Resume links to `/resume.pdf`; phone never rendered.
-  - Note (from 1.5): the button is `<a href="/resume.pdf" download="Shahar_Asher_Resume.pdf">`, so it
+  - Note (from 1.5): the button is `<a href="/resume.pdf" download="Shahar_Asher_CV.pdf">`, so it
     downloads, while a direct link to `/resume.pdf` opens in the browser (`_headers` serves it `inline`).
   - Depends on: 2.2, 2.4.
+  - Done (2026-10-30). Notes / deviations:
+    - Files: `src/components/Hero.astro`; new `src/lib/hero.ts` (`heroContent`, `socialIcon`) and
+      `src/lib/resume-pdf.ts` (`RESUME_PDF_URL`, `RESUME_PDF_FILENAME`); `src/pages/index.astro`;
+      `src/data/resume.yaml` + `resume.schema.ts`; the 5 `tests/fixtures/resume-*.yaml`;
+      `scripts/cv/paths.js`, `public/_headers` and file-name comments in `check-pdf.ts`,
+      `pdf-contains-phone.ts`, `publish-pdf.ts`, `to-pdf.js`, `create_cv.js` (line 5 comment only, user
+      approved); tests `tests/hero.test.ts`, `tests/e2e/hero.spec.ts`, `tests/resume-schema.test.ts`,
+      `tests/site-checks.test.ts`; `README.md` (one sentence); `.claude/rules/resume.md`; design-doc §5.1,
+      §7.2, §7.4, §7.5, §7.7, §13.3.
+    - **Title (user decision):** `basics.label` → "Software Engineer, Backend & Distributed Systems".
+      `create_cv.js` never reads `label`, so the PDF is unchanged.
+    - **One line (user decision):** new **required** field `basics.tagline` (schema), so
+      `validate-resume.ts` fails first with `→ at basics.tagline`. Not used by `create_cv.js`: the golden
+      Word XML test passes unchanged (no `test:update-golden`). The first sentence of `summary` was not
+      used because it starts with "Software Engineer", repeating the title.
+    - **PDF file name renamed (user decision): `Shahar_Asher_Resume` → `Shahar_Asher_CV`**
+      (`RESUME_BASENAME` in `paths.js`). Generated files are now `.generated/cv/Shahar_Asher_CV.{docx,pdf}`;
+      the download and `Content-Disposition` name is `Shahar_Asher_CV.pdf`. URL `/resume.pdf` and the
+      button text are unchanged. The 1.4/1.5 notes above still say `Shahar_Asher_Resume`: they record
+      what was true then. Old `.generated/cv/Shahar_Asher_Resume.*` files are left behind locally
+      (gitignored, harmless).
+    - **No drifting copy:** `src/` can't import the CommonJS `paths.js`, so `RESUME_PDF_FILENAME` is a
+      copy; `tests/hero.test.ts` checks it (and the built `download` attribute) against
+      `RESUME_BASENAME`, and `tests/publish-pdf.test.ts` checks `_headers` against it.
+    - Profile links come from `basics.profiles` (LinkedIn, GitHub), open in the same tab (no
+      `target="_blank"`), `aria-label` = the network name, inline-SVG icons. An unknown network fails
+      the build. No email icon yet (→ 2.9).
+    - `index.astro`: Hero on top; the swatch heading is now an `<h2>` (one `<h1>` per page); the page
+      `title`/`description` were hardcoded resume text and now come from `getResume()` (same output).
+    - Visual: subtle dot grid (`--border` dots, faded edges) via a scoped `::before`. Zero JS, no motion
+      (→ 3.4). Homepage JS still 0.56 KB gzipped.
+    - Tests: `tests/hero.test.ts` (13: helpers, file name, built HTML: one `<h1>` = name, title and
+      tagline from YAML, download href/name, the only accent-filled element, View Projects target, profile
+      links + `aria-label`s, no script / no unsafe `_blank`); schema test for a missing `tagline`;
+      `tests/e2e/hero.spec.ts` (7: download event file name, `/#projects`, Tab order + focus rings,
+      375/1280 × dark/light no horizontal scroll and CTAs fully visible). Break-on-purpose: a wrong
+      `download` value fails the hero test; a YAML without `tagline` fails `validate-resume.ts`.
 
 - [ ] **2.6 Experience section** — Homepage shows `featured: true` highlights only (timeline layout), link to full `/resume`.
   - Files: `src/components/Experience.astro`.
@@ -599,6 +636,9 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
   - Verify: Email never appears as plain text in built HTML; Copy button shows "Copied ✓"; works via keyboard.
   - Note (from 2.4): get the address only from `getEmailParts()` (`src/lib/resume.ts`). The `mailto:` link
     must be assembled in the browser too: a `mailto:user@domain` href in the HTML fails `no-email-in-dist`.
+  - Note (from 2.5): add the **email icon to the Hero** here (design-doc §5.1 lists GitHub / LinkedIn /
+    Email), next to the profile icons in `src/components/Hero.astro`, with its `mailto:` href assembled in
+    the browser like the rest of the email. The Hero has no script today, so keep the added JS tiny.
   - Depends on: 2.2.
 
 - [ ] **2.10 Footer + homepage assembly** — Wire Hero/Experience/Projects/Skills/Contact/Footer into `index.astro`.
@@ -614,8 +654,9 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
 - [ ] **2.11 `/resume` page** — Full resume in site styling, Download PDF button at top, print stylesheet. Reuses the same `CopyEmail` island as Contact (2.9) for the email — never plain text.
   - Files: `src/pages/resume.astro`.
   - Verify: Ctrl+P produces a clean printed page; phone never rendered; email not plain text on this page either (confirm `CopyEmail` island used).
-  - Note (from 1.5): the Download PDF button is `<a href="/resume.pdf" download="Shahar_Asher_Resume.pdf">`,
-    so it downloads, while a direct link to `/resume.pdf` opens in the browser.
+  - Note (from 1.5): the Download PDF button is `<a href="/resume.pdf" download="Shahar_Asher_CV.pdf">`,
+    so it downloads, while a direct link to `/resume.pdf` opens in the browser. (2.5) Use
+    `RESUME_PDF_URL` / `RESUME_PDF_FILENAME` from `src/lib/resume-pdf.ts`, never retype them.
   - Depends on: 2.4, 2.2, 2.9.
 
 - [ ] **2.12 404 page**
@@ -624,6 +665,8 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
 
 - [ ] **2.13 SEO, OG image, sitemap, JSON-LD** — Unique `<title>`/meta description per page, OG image, `sitemap.xml` (`@astrojs/sitemap`), `robots.txt`, `Person` JSON-LD from `resume.yaml` excluding `email`/`phone`.
   - Files: `src/layouts/BaseLayout.astro`, `public/og-image.*`, `astro.config.mjs`, `public/robots.txt`.
+  - Note (from 2.5): `index.astro`'s `title`/`description` now come from `getResume()` (`name`,
+    `` `${name} – ${label}.` ``) instead of hardcoded text; keep it that way for the full SEO tags.
   - Depends on: 2.2, 2.4; needs action item #6.
 
 - [ ] **2.14 Security headers** — Real CSP, `X-Content-Type-Options`, `Referrer-Policy` in `public/_headers`.
@@ -692,7 +735,7 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
   - README (from 2.4b): add a screenshot of the site and the custom-domain link; replace the
     `workers.dev` link and the work-in-progress line.
   - Making the repo public and branch protection on `main` moved out of this task (in 2.4c) to
-    "Things the user needs to do" #11–#12, done right after the pre-commit hook lands. The earlier
+    "Things the user needs to do" #11–#12, done at Task 2.16 once the MVP is live (decided in 2.5). The earlier
     "require the `build` check before merging" was dropped: a required status check blocks direct pushes
     to `main`, which amounts to required PRs; the deploy is already gated by CI.
   - Depends on: 4.2.

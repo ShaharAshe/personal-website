@@ -18,6 +18,7 @@ import {
 } from '../scripts/checks/phone.ts';
 import { emailPattern, findEmail } from '../scripts/checks/email.ts';
 import { getEmailParts } from '../src/lib/resume.ts';
+import { RESUME_BASENAME } from '../scripts/cv/paths.js';
 import { writeTextPdf } from './helpers/pdf.ts';
 
 const FAKE_LOCAL = '055-555-0199';
@@ -118,8 +119,8 @@ test('no-phone-in-dist: the international form in CV_PHONE catches the local for
 });
 
 test('no-phone-in-dist: the resume PDF/DOCX containing the phone does not trigger it', () => {
-  const dist = writeFiles(tempDir(), { 'index.html': '<p>hello</p>', 'Shahar_Asher_Resume.docx': FAKE_LOCAL });
-  writeTextPdf(path.join(dist, 'Shahar_Asher_Resume.pdf'), [FAKE_LOCAL]);
+  const dist = writeFiles(tempDir(), { 'index.html': '<p>hello</p>', [`${RESUME_BASENAME}.docx`]: FAKE_LOCAL });
+  writeTextPdf(path.join(dist, `${RESUME_BASENAME}.pdf`), [FAKE_LOCAL]);
   const result = run('no-phone-in-dist.ts', [dist]);
   assert.equal(result.status, 0, result.stderr);
 });
@@ -215,8 +216,8 @@ test('no-email-in-dist: user and domain apart (assembled in the browser) pass', 
 });
 
 test('no-email-in-dist: the resume PDF/DOCX containing the email does not trigger it', () => {
-  const dist = writeFiles(tempDir(), { 'index.html': '<p>hello</p>', 'Shahar_Asher_Resume.docx': 'jane@example.com' });
-  writeTextPdf(path.join(dist, 'Shahar_Asher_Resume.pdf'), ['jane@example.com']);
+  const dist = writeFiles(tempDir(), { 'index.html': '<p>hello</p>', [`${RESUME_BASENAME}.docx`]: 'jane@example.com' });
+  writeTextPdf(path.join(dist, `${RESUME_BASENAME}.pdf`), ['jane@example.com']);
   const result = runEmailCheck([dist, FAKE_RESUME]);
   assert.equal(result.status, 0, result.stderr);
 });

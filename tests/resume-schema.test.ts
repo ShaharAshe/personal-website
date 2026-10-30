@@ -43,6 +43,18 @@ test('rejects a missing required field', () => {
   ]);
 });
 
+test('rejects a resume without basics.tagline, naming the field', () => {
+  const resume = load(path.join(fixtures, 'resume-valid.yaml')) as { basics: Record<string, unknown> };
+  delete resume.basics.tagline;
+  const result = resumeSchema.safeParse(resume);
+  assert.equal(result.success, false);
+  assert.deepEqual(
+    result.error!.issues.map((issue) => issue.path.join('.')),
+    ['basics.tagline'],
+  );
+  assert.match(z.prettifyError(result.error!), /→ at basics\.tagline/);
+});
+
 test('rejects a malformed date string', () => {
   const resume = load(path.join(fixtures, 'resume-valid.yaml')) as { work: { startDate: string }[] };
   resume.work[0].startDate = '2024-13';

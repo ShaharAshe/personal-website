@@ -1,7 +1,7 @@
 // Converts the generated resume .docx to PDF with LibreOffice.
 //
 // Usage: node scripts/cv/to-pdf.js [input.docx]
-// Default: .generated/cv/Shahar_Asher_Resume.docx -> .generated/cv/Shahar_Asher_Resume.pdf
+// Default: .generated/cv/Shahar_Asher_CV.docx -> .generated/cv/Shahar_Asher_CV.pdf
 //
 // soffice is resolved in this order: SOFFICE_PATH env var -> the default Windows install path ->
 // plain `soffice` on PATH (what CI uses).

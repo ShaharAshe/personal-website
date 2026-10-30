@@ -1,8 +1,8 @@
 // Last step of npm run build: copies the generated resume PDF into dist/ so it's served at the stable
-// URL /resume.pdf. public/_headers gives it the Shahar_Asher_Resume.pdf file name.
+// URL /resume.pdf. public/_headers gives it the Shahar_Asher_CV.pdf file name.
 //
 // Usage: node scripts/cv/publish-pdf.ts [path/to/resume.pdf] [distDir]
-// Default: .generated/cv/Shahar_Asher_Resume.pdf → dist/resume.pdf
+// Default: .generated/cv/Shahar_Asher_CV.pdf → dist/resume.pdf
 
 import fs from 'node:fs';
 import path from 'node:path';

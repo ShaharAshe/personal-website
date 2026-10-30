@@ -25,6 +25,8 @@ const basics = z.strictObject({
   email: z.email(),
   location: text,
   summary: text,
+  // One line for the homepage Hero. Not used by the Word/PDF resume.
+  tagline: text,
   profiles: z.array(profile).min(1),
 });
 
