@@ -1,9 +1,11 @@
 ---
 // Stub homepage. Real sections are assembled in Task 2.10.
-// TEMPORARY (Task 2.1): token swatches below Experience to check both themes. Task 2.10 replaces them.
+// Skills sits right after Experience for now; Task 2.10 sets the final order (…, Projects, Skills, Contact).
+// TEMPORARY (Task 2.1): token swatches below Skills to check both themes. Task 2.10 replaces them.
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Experience from '../components/Experience.astro';
 import Hero from '../components/Hero.astro';
+import Skills from '../components/Skills.astro';
 import { getResume } from '../lib/resume';
 
 // No resume text in this file (hard rule 1). Full SEO tags come in Task 2.13.
@@ -22,6 +24,7 @@ const swatches = [
 <BaseLayout title={name} description={`${name} – ${label}.`}>
   <Hero />
   <Experience />
+  <Skills />
   <div class="mx-auto max-w-[720px] px-4 py-12">
     <h2 class="text-xl font-semibold">Design tokens</h2>
     <p class="mt-2 text-text-muted">Temporary swatch page (Task 2.1). Replaced by the homepage in Task 2.10.</p>

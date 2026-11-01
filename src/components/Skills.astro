@@ -1,0 +1,40 @@
+---
+// Homepage Skills (design-doc §5.1): each category from resume.yaml with its items as small outline chips,
+// in YAML order. No progress bars, percentages or levels. All text comes from src/lib/skills.ts. Ships no JS.
+//
+// Category name sits left of its chips from `sm:` up and above them on mobile. Chips wrap, and a long item
+// name wraps inside its chip instead of overflowing. role="list" keeps list semantics in Safari/VoiceOver,
+// which drops them for `list-style: none`. No accent in this section; no motion (→ Task 3.4).
+import { skillsContent } from '../lib/skills';
+import { getResume } from '../lib/resume';
+
+const categories = skillsContent(getResume());
+---
+
+<section id="skills" aria-labelledby="skills-title" data-skills>
+  <div class="mx-auto max-w-[720px] px-4 py-16">
+    <h2 id="skills-title" class="text-xl font-semibold tracking-tight">
+      Skills
+    </h2>
+
+    <div class="mt-8 space-y-6">
+      {categories.map(({ category, items }) => (
+        <div data-skill-category class="sm:grid sm:grid-cols-[13rem_1fr] sm:gap-6">
+          <h3 data-skill-category-name class="text-sm font-medium text-text-muted sm:pt-1">
+            {category}
+          </h3>
+          <ul role="list" class="mt-2 flex flex-wrap gap-2 sm:mt-0">
+            {items.map((item) => (
+              <li
+                data-skill
+                class="max-w-full rounded-md border border-border px-2.5 py-1 font-mono text-sm [overflow-wrap:anywhere]"
+              >
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

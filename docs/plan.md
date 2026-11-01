@@ -647,9 +647,32 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       `tests/e2e/experience.spec.ts` (6: nav link → `#experience` in view, Tab from the last Hero profile link
       to the full-resume link with a focus ring, 375/1280 × dark/light no horizontal scroll).
 
-- [ ] **2.7 Skills section** — Categorized list from `resume.yaml`, no progress bars/percentages.
+- [x] **2.7 Skills section** — Categorized list from `resume.yaml`, no progress bars/percentages.
   - Files: `src/components/Skills.astro`.
   - Depends on: 2.4.
+  - Done (2026-11-01). Notes / deviations:
+    - Files: `src/components/Skills.astro`; new `src/lib/skills.ts` (`skillsContent`: every category and item,
+      copied, in YAML order); `src/pages/index.astro` (Skills right after Experience, swatches still below; the
+      final order is set in 2.10); tests `tests/skills.test.ts`, `tests/e2e/skills.spec.ts`. Design doc
+      unchanged (matches §5.1).
+    - Content: 5 categories, 26 items (Languages 5, Frameworks & Architecture 6, Databases 4, DevOps & Tools
+      9, AI Tools 2). Longest item "Kusto (Azure Data Explorer)" fits at 375px.
+    - **Spoken languages (`resume.languages`) are not in Skills** (user decision): they go on `/resume`
+      (see the note on 2.11). The "Languages" category name stays (no ambiguity without spoken languages,
+      and renaming it would change the PDF).
+    - Layout: `<section id="skills" aria-labelledby>` + `<h2>`; per category an `<h3>` (muted, small) and a
+      `<ul role="list">` of outline chips (`--border` 1px, mono `text-sm`, no fill). Category left of its chips
+      from `sm:` up (13rem column), stacked on mobile. Chips wrap (`flex-wrap`), and a long name wraps inside
+      its chip (`max-w-full`, `overflow-wrap: anywhere`). `role="list"` because Safari/VoiceOver drops list
+      semantics for `list-style: none`. 720px text width. No accent, no levels, zero JS (homepage JS still
+      0.56 KB gzipped), no motion (→ 3.4). No nav link (see the 2.10 nav note).
+    - Tests: `tests/skills.test.ts` (9: helper on the fixture and the real resume, returns copies; built HTML:
+      id/`aria-labelledby`/`<h2>`, every category as `<h3>` and every item in YAML order in a `role="list"`,
+      no `%`/`<progress>`/`<meter>`/progressbar/`aria-value*`/inline `style`/`n/n`/stars, no spoken languages,
+      one `<h1>`, no script, no `bg-accent`); `tests/e2e/skills.spec.ts` (4: 375/1280 × dark/light no horizontal
+      scroll, every chip visible and inside the viewport width; the count comes from the resume, so editing
+      skills needs no test change). Break-on-purpose: dropping the first item per category in the helper failed
+      both helper tests; restored.
 
 - [ ] **2.8 Projects section** — Featured wide card, "More projects" grid, "Algorithm practice" link row, per the topic tiers in `.claude/rules/github-projects.md`.
   - Files: `src/components/Projects.astro`, `src/components/ProjectCard.astro`.
@@ -674,6 +697,13 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
     the links then wrap to a second line (no overflow, but it looks crowded). Decide here whether
     that's acceptable or whether the nav needs a small-screen pattern (e.g. a disclosure/hamburger
     menu, as an Astro component with a small script).
+  - Open item (from 2.7): navigation on a long page. Decide with the full homepage in place whether it's
+    needed at all, and if so: a 'Back to top' anchor link in the footer (zero JS), a sticky header, or a
+    floating back-to-top button. Smooth scrolling only under prefers-reduced-motion: no-preference.
+  - Visual polish (from 2.5/2.6, review with the full homepage):
+    - Align the Hero profile icons with the text column: their 40px hit area shifts them about 10px right.
+    - Reduce the Experience timeline indent and card padding at 375px.
+    - Review the vertical spacing between sections.
   - Depends on: 2.5–2.9.
 
 - [ ] **2.11 `/resume` page** — Full resume in site styling, Download PDF button at top, print stylesheet. Reuses the same `CopyEmail` island as Contact (2.9) for the email — never plain text.
@@ -685,6 +715,8 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
   - Note (from 2.6): the homepage Experience section's "View full resume →" links to `/resume` (404 until
     this task). Confirm it resolves once the page exists (e.g. an e2e test that follows it). Format dates
     with `src/lib/resume-dates.ts` (same output as the PDF, parity-tested), for work and education.
+  - Note (from 2.7): spoken languages (`resume.languages`, e.g. Hebrew – Native) are shown here, not in
+    the homepage Skills section (user decision in 2.7).
   - Depends on: 2.4, 2.2, 2.9.
 
 - [ ] **2.12 404 page**
