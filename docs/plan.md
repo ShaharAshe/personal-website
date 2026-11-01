@@ -618,9 +618,34 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       375/1280 × dark/light no horizontal scroll and CTAs fully visible). Break-on-purpose: a wrong
       `download` value fails the hero test; a YAML without `tagline` fails `validate-resume.ts`.
 
-- [ ] **2.6 Experience section** — Homepage shows `featured: true` highlights only (timeline layout), link to full `/resume`.
+- [x] **2.6 Experience section** — Homepage shows `featured: true` highlights only (timeline layout), link to full `/resume`.
   - Files: `src/components/Experience.astro`.
   - Depends on: 2.4.
+  - Done (2026-11-01). Notes / deviations:
+    - Files: `src/components/Experience.astro`; new `src/lib/experience.ts` (`experienceContent`) and
+      `src/lib/resume-dates.ts` (`formatDate`, `dateRange`, `dateParts`, `PRESENT`); `src/pages/index.astro`
+      (Experience right after the Hero, swatches still below); tests `tests/experience.test.ts`,
+      `tests/e2e/experience.spec.ts`; design-doc §5.1 (one line).
+    - Content: 4 featured highlights, all from the one role (Taboola), in YAML order. A test enforces the
+      §5.1 rule (3–4 featured in total), not the exact set: changing the flags needs no test edit.
+    - **A role with no featured highlights is still shown** (company, position, dates only), so the timeline
+      has no gaps.
+    - **Dates:** `scripts/cv/format.js` is CommonJS, which `src/` can't import, so `src/lib/resume-dates.ts` is
+      a copy. `tests/experience.test.ts` runs both on the same inputs (all 12 months, year-only, missing end,
+      every work/education item in the real YAML and the fixture). Break-on-purpose: "Apr" → "April" in the
+      copy failed 3 tests; restored. Rendered as `<time datetime="2025-04">Apr 2025</time> – …`; an open
+      end is the text `Present` (no `<time>`).
+    - Layout: `<section id="experience">` + `<h2>`, an `<ol>` timeline (left border line + a dot per role),
+      each role a bordered `bg-surface` card; dates sit right of the company from `sm:` up, stacked on mobile.
+      No accent-filled element; zero JS (homepage JS still 0.56 KB gzipped); no motion (→ 3.4).
+    - **Full-resume link → `/resume`** ("View full resume →", plain accent text link), like the nav's Resume
+      link: a 404 until 2.11 (see the note there).
+    - No case study link yet (→ 3.2, see the note there).
+    - Tests: `tests/experience.test.ts` (12: date formatting + parity with the PDF, featured filtering, the
+      §5.1 count rule, built HTML: id/`<h2>`, featured shown / non-featured absent from the page, company/
+      position/dates + `datetime` per role, `/resume` href, one `<h1>`, no script, no `bg-accent`);
+      `tests/e2e/experience.spec.ts` (6: nav link → `#experience` in view, Tab from the last Hero profile link
+      to the full-resume link with a focus ring, 375/1280 × dark/light no horizontal scroll).
 
 - [ ] **2.7 Skills section** — Categorized list from `resume.yaml`, no progress bars/percentages.
   - Files: `src/components/Skills.astro`.
@@ -657,6 +682,9 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
   - Note (from 1.5): the Download PDF button is `<a href="/resume.pdf" download="Shahar_Asher_CV.pdf">`,
     so it downloads, while a direct link to `/resume.pdf` opens in the browser. (2.5) Use
     `RESUME_PDF_URL` / `RESUME_PDF_FILENAME` from `src/lib/resume-pdf.ts`, never retype them.
+  - Note (from 2.6): the homepage Experience section's "View full resume →" links to `/resume` (404 until
+    this task). Confirm it resolves once the page exists (e.g. an e2e test that follows it). Format dates
+    with `src/lib/resume-dates.ts` (same output as the PDF, parity-tested), for work and education.
   - Depends on: 2.4, 2.2, 2.9.
 
 - [ ] **2.12 404 page**
@@ -707,6 +735,8 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
 - [ ] **3.2 Table-migration case study** — User drafts the narrative; Claude Code handles layout/MDX wiring.
   - Files: `src/content/case-studies/table-migration.mdx`, `src/pages/case-studies/[slug].astro`, `src/content.config.ts`.
   - Note (from 2.4): the `case-studies` collection (with its frontmatter schema) is added here, not in 2.4.
+  - Note (from 2.6): add the "Read the migration case study →" link (design-doc §5.1) to the homepage
+    Experience section (`src/components/Experience.astro`), with a test for its href.
   - Verify: Content reviewed against §12 — no internal names/numbers/screenshots.
   - Depends on: 2.4; needs action item #7.
 

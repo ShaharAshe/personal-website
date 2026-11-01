@@ -1,0 +1,58 @@
+---
+// Homepage Experience (design-doc §5.1): a timeline of roles, each a card with company, position, dates
+// and only its featured highlights. All text comes from resume.yaml via src/lib/experience.ts. Ships no JS.
+//
+// Dates read exactly like the PDF (src/lib/resume-dates.ts). No accent-filled button here: the full-resume
+// link is a plain text link. /resume is built in Task 2.11; the case study link is added in Task 3.2.
+import { experienceContent } from '../lib/experience';
+import { getResume } from '../lib/resume';
+import { PRESENT } from '../lib/resume-dates';
+
+const roles = experienceContent(getResume());
+---
+
+<section id="experience" aria-labelledby="experience-title" data-experience>
+  <div class="mx-auto max-w-[720px] px-4 py-16">
+    <h2 id="experience-title" class="text-xl font-semibold tracking-tight">
+      Experience
+    </h2>
+
+    <ol class="mt-8 space-y-8 border-l border-border pl-6">
+      {roles.map(({ company, position, dates, highlights }) => (
+        <li data-role class="relative">
+          <span
+            aria-hidden="true"
+            class="absolute top-6 -left-[29px] size-2.5 rounded-full border-2 border-accent bg-bg"
+          />
+          <article class="rounded-lg border border-border bg-surface p-5">
+            <div class="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+              <h3 data-role-company class="text-lg font-semibold">
+                {company}
+              </h3>
+              <p data-role-dates class="shrink-0 font-mono text-sm text-text-muted">
+                <time datetime={dates.start.datetime}>{dates.start.label}</time> –{' '}
+                {dates.end ? <time datetime={dates.end.datetime}>{dates.end.label}</time> : <span>{PRESENT}</span>}
+              </p>
+            </div>
+            <p data-role-position class="mt-1 text-text-muted">
+              {position}
+            </p>
+            {highlights.length > 0 && (
+              <ul class="mt-4 max-w-[65ch] list-disc space-y-2 pl-5 marker:text-text-muted">
+                {highlights.map((text) => (
+                  <li data-highlight>{text}</li>
+                ))}
+              </ul>
+            )}
+          </article>
+        </li>
+      ))}
+    </ol>
+
+    <p class="mt-8">
+      <a href="/resume" data-full-resume class="font-medium text-accent hover:underline">
+        View full resume <span aria-hidden="true">→</span>
+      </a>
+    </p>
+  </div>
+</section>
