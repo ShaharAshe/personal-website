@@ -1,0 +1,96 @@
+---
+// One project card (design-doc §6.4, .claude/rules/github-projects.md). Renders a ProjectCardView from
+// src/lib/projects-section.ts and holds no project text. Ships no JS.
+//
+// featured: the wide card at the top, title <h3>. portfolio: a "More projects" grid card, title <h4> (under
+// the "More projects" <h3>). Accent means "clickable": the links are accent text links (never chips, which
+// are never accent), in the same tab, each with an aria-label that names the project; icons/arrows are
+// aria-hidden. No whole-card link, so no nested links. No accent fill, no motion (hover lift → Task 3.4).
+import GitHubIcon from './GitHubIcon.astro';
+import type { ProjectCardView } from '../lib/projects-section';
+
+interface Props {
+  card: ProjectCardView;
+  variant: 'featured' | 'portfolio';
+}
+
+const { card, variant } = Astro.props;
+const Title = variant === 'featured' ? 'h3' : 'h4';
+const meta = [card.status, card.team].filter(Boolean).join(' · ');
+// min-h-10: a 40px-tall tap target on phones, with gap-x-6 between links.
+const linkClass = 'inline-flex min-h-10 items-center gap-1.5 text-sm font-medium text-accent hover:underline';
+---
+
+<article
+  data-project-card={variant}
+  data-project-name={card.name}
+  class:list={[
+    'flex h-full min-w-0 flex-col rounded-lg border border-border bg-surface p-5 [overflow-wrap:anywhere]',
+    variant === 'featured' && 'sm:p-6',
+  ]}
+>
+  <Title data-project-title class="text-lg font-semibold">
+    {card.title}
+  </Title>
+  {meta && (
+    <p data-project-meta class="mt-1 font-mono text-xs text-text-muted">
+      {meta}
+    </p>
+  )}
+  <p data-project-description class="mt-3 max-w-[65ch] text-text-muted">
+    {card.description}
+  </p>
+
+  {card.languages.length > 0 && (
+    <ul role="list" aria-label="Languages" class="mt-4 flex flex-wrap gap-2">
+      {card.languages.map((language) => (
+        <li data-project-language class="max-w-full rounded-md border border-border px-2 py-0.5 font-mono text-xs">
+          {language}
+        </li>
+      ))}
+    </ul>
+  )}
+  {card.topics.length > 0 && (
+    <ul role="list" aria-label="Topics" class="mt-3 flex flex-wrap gap-1.5">
+      {card.topics.map((topic) => (
+        <li data-project-topic class="max-w-full rounded-md bg-border px-1.5 py-px font-mono text-xs text-text-muted">
+          {topic}
+        </li>
+      ))}
+    </ul>
+  )}
+
+  <div class="mt-auto pt-5">
+    {(card.stars || card.updated) && (
+      <p class="flex flex-wrap gap-x-3 text-xs text-text-muted">
+        {card.stars && (
+          <span data-project-stars>
+            <span aria-hidden="true">★ {card.stars.count}</span>
+            <span class="sr-only">{card.stars.label}</span>
+          </span>
+        )}
+        {card.updated && (
+          <span data-project-updated>
+            Updated <time datetime={card.updated.datetime}>{card.updated.label}</time>
+          </span>
+        )}
+      </p>
+    )}
+    <p class="mt-2 flex flex-wrap gap-x-6">
+      <a href={card.repo.href} aria-label={card.repo.label} data-project-repo class={linkClass}>
+        <GitHubIcon size={16} class="shrink-0" />
+        GitHub
+      </a>
+      {card.demo && (
+        <a href={card.demo.href} aria-label={card.demo.label} data-project-demo class={linkClass}>
+          Live demo <span aria-hidden="true">↗</span>
+        </a>
+      )}
+      {card.page && (
+        <a href={card.page.href} aria-label={card.page.label} data-project-page class={linkClass}>
+          Read more <span aria-hidden="true">→</span>
+        </a>
+      )}
+    </p>
+  </div>
+</article>

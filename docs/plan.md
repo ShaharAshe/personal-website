@@ -83,7 +83,7 @@ Reality check performed before this plan:
 | # | Action | Needed by |
 |---|---|---|
 | 1 | Install LibreOffice locally (24.2+) | Before Milestone 1, Task 1.2 |
-| 2 | Add descriptions to `log-analytics-platform`, `NeetCode`, `project_euler`; add `portfolio-*` topics per §6.5; fix "About As"→"About Us" typo in `scam-reporting-app` README | Before Milestone 2, Task 2.8 |
+| 2 | Add descriptions to `log-analytics-platform`, `NeetCode`, `project_euler`; add `portfolio-*` topics per §6.5; fix "About As"→"About Us" typo in `scam-reporting-app` README | Before Milestone 2, Task 2.8. **Done**: descriptions and `portfolio-*` topics verified from `projects.json` in Task 2.8; README typo fixed (user) |
 | 3 | Create a free Cloudflare account | Milestone 1, Task 1.5 |
 | 4 | Create a Cloudflare API token (Workers deploy scope) and the account ID; add both as GitHub Actions secrets (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`) | Milestone 1, Task 1.5 |
 | 5 | Enable Cloudflare Web Analytics on the site once it has a URL, grab the beacon token | Milestone 2, Task 2.15 |
@@ -94,6 +94,8 @@ Reality check performed before this plan:
 | 10 | Create a local `.env` (from `.env.example`) with your real `CV_PHONE`; add `CV_PHONE` as a GitHub Actions secret | Before Milestone 1, Task 1.2 (local), and Task 1.5 (CI secret) |
 | 11 | Before making the repo public: delete the stale remote branch `ci/deploy`; then change the repo visibility to public | Task 2.16 (user decision in 2.5: make it public once the MVP is live; the pre-commit hook from 2.4c is already in place) |
 | 12 | Right after making it public: enable secret scanning + push protection and Dependabot alerts; add branch protection on `main` (block force pushes and deletion; no required PRs, and no required status checks, since those would block direct pushes too); check that PRs from forks need approval before they run Actions (Settings → Actions → General) | Task 2.16 (right after #11) |
+| 13 | Email privacy: git now uses the GitHub noreply address for new commits (set on 2026-11-02; GitHub Settings → Emails: keep email private and block command-line pushes that expose it are on). Decide whether to rewrite the existing commits' author email, and whether to switch `resume.yaml` to a `contact@<domain>` address first (see #14), before the repo goes public | Task 2.16 (before making the repo public, #11) |
+| 14 | Consider a `contact@<domain>` address via Cloudflare Email Routing for `resume.yaml` and the PDF, so the personal Gmail isn't public anywhere. If wanted before the repo goes public, buy the domain (#9) before Task 2.16 | Milestone 4, Task 4.2 |
 
 ## New dependencies introduced by this plan
 
@@ -674,10 +676,67 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       skills needs no test change). Break-on-purpose: dropping the first item per category in the helper failed
       both helper tests; restored.
 
-- [ ] **2.8 Projects section** — Featured wide card, "More projects" grid, "Algorithm practice" link row, per the topic tiers in `.claude/rules/github-projects.md`.
+- [x] **2.8 Projects section** — Featured wide card, "More projects" grid, "Algorithm practice" link row, per the topic tiers in `.claude/rules/github-projects.md`.
   - Files: `src/components/Projects.astro`, `src/components/ProjectCard.astro`.
   - Verify: With action item #2 done, re-run `npm run projects`, confirm the three tiers render; a repo with a missing description fails the build instead of rendering an empty card.
   - Depends on: 1.3, 2.4; needs action item #2.
+  - Done (2026-11-02). Notes / deviations:
+    - Files: `src/components/Projects.astro`, `src/components/ProjectCard.astro`; new `src/lib/projects-section.ts`
+      (pure: `projectsSection`, `projectCard`, `practiceLink`, `updatedLabel`, `githubProfileUrl`); new
+      `src/components/GitHubIcon.astro` (the one copy of the GitHub mark's SVG, `aria-hidden`; the Hero's
+      profile link now uses it too); `src/pages/index.astro` (Projects between Experience and Skills, swatches
+      still below); tests `tests/projects-section.test.ts`, `tests/e2e/projects.spec.ts`, and a text-muted on
+      `--border` pair in `tests/design-tokens.test.ts`. Design doc §6.4/§6.5 updated (see below);
+      `.claude/rules/ui.md` gained the accent-means-clickable rule.
+    - Data at build time (projects.json, pushed_at order): featured `log-analytics-platform`; portfolio
+      `scam-reporting-app`, `diff-checker` (Live demo), `Cryptography_modules` (2★); practice `LeetCode`,
+      `NeetCode`, `project_euler`. All read through `getProjects()`; nothing hardcoded, no browser fetch.
+    - Layout: `<section id="projects" aria-labelledby>` + `<h2>`, 1100px wide. Featured: full-width card(s),
+      title `<h3>`, no group heading. "More projects" `<h3>` + `<ul role="list">` grid (1 col, 2 from `sm:`,
+      3 from `lg:`), card titles `<h4>` (user decision: nested headings over a flat all-`<h3>` outline).
+      "Algorithm practice" `<h3>`, one muted line "Solutions on GitHub" (`text-sm text-text-muted`, not a link,
+      no icon: says once for the group where the links go), then a wrapping row of accent text links, each
+      "<title> ↗" (no GitHub icon: ui.md "Link markers", no logo repeated on every item). An empty tier renders nothing (no heading); if all three are empty the section keeps its `<h2>` (Hero/nav
+      link to it) with one line linking to the GitHub profile from `resume.yaml` (also with the icon).
+    - Card (`<article>`, 1px `--border`, `--surface`, no shadow): title, status · team (page only),
+      description, language chips (outline, `border-border`), topic chips (no border, `bg-border` fill,
+      `text-text-muted` — 4.8:1 in both themes — mono `text-xs`, wrapping; a topic that only repeats a
+      language, ignoring case, is dropped), `★ n` only if > 0 (spoken "n stars"), `Updated <time
+      datetime="YYYY-MM">Mon YYYY</time>` (UTC month, never relative), then the links.
+    - Links: accent means "clickable", chips are never accent. Card links and practice links are accent text
+      links (`text-accent`, medium, underline on hover, global focus ring, 40px tap height, 24px apart): "GitHub"
+      with the shared `GitHubIcon` in front, "Live demo ↗" (only for an http(s) `homepage`), "Read more →"
+      (only with a project page); practice links "<title> ↗". Icons and arrows are `aria-hidden`. Links open in the same tab; each
+      `aria-label` names the project and contains the visible text ("Log Analytics Platform on GitHub", "Live
+      demo of …", "Read more about …", "LeetCode on GitHub"). No whole-card link, no nested links, no accent
+      fill, zero JS (homepage JS still 0.56 KB gzipped), no motion (→ 3.4).
+    - Project pages: `projectsSection(data, pages)` matches a `projects` collection entry to a repo by id vs.
+      repo name, ignoring case (Astro's glob loader lowercases ids). Frontmatter title/description override
+      GitHub, status/team are added, and the card links to `/projects/<entry id>`. Not applied to practice
+      links. No pages exist yet, so no card links to `/projects/`; the merge is unit-tested with made-up
+      entries. `Projects.astro` only calls `getCollection('projects')` once a page file exists
+      (`listProjectPageFiles`), because it warns on every build while the collection is empty.
+    - Missing descriptions: not re-implemented. Already proven by `tests/github-projects.test.ts`
+      (`findMissingDescriptions…`, `fetchProjects: missing description throws…`, `CLI: missing description
+      exits non-zero…`) and `tests/projects-data.test.ts` (`an empty description on a featured/portfolio
+      project fails`).
+    - Tests: `tests/projects-section.test.ts` (29: helpers on made-up data — tier order, empty tiers /
+      `isEmpty`, stars 0 vs > 0, Live demo only for http(s), month/year + UTC + `datetime`, topic dedupe,
+      page overrides + case-insensitive match + no link without a page, practice ignores pages, GitHub
+      profile URL; built HTML — id/`aria-labelledby`/`<h2>`, between Experience and Skills, every card in
+      order with title/description/repo href/demo/stars from `getProjects()`, practice links, link names
+      include the title and no `target`, no nested links, `<time>` values and no relative text, no
+      `/projects/` href without page files, one `<h1>`, no script, no `bg-accent`; each language and topic its
+      own `<li>` in a `role="list"`; card and practice links are accent text links (no chip classes), chips
+      never accent, `aria-hidden` GitHub icon / ↗ / →; the GitHub SVG path exists only in `GitHubIcon.astro`,
+      and the icon appears only on the Hero GitHub link, each card's "GitHub" link and the all-empty fallback;
+      practice links end in an `aria-hidden` ↗ with no icon, under a muted "Solutions on GitHub" line). `tests/design-tokens.test.ts`: text-muted on
+      `--border` ≥ 4.5:1 in both themes (accent on surface was already covered). Repos with a page file are
+      exempt from the title/description checks, so 3.1 needs no test change. `tests/e2e/projects.spec.ts` (7:
+      Hero "View Projects" and nav "Projects" → `#projects` in view; Tab from "View full resume" through every
+      section link with a focus ring, count from `projectsSection(getProjects(), <existing page files>)`;
+      375/1280 × dark/light no horizontal scroll, every card and practice link inside the viewport).
+      Break-on-purpose: showing stars at 0 failed the stars test; restored.
 
 - [ ] **2.9 Contact section (launch-level: no form yet)** — Email assembled client-side with Copy button (island), LinkedIn card, GitHub link.
   - Files: `src/components/Contact.astro`, `src/components/islands/CopyEmail.tsx`.
@@ -704,6 +763,9 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
     - Align the Hero profile icons with the text column: their 40px hit area shifts them about 10px right.
     - Reduce the Experience timeline indent and card padding at 375px.
     - Review the vertical spacing between sections.
+  - Open item (from 2.8): Section width: Projects is ~1100px while Hero/Experience/Skills are 720px, so
+    headings jump left and back while scrolling, and the featured card is ~40% empty at 1280px. Proposed:
+    one 720px column for all sections (Projects as a 2-column grid), then update ui.md's width rule.
   - Depends on: 2.5–2.9.
 
 - [ ] **2.11 `/resume` page** — Full resume in site styling, Download PDF button at top, print stylesheet. Reuses the same `CopyEmail` island as Contact (2.9) for the email — never plain text.
@@ -762,6 +824,11 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
     reads `.mdx` and validates its frontmatter. Then check whether the quiet glob wrapper
     (`src/lib/project-pages-loader.ts`) is still needed once the first project page exists; if not,
     replace it with plain `glob()` in `src/content.config.ts`.
+  - Note (from 2.8): the homepage cards are already wired. Once `src/content/projects/<repo-name>.mdx`
+    exists, its card gets a "Read more" link to `/projects/<entry id>` (matched to the repo name ignoring
+    case; the route must use the same entry id), and its frontmatter title/description/status/team override
+    the GitHub data (`src/lib/projects-section.ts`). `Projects.astro` calls `getCollection('projects')` only
+    when a page file exists; if the glob wrapper goes, that guard can go too. No test edit is needed.
   - Depends on: 2.4; needs action item #7.
 
 - [ ] **3.2 Table-migration case study** — User drafts the narrative; Claude Code handles layout/MDX wiring.

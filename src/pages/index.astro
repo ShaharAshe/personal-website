@@ -1,10 +1,11 @@
 ---
 // Stub homepage. Real sections are assembled in Task 2.10.
-// Skills sits right after Experience for now; Task 2.10 sets the final order (…, Projects, Skills, Contact).
+// Order so far: Hero, Experience, Projects, Skills; Task 2.10 adds Contact and sets the final page.
 // TEMPORARY (Task 2.1): token swatches below Skills to check both themes. Task 2.10 replaces them.
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Experience from '../components/Experience.astro';
 import Hero from '../components/Hero.astro';
+import Projects from '../components/Projects.astro';
 import Skills from '../components/Skills.astro';
 import { getResume } from '../lib/resume';
 
@@ -24,6 +25,7 @@ const swatches = [
 <BaseLayout title={name} description={`${name} – ${label}.`}>
   <Hero />
   <Experience />
+  <Projects />
   <Skills />
   <div class="mx-auto max-w-[720px] px-4 py-12">
     <h2 class="text-xl font-semibold">Design tokens</h2>

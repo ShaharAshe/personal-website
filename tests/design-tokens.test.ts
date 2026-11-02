@@ -113,6 +113,8 @@ const pairs: [fg: string, bg: string][] = [
   ['--text', '--surface'],
   ['--text-muted', '--bg'],
   ['--text-muted', '--surface'],
+  // Topic chips on project cards (bg-border fill, text-text-muted).
+  ['--text-muted', '--border'],
   ['--accent', '--bg'],
   ['--accent', '--surface'],
   [onAccent, '--accent'],

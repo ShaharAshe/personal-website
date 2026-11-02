@@ -226,22 +226,26 @@
 | Topics | `topics` | סינון + תגיות נוספות (בלי ה-topics של `portfolio-*`) |
 | כוכבים | `stargazers_count` | מוצג רק אם > 0 |
 | עדכון אחרון | `pushed_at` | מיון + "Updated Oct 2026" |
-| קישור | `html_url` | כפתור GitHub |
-| Demo | `homepage` | כפתור "Live demo", אם הוגדר Website בריפו |
+| קישור | `html_url` | קישור "GitHub" (עם אייקון GitHub) |
+| Demo | `homepage` | קישור "Live demo ↗", אם הוגדר Website בריפו |
 
-**חיבור לעמוד עומק:** אם קיים `src/content/projects/<repo-name>.mdx`, הכרטיס מקבל כפתור "Read more" לעמוד הפנימי. ב-MDX אפשר גם לדרוס שדות (למשל `status: In progress`, `team: 2 developers`, תיאור ארוך יותר).
+**חיבור לעמוד עומק:** אם קיים `src/content/projects/<repo-name>.mdx`, הכרטיס מקבל קישור "Read more →" לעמוד הפנימי. ב-MDX אפשר גם לדרוס שדות (למשל `status: In progress`, `team: 2 developers`, תיאור ארוך יותר). `status` ו-`team` מוצגים בכרטיס בשורה קטנה מתחת לכותרת.
+
+**Topics בכרטיס:** topic שרק חוזר על שפה (למשל `java` ליד Java, בלי תלות באותיות גדולות/קטנות) לא מוצג פעמיים.
+
+**קישורים מול תגיות:** הקישורים בכרטיס הם קישורי טקסט בצבע ה-accent (כי accent = לחיץ). תגיות השפה הן outline ותגיות ה-topics עם רקע `--border`, ואף אחת מהן לא בצבע accent.
 
 ### 6.5 מצב הריפוזיטוריז היום והמיפוי המוצע
 
 | ריפו | תיאור ב-GitHub | Topic מוצע |
 |---|---|---|
-| log-analytics-platform | ❌ חסר | `portfolio-featured` |
+| log-analytics-platform | ✅ קיים | `portfolio-featured` |
 | scam-reporting-app | ✅ קיים | `portfolio` |
 | diff-checker | ✅ קיים | `portfolio` |
 | Cryptography_modules | ✅ קיים | `portfolio` (אופציונלי) |
 | LeetCode | ✅ קיים | `portfolio-practice` |
-| NeetCode | ❌ חסר | `portfolio-practice` |
-| project_euler | ❌ חסר | `portfolio-practice` |
+| NeetCode | ✅ קיים | `portfolio-practice` |
+| project_euler | ✅ קיים | `portfolio-practice` |
 
 ### 6.6 בדיקות ב-build
 - ריפו עם `portfolio-featured` או `portfolio` **בלי תיאור** → ה-build נכשל עם הודעה ברורה. כך לא יעלה כרטיס ריק.
@@ -284,7 +288,7 @@ Claude Code מעדכן את `resume.yaml`, אתה רואה את ה-diff, מאש�
 basics:
   name: Shahar Asher
   label: Software Engineer, Backend & Distributed Systems
-  email: shaharas30@gmail.com
+  email: <email from resume.yaml>
   # אין שדה phone: הריפו ציבורי. הטלפון מגיע רק ממשתנה הסביבה CV_PHONE
   # (.env מקומית, secret ב-CI), ומופיע רק ב-Word/PDF. ה-schema דוחה שדה phone.
   location: Israel

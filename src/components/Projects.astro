@@ -1,0 +1,98 @@
+---
+// Homepage Projects (design-doc §5.1, §6): built at build time from src/data/projects.json (getProjects())
+// and the `projects` content collection, merged by src/lib/projects-section.ts. Never fetches GitHub in the
+// browser. Ships no JS.
+//
+// Tiers (.claude/rules/github-projects.md), each in projects.json order: featured → wide card(s) at the top;
+// portfolio → "More projects" grid; practice → "Algorithm practice" link row. An empty tier renders nothing
+// (no heading over an empty block). If all are empty, the section stays (Hero and nav link to #projects)
+// with one line linking to the GitHub profile. No accent fill, no motion (→ Task 3.4).
+import { getCollection } from 'astro:content';
+import GitHubIcon from './GitHubIcon.astro';
+import ProjectCard from './ProjectCard.astro';
+import { listProjectPageFiles } from '../lib/project-pages-loader';
+import { getProjects } from '../lib/projects';
+import { githubProfileUrl, projectsSection } from '../lib/projects-section';
+import { getResume } from '../lib/resume';
+
+// getCollection() warns "collection does not exist or is empty" on every build while there are no pages
+// (until Task 3.1), so it's only called once a page file exists. Same folder as PROJECTS_DIR in
+// src/content.config.ts.
+const hasPages = listProjectPageFiles('./src/content/projects').length > 0;
+const pages = hasPages ? (await getCollection('projects')).map(({ id, data }) => ({ id, data })) : [];
+const { featured, portfolio, practice, isEmpty } = projectsSection(getProjects(), pages);
+const profileUrl = isEmpty ? githubProfileUrl(getResume().basics.profiles) : null;
+---
+
+<section id="projects" aria-labelledby="projects-title" data-projects>
+  <div class="mx-auto max-w-[1100px] px-4 py-16">
+    <h2 id="projects-title" class="text-xl font-semibold tracking-tight">
+      Projects
+    </h2>
+
+    {featured.length > 0 && (
+      <div data-project-tier="featured" class="mt-8 space-y-6">
+        {featured.map((card) => (
+          <ProjectCard card={card} variant="featured" />
+        ))}
+      </div>
+    )}
+
+    {portfolio.length > 0 && (
+      <div data-project-tier="portfolio" class="mt-12">
+        <h3 id="more-projects-title" class="text-lg font-semibold">
+          More projects
+        </h3>
+        <ul role="list" aria-labelledby="more-projects-title" class="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {portfolio.map((card) => (
+            <li class="min-w-0">
+              <ProjectCard card={card} variant="portfolio" />
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+
+    {practice.length > 0 && (
+      <div data-project-tier="practice" class="mt-12">
+        <h3 id="practice-title" class="text-lg font-semibold">
+          Algorithm practice
+        </h3>
+        {/* Says once for the group where the links go: "LeetCode ↗" alone could read as leetcode.com. */}
+        <p data-practice-note class="mt-1 text-sm text-text-muted">
+          Solutions on GitHub
+        </p>
+        <ul role="list" aria-labelledby="practice-title" class="mt-2 flex flex-wrap gap-x-6">
+          {practice.map(({ name, title, href, label }) => (
+            <li class="max-w-full [overflow-wrap:anywhere]">
+              <a
+                href={href}
+                aria-label={label}
+                data-practice-link={name}
+                class="inline-flex min-h-10 items-center gap-1.5 font-medium text-accent hover:underline"
+              >
+                {title} <span aria-hidden="true">↗</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+
+    {isEmpty && (
+      <p data-projects-empty class="mt-8 text-text-muted">
+        {profileUrl ? (
+          <a
+            href={profileUrl}
+            class="inline-flex min-h-10 items-center gap-1.5 font-medium text-accent hover:underline"
+          >
+            <GitHubIcon size={16} class="shrink-0" />
+            Projects are on GitHub
+          </a>
+        ) : (
+          'Projects are on GitHub.'
+        )}
+      </p>
+    )}
+  </div>
+</section>
