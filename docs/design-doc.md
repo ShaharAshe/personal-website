@@ -383,7 +383,7 @@ education:
 | **טופס** (פונקציה משלך על Cloudflare) | משני, מתחת לערוצים הראשיים | שלב 2 |
 
 ### 8.2 מבנה הסקשן
-1. כותרת "Let's talk" + משפט קצר: "Open to backend and distributed systems roles. I usually reply within a day." (את המשפט אפשר לשנות כשתמצא עבודה.)
+1. כותרת "Let's talk" + משפט קצר: "Open to backend and distributed systems roles." (את המשפט אפשר לשנות כשתמצא עבודה.)
 2. שני כרטיסים באותו גודל: **Email** (עם כפתור Copy כחול) ו-**LinkedIn**.
 3. בשלב 2: "Or send a message here" וטופס קצר. כפתור השליחה לא צבוע, כדי שיהיה ברור שזו אפשרות משנית.
 4. קישור ל-GitHub בתחתית.
@@ -393,6 +393,9 @@ education:
 - `mailto:` כאפשרות נוספת בלבד (לרוב המבקרים אין תוכנת מייל מוגדרת). גם הקישור הזה מורכב בדפדפן.
 - **הגנה מבוטים:** הכתובת מורכבת רק בדפדפן ולא מופיעה כטקסט רגיל ב-HTML. הקומפוננטות מקבלות אותה רק
   מ-`getEmailParts()` ב-`src/lib/resume.ts`, ובדיקת `no-email-in-dist` מכשילה את ה-build אם היא מופיעה ב-`dist/`.
+- **בלי JavaScript:** הכתובת, כפתור ה-Copy וקישורי ה-`mailto:` (גם האייקון ב-Hero) מוסתרים ולא מקבלים פוקוס, ובכרטיס
+  המייל מופיעה שורה קצרה שמפנה ל-LinkedIn. **אם ההעתקה נכשלת** (אין Clipboard API או שהגישה נחסמה): הכתובת מסומנת
+  ומופיעה הנחיה להעתיק ידנית (Ctrl+C / ⌘C).
 
 ### 8.4 טופס (שלב 2)
 - **שדות:** Name, Email, Message + שדה נסתר (honeypot) נגד בוטים.
@@ -634,8 +637,8 @@ portfolio/
 │   │   ├── Contact.astro
 │   │   ├── ArchitectureDiagram.astro
 │   │   ├── ThemeToggle.astro        # רכיב Astro + סקריפט קטן, לא island
+│   │   ├── CopyEmail.astro          # רכיב Astro + סקריפט קטן, לא island
 │   │   └── islands/
-│   │       ├── CopyEmail.tsx
 │   │       └── ContactForm.tsx      # שלב 2
 │   ├── layouts/
 │   │   ├── BaseLayout.astro

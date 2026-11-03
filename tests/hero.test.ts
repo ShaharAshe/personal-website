@@ -126,6 +126,26 @@ test('the profile links match basics.profiles, in order, each with an aria-label
   for (const a of links) assert.match(a, /<svg\b[^>]*aria-hidden="true"/);
 });
 
+test(
+  'the email icon is last in the profile row: aria-label "Email", no href, hidden until the script runs',
+  {
+    skip,
+  },
+  () => {
+    const row = hero.match(/<ul\b[^>]*aria-label="Profiles"[^>]*>([\s\S]*?)<\/ul>/)?.[1] ?? '';
+    const items = [...row.matchAll(/<li\b[^>]*>[\s\S]*?<\/li>/g)].map(([li]) => li);
+    const last = items[items.length - 1] ?? '';
+    assert.equal(items.length, getResume().basics.profiles.length + 1);
+    assert.match(last, /^<li\b[^>]*\sdata-email-reveal\b[^>]*\shidden[\s>]/);
+    const link = anchors(last)[0] ?? '';
+    assert.match(link, /\sdata-email-link\b/);
+    assert.equal(attr(link, 'aria-label'), 'Email');
+    assert.equal(attr(link, 'href'), undefined);
+    assert.doesNotMatch(link, /\sdata-social=/);
+    assert.match(link, /<svg\b[^>]*aria-hidden="true"[^>]*data-icon="mail"/);
+  },
+);
+
 test('the Hero ships no script, and any new-tab link has rel="noopener noreferrer"', { skip }, () => {
   assert.doesNotMatch(hero, /<script\b/);
   for (const a of anchors(hero).filter((a) => /\starget="_blank"/.test(a))) {

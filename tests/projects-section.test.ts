@@ -370,9 +370,12 @@ test('the GitHub icon path lives in one source file; the icon appears only where
     cards(section).length + (fallback ? 1 : 0),
     'one GitHub icon per card GitHub link (plus the fallback link)',
   );
+  // Plus the Contact section's "GitHub" link (Task 2.9).
+  const contact = html.match(/<section\b[^>]*\bdata-contact\b[^>]*>[\s\S]*?<\/section>/)?.[0] ?? '';
+  assert.equal([...contact.matchAll(/data-icon="github"/g)].length, 1, 'Contact GitHub link icon');
   assert.equal(
     [...html.matchAll(/data-icon="github"/g)].length,
-    heroGitHub.length + cards(section).length + (fallback ? 1 : 0),
+    heroGitHub.length + cards(section).length + (fallback ? 1 : 0) + 1,
     'GitHub icons on the whole page',
   );
 });

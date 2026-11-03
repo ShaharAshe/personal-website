@@ -1,0 +1,112 @@
+---
+// The email row (design-doc §8.3): the address, the accent-filled Copy button and an "Open in mail app"
+// mailto: link. Used by the homepage Contact section and, in Task 2.11, the /resume page. An Astro
+// component with a small script, not a React island (React would add ~45-60KB of JS for one button).
+//
+// The address is never in the HTML or the JS: getEmailParts() gives user and domain, written as two
+// separate data attributes, and the script below joins them in the browser. The whole row is `hidden`
+// until the script has filled it in, so without JavaScript nothing email-related shows or takes focus
+// (Contact.astro shows a <noscript> line instead).
+//
+// The script is the page's one email script: it wires every email element on the page, including
+// EmailLink.astro links outside this component (the Hero email icon). Astro renders a component's
+// script once, where the component is first used, so it lands here in Contact, not in the Hero.
+import EmailLink from './EmailLink.astro';
+import MailIcon from './MailIcon.astro';
+import { getEmailParts } from '../lib/resume';
+
+const { user, domain } = getEmailParts();
+---
+
+<div data-email-reveal data-copy-email data-email-user={user} data-email-domain={domain} hidden>
+  <p data-email-address class="font-mono text-sm [overflow-wrap:anywhere]"></p>
+  <div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3">
+    <button
+      type="button"
+      data-email-copy
+      class="inline-grid justify-items-center rounded-md bg-accent px-5 py-2.5 font-medium text-on-accent hover:opacity-90"
+    >
+      {/* Both labels share one grid cell, so the button keeps its width when the label changes. */}
+      <span data-copy-idle class="[grid-area:1/1]">
+        Copy<span class="sr-only"> email address</span>
+      </span>
+      <span data-copy-done class="[grid-area:1/1]">
+        Copied ✓
+      </span>
+    </button>
+    <EmailLink class="inline-flex min-h-10 items-center gap-2 font-medium text-accent hover:underline">
+      <MailIcon size={16} />
+      Open in mail app
+    </EmailLink>
+  </div>
+  <p data-copy-hint class="mt-3 text-sm text-text-muted" hidden>
+    Couldn't copy automatically. The address is selected: press Ctrl+C (⌘C on Mac).
+  </p>
+  <p data-copy-status class="sr-only" role="status" aria-live="polite"></p>
+</div>
+
+<style>
+  /* Instant swap, no animation (design-doc §10.1). visibility also drops the hidden label from the name. */
+  [data-copy-done],
+  [data-copied] [data-copy-idle] {
+    visibility: hidden;
+  }
+  [data-copied] [data-copy-done] {
+    visibility: visible;
+  }
+</style>
+
+<script>
+  import { COPY_FEEDBACK_MS, copyText, joinEmail, mailtoHref, readEmailParts } from '../lib/email-client';
+  import type { EmailParts } from '../lib/resume';
+
+  function setUpCopy(root: HTMLElement, address: string) {
+    const addressEl = root.querySelector<HTMLElement>('[data-email-address]');
+    const button = root.querySelector<HTMLButtonElement>('button[data-email-copy]');
+    const hint = root.querySelector<HTMLElement>('[data-copy-hint]');
+    const status = root.querySelector<HTMLElement>('[data-copy-status]');
+    if (!addressEl || !button || !hint || !status) return;
+
+    addressEl.textContent = address;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    button.addEventListener('click', async () => {
+      const result = await copyText(address, navigator.clipboard);
+      clearTimeout(timer);
+      if (result === 'copied') {
+        hint.hidden = true;
+        button.dataset.copied = '';
+        status.textContent = 'Email address copied';
+        timer = setTimeout(() => {
+          delete button.dataset.copied;
+          status.textContent = '';
+        }, COPY_FEEDBACK_MS);
+        return;
+      }
+      // No clipboard, or access denied: select the address so it can be copied by hand.
+      delete button.dataset.copied;
+      const range = document.createRange();
+      range.selectNodeContents(addressEl);
+      const selection = getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      hint.hidden = false;
+      status.textContent = hint.textContent?.trim() ?? '';
+    });
+  }
+
+  // Each [data-email-reveal] container is shown only once every email element in it has valid parts.
+  for (const container of document.querySelectorAll<HTMLElement>('[data-email-reveal]')) {
+    const elements = [container, ...container.querySelectorAll<HTMLElement>('[data-email-user]')].filter(
+      (el) => el.dataset.emailUser !== undefined,
+    );
+    const parsed = elements.map((el) => [el, readEmailParts(el.dataset)] as const);
+    if (parsed.length === 0 || parsed.some(([, parts]) => !parts)) continue;
+
+    for (const [el, parts] of parsed as (readonly [HTMLElement, EmailParts])[]) {
+      if (el instanceof HTMLAnchorElement) el.href = mailtoHref(parts);
+      if (el.hasAttribute('data-copy-email')) setUpCopy(el, joinEmail(parts));
+    }
+    container.hidden = false;
+  }
+</script>

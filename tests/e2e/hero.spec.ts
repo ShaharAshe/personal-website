@@ -4,7 +4,8 @@
 
 import { expect, test, type Page } from '@playwright/test';
 import { THEMES } from '../../src/lib/theme.ts';
-import { getResume } from '../../src/lib/resume.ts';
+import { mailtoHref } from '../../src/lib/email-client.ts';
+import { getEmailParts, getResume } from '../../src/lib/resume.ts';
 import { RESUME_PDF_FILENAME } from '../../src/lib/resume-pdf.ts';
 import { expectFocusRing, expectTheme, themeToggle } from './helpers.ts';
 
@@ -46,6 +47,11 @@ test('keyboard: after the theme toggle, Tab reaches both CTAs and then each prof
     await expect(link).toHaveAttribute('href', url);
     await expectFocusRing(link);
   }
+  // Then the email icon, last in the row, its mailto: href set by the page's email script.
+  await page.keyboard.press('Tab');
+  const email = hero(page).getByRole('link', { name: 'Email', exact: true });
+  await expectFocusRing(email);
+  expect((await email.getAttribute('href')) === mailtoHref(getEmailParts())).toBe(true);
 });
 
 for (const width of [375, 1280]) {

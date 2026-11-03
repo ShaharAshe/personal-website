@@ -17,12 +17,15 @@ paths:
   shared `GitHubIcon` (`src/components/GitHubIcon.astro`) goes on links whose text is "GitHub" and on
   icon-only GitHub links; ↗ marks other links that leave the site (e.g. Live demo, a list of repos); →
   marks links within the site (e.g. View full resume, Read more). Don't repeat a logo on every item of a
-  list; if the destination isn't obvious, say it once for the group.
+  list; if the destination isn't obvious, say it once for the group. The shared `LinkedInIcon`
+  (`src/components/LinkedInIcon.astro`) works the same way for LinkedIn: on links whose text names
+  LinkedIn and on icon-only LinkedIn links, without ↗. `mailto:` links get the shared `MailIcon`
+  (`src/components/MailIcon.astro`) instead of ↗ (they open a mail app, not a page).
 - Content width: ~720px for text, ~1100px for grids. Cards use a subtle 1px border, no heavy shadows.
 - Proposed for Task 2.10: one 720px column for every section, including Projects (2-column card grid),
   so all section headings align. Decide there with screenshots; until then the ~1100px grid width stays.
 - Prefer an Astro component with a small script for simple interactions, such as the theme toggle
-  (`src/components/ThemeToggle.astro`) and probably the copy-email button (task 2.9).
+  (`src/components/ThemeToggle.astro`) and the copy-email button (`src/components/CopyEmail.astro`).
 - Use a React island only when the interaction is complex enough to need it, such as the contact
   form (task 3.3). Load it only where it's used, with `client:visible` or `client:idle`.
 - Keep the "homepage JS < 30KB gzipped" budget from CLAUDE.md in mind when choosing.

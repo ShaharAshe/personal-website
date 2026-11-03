@@ -63,7 +63,8 @@ Reality check performed before this plan:
 - **Deploy only from `main`.** PRs and other branches run `build` + `check` only — no deploy, no
   preview URL for now.
 - The `/resume` page and the homepage Contact section both render the email via the same client-side
-  `CopyEmail` island — nowhere does the email appear as plain text in built HTML.
+  `CopyEmail` component (`src/components/CopyEmail.astro`, an Astro component with a small script, not a
+  React island; changed in 2.9) — nowhere does the email appear as plain text in built HTML.
 - JSON-LD `Person` schema (Task 2.13) is built from `resume.yaml` but **excludes `email` and `phone`
   entirely** — it's for SEO rich results, not a contact-harvesting surface.
 - Node version pinned via `.nvmrc` (`22`) + `package.json` `engines.node`, so CI matches local exactly.
@@ -738,8 +739,8 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       375/1280 × dark/light no horizontal scroll, every card and practice link inside the viewport).
       Break-on-purpose: showing stars at 0 failed the stars test; restored.
 
-- [ ] **2.9 Contact section (launch-level: no form yet)** — Email assembled client-side with Copy button (island), LinkedIn card, GitHub link.
-  - Files: `src/components/Contact.astro`, `src/components/islands/CopyEmail.tsx`.
+- [x] **2.9 Contact section (launch-level: no form yet)** — Email assembled client-side with Copy button (Astro component + small script), LinkedIn card, GitHub link.
+  - Files: `src/components/Contact.astro`, `src/components/CopyEmail.astro` (was `islands/CopyEmail.tsx`, see below).
   - Verify: Email never appears as plain text in built HTML; Copy button shows "Copied ✓"; works via keyboard.
   - Note (from 2.4): get the address only from `getEmailParts()` (`src/lib/resume.ts`). The `mailto:` link
     must be assembled in the browser too: a `mailto:user@domain` href in the HTML fails `no-email-in-dist`.
@@ -747,6 +748,47 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
     Email), next to the profile icons in `src/components/Hero.astro`, with its `mailto:` href assembled in
     the browser like the rest of the email. The Hero has no script today, so keep the added JS tiny.
   - Depends on: 2.2.
+  - Done (2026-11-03). Notes / deviations:
+    - **Astro component, not a React island** (per `.claude/rules/ui.md` since 2.3): `CopyEmail.astro` with a
+      small script. React would add ~45-60KB for one button. Homepage JS 0.56 → 1.24 KB gzipped.
+    - Files: new `src/components/Contact.astro`, `CopyEmail.astro`, `EmailLink.astro`, `LinkedInIcon.astro`
+      (the LinkedIn SVG, moved out of `Hero.astro`), `MailIcon.astro`; new `src/lib/email-client.ts` (pure:
+      `joinEmail`, `mailtoHref`, `readEmailParts`, `copyText`, `COPY_FEEDBACK_MS`) and `src/lib/contact.ts`
+      (`contactContent`: LinkedIn + GitHub URLs from `basics.profiles`, a missing one fails the build);
+      `Hero.astro` (email icon), `index.astro` (Contact after Skills, swatches still below).
+    - **How the email reaches the browser:** `getEmailParts()` → `data-email-user` / `data-email-domain` as two
+      separate attributes on each email element. The script (no address in it) joins them, sets the
+      `mailto:` href (none in the HTML) and the shown address, then removes `hidden` from each
+      `[data-email-reveal]` container. `no-email-in-dist` still passes.
+    - **One script for the page, in `CopyEmail.astro`:** Astro renders a component's script where the component
+      is first used, and the Hero must stay script-free (`tests/hero.test.ts`), so the script renders inside
+      Contact and wires every email element on the page, including the Hero icon. A page that uses `EmailLink`
+      must also render `CopyEmail` (2.11 does); without it the link just stays hidden.
+    - **No JS:** the email row and the Hero icon stay `hidden` (not shown, not focusable); the Email card shows a
+      `<noscript>` line pointing to LinkedIn. **Clipboard fails** (no API / denied): the address is selected and
+      a muted hint says "press Ctrl+C (⌘C on Mac)", also announced; the label stays "Copy".
+    - Copy: `<button type="button">`, the section's one accent fill, name "Copy email address". "Copy" and
+      "Copied ✓" share one grid cell (no width change), swapped instantly for 2s (no animation). A
+      `role="status" aria-live="polite"` region announces "Email address copied".
+    - Layout (§8.2): `<section id="contact" aria-labelledby>` + `<h2>` "Let's talk" + "Open to backend and
+      distributed systems roles." (user decision: "I usually reply within a day." dropped, design-doc §8.2
+      updated). Two equal cards (1 column, 2 from `sm:`): Email (address, Copy, "Open in mail app" with the mail
+      icon) and LinkedIn ("View my LinkedIn profile" with the LinkedIn icon); then "Code and projects on
+      GitHub" (GitHub icon). 720px, same-tab links. Link markers: ui.md gained a line for LinkedIn and mailto.
+    - Hero: email icon last in the profile row (`aria-label="Email"`, same 40px hit area), so revealing it
+      shifts nothing.
+    - Docs: ui.md (link markers, interactivity line), design-doc §8.2/§8.3/§14, this file (2.11 and "Decisions
+      locked in": `CopyEmail` component, not island).
+    - Tests: `tests/email-client.test.ts` (10, made-up addresses), `tests/contact.test.ts` (15: helper; built
+      HTML: id/`<h2>`, intro, order, parts as separate attributes equal to `getEmailParts()` (true/false only),
+      no `mailto:` href in any built file, no href on email links, hidden row, Copy is the only accent-filled
+      `<button>`, live region, profile hrefs/icons/no `target`, LinkedIn path in one src file, `<noscript>`,
+      one `<h1>`), a Hero email-icon test in `tests/hero.test.ts`, the page GitHub-icon count in
+      `tests/projects-section.test.ts` (+1 for Contact). `npm test`: 269. E2E `tests/e2e/contact.spec.ts` (11:
+      nav → `#contact`, mailto links + address after load, click Copy → clipboard + "Copied ✓" gone after 2s
+      (`page.clock`), Tab + Enter/Space, clipboard denied, no clipboard API, JS off (fallback, no email Tab
+      stop), 375/1280 × dark/light layout); Hero and Experience Tab-order tests now include the email icon;
+      a `contact-copied` review screenshot. `npm run test:e2e`: 54.
 
 - [ ] **2.10 Footer + homepage assembly** — Wire Hero/Experience/Projects/Skills/Contact/Footer into `index.astro`.
   - Files: `src/pages/index.astro`.
@@ -768,9 +810,9 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
     one 720px column for all sections (Projects as a 2-column grid), then update ui.md's width rule.
   - Depends on: 2.5–2.9.
 
-- [ ] **2.11 `/resume` page** — Full resume in site styling, Download PDF button at top, print stylesheet. Reuses the same `CopyEmail` island as Contact (2.9) for the email — never plain text.
+- [ ] **2.11 `/resume` page** — Full resume in site styling, Download PDF button at top, print stylesheet. Reuses the same `CopyEmail` component (`src/components/CopyEmail.astro`) as Contact (2.9) for the email — never plain text.
   - Files: `src/pages/resume.astro`.
-  - Verify: Ctrl+P produces a clean printed page; phone never rendered; email not plain text on this page either (confirm `CopyEmail` island used).
+  - Verify: Ctrl+P produces a clean printed page; phone never rendered; email not plain text on this page either (confirm the `CopyEmail` component is used).
   - Note (from 1.5): the Download PDF button is `<a href="/resume.pdf" download="Shahar_Asher_CV.pdf">`,
     so it downloads, while a direct link to `/resume.pdf` opens in the browser. (2.5) Use
     `RESUME_PDF_URL` / `RESUME_PDF_FILENAME` from `src/lib/resume-pdf.ts`, never retype them.

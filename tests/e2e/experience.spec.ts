@@ -4,7 +4,6 @@
 
 import { expect, test, type Page } from '@playwright/test';
 import { THEMES } from '../../src/lib/theme.ts';
-import { getResume } from '../../src/lib/resume.ts';
 import { expectFocusRing, expectTheme } from './helpers.ts';
 
 const experience = (page: Page) => page.locator('#experience');
@@ -17,14 +16,11 @@ test('the nav "Experience" link brings the section into view', async ({ page }) 
   await expect(experience(page).getByRole('heading', { level: 2, name: 'Experience' })).toBeInViewport();
 });
 
-test('keyboard: after the last Hero profile link, Tab reaches the full-resume link with a focus ring', async ({
+test('keyboard: after the Hero email icon (its last stop), Tab reaches the full-resume link with a focus ring', async ({
   page,
 }) => {
   await page.goto('/');
-  const profiles = getResume().basics.profiles;
-  const last = page
-    .locator('[data-hero]')
-    .getByRole('link', { name: profiles[profiles.length - 1].network, exact: true });
+  const last = page.locator('[data-hero]').getByRole('link', { name: 'Email', exact: true });
   // Focus by keyboard (Shift+Tab, Tab), so :focus-visible applies.
   await last.focus();
   await page.keyboard.press('Shift+Tab');

@@ -29,6 +29,24 @@ for (const width of WIDTHS) {
         await page.keyboard.press('Tab');
         await page.screenshot({ path: `${OUT_DIR}/${width}-${theme}-toggle-focused.png` });
       });
+
+      test.describe('with clipboard access', () => {
+        test.use({ permissions: ['clipboard-read', 'clipboard-write'] });
+
+        test('contact copied', async ({ page }) => {
+          await page.goto('/');
+          await page.evaluate(() => document.fonts.ready);
+          const button = page.locator('[data-contact] button[data-email-copy]');
+          await button.scrollIntoViewIfNeeded();
+          // Copy, then Tab-and-back so the button shows "Copied ✓" with its keyboard focus ring.
+          await button.focus();
+          await page.keyboard.press('Shift+Tab');
+          await page.keyboard.press('Tab');
+          await page.keyboard.press('Enter');
+          await page.locator('[data-copy-done]').waitFor({ state: 'visible' });
+          await page.locator('[data-contact]').screenshot({ path: `${OUT_DIR}/${width}-${theme}-contact-copied.png` });
+        });
+      });
     });
   }
 }

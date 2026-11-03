@@ -1,0 +1,55 @@
+---
+// Homepage Contact section (design-doc §8.2, launch level, no form yet): heading and one line, then two
+// equal cards, Email (CopyEmail: address, the section's one accent-filled button, a mailto: link) and
+// LinkedIn, then a GitHub link. Profile URLs come from basics.profiles (src/lib/contact.ts). The email
+// only reaches the page as parts, joined in the browser by CopyEmail's script (design-doc §8.3).
+// Links open in the same tab.
+import CopyEmail from './CopyEmail.astro';
+import GitHubIcon from './GitHubIcon.astro';
+import LinkedInIcon from './LinkedInIcon.astro';
+import { contactContent } from '../lib/contact';
+import { getResume } from '../lib/resume';
+
+const { linkedin, github } = contactContent(getResume());
+const linkClass = 'inline-flex min-h-10 items-center gap-2 font-medium text-accent hover:underline';
+---
+
+<section id="contact" aria-labelledby="contact-title" data-contact class="mx-auto max-w-[720px] px-4 py-16">
+  <h2 id="contact-title" class="text-xl font-semibold">
+    Let's talk
+  </h2>
+  <p data-contact-intro class="mt-3 max-w-[60ch] text-text-muted">
+    Open to backend and distributed systems roles.
+  </p>
+
+  <div class="mt-8 grid gap-4 sm:grid-cols-2">
+    <div data-contact-card="email" class="flex flex-col rounded-lg border border-border bg-surface p-5 sm:p-6">
+      <h3 class="mb-3 font-semibold">Email</h3>
+      <CopyEmail />
+      <noscript>
+        <p data-email-nojs class="text-sm text-text-muted">
+          My email address appears with JavaScript on (it keeps it away from spam bots). You can reach me on LinkedIn.
+        </p>
+      </noscript>
+    </div>
+
+    <div data-contact-card="linkedin" class="flex flex-col rounded-lg border border-border bg-surface p-5 sm:p-6">
+      <h3 class="mb-3 font-semibold">LinkedIn</h3>
+      <p class="text-sm text-text-muted">Message me or connect there.</p>
+      <div class="mt-auto pt-4">
+        <a href={linkedin} data-contact-linkedin class={linkClass}>
+          <LinkedInIcon size={16} />
+          View my LinkedIn profile
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <p class="mt-6 flex flex-wrap items-center gap-x-2 text-text-muted">
+    Code and projects on
+    <a href={github} data-contact-github class={linkClass}>
+      <GitHubIcon size={16} />
+      GitHub
+    </a>
+  </p>
+</section>

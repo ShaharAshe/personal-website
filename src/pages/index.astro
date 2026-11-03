@@ -1,8 +1,9 @@
 ---
 // Stub homepage. Real sections are assembled in Task 2.10.
-// Order so far: Hero, Experience, Projects, Skills; Task 2.10 adds Contact and sets the final page.
-// TEMPORARY (Task 2.1): token swatches below Skills to check both themes. Task 2.10 replaces them.
+// Order: Hero, Experience, Projects, Skills, Contact; Task 2.10 adds the footer and sets the final page.
+// TEMPORARY (Task 2.1): token swatches below Contact to check both themes. Task 2.10 replaces them.
 import BaseLayout from '../layouts/BaseLayout.astro';
+import Contact from '../components/Contact.astro';
 import Experience from '../components/Experience.astro';
 import Hero from '../components/Hero.astro';
 import Projects from '../components/Projects.astro';
@@ -27,6 +28,7 @@ const swatches = [
   <Experience />
   <Projects />
   <Skills />
+  <Contact />
   <div class="mx-auto max-w-[720px] px-4 py-12">
     <h2 class="text-xl font-semibold">Design tokens</h2>
     <p class="mt-2 text-text-muted">Temporary swatch page (Task 2.1). Replaced by the homepage in Task 2.10.</p>

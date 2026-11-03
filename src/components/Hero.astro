@@ -4,9 +4,14 @@
 //
 // "Download Resume" is the section's one accent-filled button. The download attribute makes it save the
 // PDF; a plain link to /resume.pdf opens it in the browser (public/_headers serves it inline).
-// The email icon is added in Task 2.9, with the CopyEmail component that assembles it in the browser.
+// The email icon (last in the row) is an EmailLink: no href in the HTML, and its item is `hidden` until
+// the page's email script (in CopyEmail.astro, rendered by Contact) joins the address and sets the
+// mailto: href. So the Hero itself still ships no script, and without JS the icon isn't shown.
 // Profile links open in the same tab (no target="_blank").
+import EmailLink from './EmailLink.astro';
 import GitHubIcon from './GitHubIcon.astro';
+import LinkedInIcon from './LinkedInIcon.astro';
+import MailIcon from './MailIcon.astro';
 import { heroContent } from '../lib/hero';
 import { getResume } from '../lib/resume';
 import { RESUME_PDF_FILENAME, RESUME_PDF_URL } from '../lib/resume-pdf';
@@ -52,14 +57,18 @@ const { name, title, tagline, socials } = heroContent(getResume());
             class="inline-flex size-10 items-center justify-center rounded-md text-text-muted hover:text-text"
           >
             {icon === 'github' && <GitHubIcon size={20} />}
-            {icon === 'linkedin' && (
-              <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 1 1 0-4.125 2.062 2.062 0 0 1 0 4.125zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-              </svg>
-            )}
+            {icon === 'linkedin' && <LinkedInIcon size={20} />}
           </a>
         </li>
       ))}
+      <li data-email-reveal hidden>
+        <EmailLink
+          aria-label="Email"
+          class="inline-flex size-10 items-center justify-center rounded-md text-text-muted hover:text-text"
+        >
+          <MailIcon size={20} />
+        </EmailLink>
+      </li>
     </ul>
   </div>
 </section>

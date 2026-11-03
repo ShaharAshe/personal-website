@@ -1,0 +1,20 @@
+---
+// A mailto: link with no href in the HTML. It carries the address as two separate data attributes from
+// getEmailParts(); the shared email script in CopyEmail.astro joins them and sets the href in the
+// browser (design-doc §8.3). Without that script the link has no href, so it isn't focusable: put it
+// inside a `hidden` [data-email-reveal] container, which the script reveals once the href is set.
+// A page that uses EmailLink must also render CopyEmail (its script wires every email element on the page).
+import { getEmailParts } from '../lib/resume';
+
+interface Props {
+  class?: string;
+  'aria-label'?: string;
+}
+
+const { class: className, 'aria-label': ariaLabel } = Astro.props;
+const { user, domain } = getEmailParts();
+---
+
+<a data-email-link data-email-user={user} data-email-domain={domain} aria-label={ariaLabel} class={className}>
+  <slot />
+</a>
