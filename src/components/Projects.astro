@@ -8,6 +8,7 @@
 // (no heading over an empty block). If all are empty, the section stays (Hero and nav link to #projects)
 // with one line linking to the GitHub profile. No accent fill, no motion (→ Task 3.4).
 import { getCollection } from 'astro:content';
+import ArrowUpRightIcon from './ArrowUpRightIcon.astro';
 import GitHubIcon from './GitHubIcon.astro';
 import ProjectCard from './ProjectCard.astro';
 import { listProjectPageFiles } from '../lib/project-pages-loader';
@@ -25,7 +26,7 @@ const profileUrl = isEmpty ? githubProfileUrl(getResume().basics.profiles) : nul
 ---
 
 <section id="projects" aria-labelledby="projects-title" data-projects>
-  <div class="mx-auto max-w-[1100px] px-4 py-16">
+  <div class="mx-auto max-w-[720px] px-4 pt-(--section-gap)">
     <h2 id="projects-title" class="text-xl font-semibold tracking-tight">
       Projects
     </h2>
@@ -43,7 +44,7 @@ const profileUrl = isEmpty ? githubProfileUrl(getResume().basics.profiles) : nul
         <h3 id="more-projects-title" class="text-lg font-semibold">
           More projects
         </h3>
-        <ul role="list" aria-labelledby="more-projects-title" class="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <ul role="list" aria-labelledby="more-projects-title" class="mt-4 grid gap-6">
           {portfolio.map((card) => (
             <li class="min-w-0">
               <ProjectCard card={card} variant="portfolio" />
@@ -58,7 +59,7 @@ const profileUrl = isEmpty ? githubProfileUrl(getResume().basics.profiles) : nul
         <h3 id="practice-title" class="text-lg font-semibold">
           Algorithm practice
         </h3>
-        {/* Says once for the group where the links go: "LeetCode ↗" alone could read as leetcode.com. */}
+        {/* Says once for the group where the links go: "LeetCode" with an arrow alone could read as leetcode.com. */}
         <p data-practice-note class="mt-1 text-sm text-text-muted">
           Solutions on GitHub
         </p>
@@ -71,7 +72,8 @@ const profileUrl = isEmpty ? githubProfileUrl(getResume().basics.profiles) : nul
                 data-practice-link={name}
                 class="inline-flex min-h-10 items-center gap-1.5 font-medium text-accent hover:underline"
               >
-                {title} <span aria-hidden="true">↗</span>
+                {title}
+                <ArrowUpRightIcon size={16} class="shrink-0" />
               </a>
             </li>
           ))}

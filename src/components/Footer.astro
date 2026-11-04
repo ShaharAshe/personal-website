@@ -1,0 +1,41 @@
+---
+// The site footer, on every page through BaseLayout: name and build year, the profile links from
+// basics.profiles, and Back to top. Muted site chrome (.claude/rules/ui.md). Ships no JS.
+//
+// No email here: email links only work on pages that render CopyEmail, and the footer is on all of them.
+// Back to top targets BaseLayout's #top, so following it also moves keyboard focus to the top of the page.
+import ArrowUpIcon from './ArrowUpIcon.astro';
+import GitHubIcon from './GitHubIcon.astro';
+import LinkedInIcon from './LinkedInIcon.astro';
+import { heroContent } from '../lib/hero';
+import { getResume } from '../lib/resume';
+
+const { name, socials } = heroContent(getResume());
+const year = new Date().getFullYear();
+const linkClass = 'inline-flex min-h-10 items-center gap-1.5 text-text-muted hover:text-text';
+---
+
+<footer data-footer class="border-t border-border">
+  <div class="mx-auto flex max-w-[720px] flex-col gap-2 px-4 py-6 text-sm text-text-muted sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+    <p data-footer-copyright>
+      &copy; {year} {name}
+    </p>
+    <ul role="list" class="flex flex-wrap items-center gap-x-5">
+      {socials.map(({ network, url, icon }) => (
+        <li>
+          <a href={url} data-footer-social={icon} class={linkClass}>
+            {icon === 'github' && <GitHubIcon size={16} class="shrink-0" />}
+            {icon === 'linkedin' && <LinkedInIcon size={16} class="shrink-0" />}
+            {network}
+          </a>
+        </li>
+      ))}
+      <li>
+        <a href="#top" data-back-to-top class={linkClass}>
+          Back to top
+          <ArrowUpIcon size={14} class="shrink-0" />
+        </a>
+      </li>
+    </ul>
+  </div>
+</footer>

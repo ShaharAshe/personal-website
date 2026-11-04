@@ -790,24 +790,50 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       stop), 375/1280 × dark/light layout); Hero and Experience Tab-order tests now include the email icon;
       a `contact-copied` review screenshot. `npm run test:e2e`: 54.
 
-- [ ] **2.10 Footer + homepage assembly** — Wire Hero/Experience/Projects/Skills/Contact/Footer into `index.astro`.
-  - Files: `src/pages/index.astro`.
-  - Note (from 2.1): this replaces the temporary design-token swatch page currently in `index.astro`.
-  - Open item (from 2.3): at 375px the nav (4 links + theme toggle) fits on one line with only ~6px
-    to spare. If a home link / name is added to the header (2.4/2.5) or a link is added, it won't fit:
-    the links then wrap to a second line (no overflow, but it looks crowded). Decide here whether
-    that's acceptable or whether the nav needs a small-screen pattern (e.g. a disclosure/hamburger
-    menu, as an Astro component with a small script).
-  - Open item (from 2.7): navigation on a long page. Decide with the full homepage in place whether it's
-    needed at all, and if so: a 'Back to top' anchor link in the footer (zero JS), a sticky header, or a
-    floating back-to-top button. Smooth scrolling only under prefers-reduced-motion: no-preference.
-  - Visual polish (from 2.5/2.6, review with the full homepage):
-    - Align the Hero profile icons with the text column: their 40px hit area shifts them about 10px right.
-    - Reduce the Experience timeline indent and card padding at 375px.
-    - Review the vertical spacing between sections.
-  - Open item (from 2.8): Section width: Projects is ~1100px while Hero/Experience/Skills are 720px, so
-    headings jump left and back while scrolling, and the featured card is ~40% empty at 1280px. Proposed:
-    one 720px column for all sections (Projects as a 2-column grid), then update ui.md's width rule.
+- [x] **2.10 Footer + homepage assembly** — Wire Hero/Experience/Projects/Skills/Contact/Footer into `index.astro`.
+  - Files: `src/pages/index.astro`, `src/components/Footer.astro`, `ArrowUpRightIcon.astro`, `ArrowUpIcon.astro`,
+    `src/layouts/BaseLayout.astro`, `src/styles/global.css`, the section components, `MailIcon.astro`.
+  - Note (from 2.1): the swatch content is gone; `index.astro` is the real homepage.
+  - Closed (from 2.3), nav at 375px: no change, no hamburger. No links were added and it fits on one line.
+  - Closed (from 2.7), long page: a "Back to top" link in the footer, zero JS, and no sticky header or floating
+    button. It targets `<div id="top" tabindex="-1">`, the first child of `<body>`, so it also moves keyboard
+    focus (the next Tab reaches the skip link). In-page links scroll smoothly only under
+    `prefers-reduced-motion: no-preference`.
+  - Visual polish (from 2.5/2.6), done:
+    - Hero profile list `-ml-2.5`: the icons line up with the text, and the hit area stays 40px.
+    - Experience at 375px: `pl-4`, card `p-4`, dot offset to match (16px more text width); unchanged from `sm:`.
+    - One section gap, `--section-gap` in `global.css`: 64px, 96px from `sm:` (was a doubled 128px). Sections pad
+      only their top, Contact also its bottom before the footer. The Hero keeps its top padding (80/112px).
+  - Closed (from 2.8), width: one 720px column for every section, including Projects. "More projects" is one column
+    at every width, each card spanning the column like the featured card. The 2-column grid was tried first and
+    dropped after the screenshots: cards were about 330px wide, so descriptions wrapped into tall cards (Cryptography
+    Modules almost 500px), and 3 cards left an empty cell. ui.md updated. All project cards now use the same padding (`p-5`, dropping the featured card's `sm:p-6`), so their text lines up.
+  - Deviations from the original task text:
+    - The nav moved into the 720px column too, so its right edge lines up at 1280px.
+    - ui.md now states that site chrome links are muted, and links inside content use accent.
+    - `↗` became the shared `ArrowUpRightIcon` (it can render as a colored emoji on phones), and Back to top uses
+      `ArrowUpIcon`; → stays text. A test keeps `↗` and `↑` out of link text.
+    - Footer contents replace design-doc §5.1's ("Built with Astro" and the source link are dropped).
+    - `Hero.astro` lost `overflow-hidden`: with no bottom padding it would clip the icons' focus ring.
+    - `Contact.astro` reserves the email row's height (`min-h-20 sm:min-h-33`): without it, revealing the row
+      pushed everything below it down by 80px at 375px and 132px at 1280px.
+    - Hero background is now two independent layers, with nothing under the text. Each is one class on the Hero's
+      `<section>` (remove it to turn the layer off):
+      - `hero-dots`: `--hero-dot` (`--text-muted` at 35%, about 1.7:1 on `--bg`, 2px radius, 24px spacing), masked
+        transparent across the 720px column, so dots show only in the margins and not at all at 720px or less.
+      - `hero-glow`: `--hero-glow` (`--accent` at 10% via `color-mix()`), a soft radial gradient behind the heading, in
+        dark only; light sets it to `transparent`. Light was tried at 3.5%, the most the accent role line allows (4.52:1,
+        from 4.73:1 on `--bg`), but it was barely visible, showed a faint gray ellipse edge, and left the role line right
+        at the limit. So at 375px, where no dots show, the light Hero is plain `--bg`.
+    - What was tried first: dots under the text at 1px, 1.5px and 2px radius. A dot strong enough to see drops the
+      text below AA (light accent is 3.59:1 even at 20%), so the role and tagline needed a solid `--bg`, and that
+      cut the dots into a dashed line under the text. Moving the dots off the text removed the whole trade-off.
+  - Tests: new `tests/homepage.test.ts` (10) and `tests/e2e/homepage.spec.ts` (39); `tests/projects-section.test.ts`
+    updated (footer GitHub icon, arrow icons); Hero layer checks added to `tests/design-tokens.test.ts` and
+    `tests/hero.test.ts`. `npm test`: 288. `npm run test:e2e`: 93.
+  - Left open:
+    - Design-doc §4 still lists GitHub/LinkedIn icons in the top nav, and §6 still says "Live demo ↗".
+    - The arrow icons still need a look on a real phone, and `#top` focus a look in Safari/Firefox (e2e is Chromium only).
   - Depends on: 2.5–2.9.
 
 - [ ] **2.11 `/resume` page** — Full resume in site styling, Download PDF button at top, print stylesheet. Reuses the same `CopyEmail` component (`src/components/CopyEmail.astro`) as Contact (2.9) for the email — never plain text.

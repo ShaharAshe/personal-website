@@ -128,3 +128,56 @@ for (const [name, tokens] of Object.entries(themes)) {
     });
   }
 }
+
+// --- the Hero background layers ---
+
+/** `token` at `percent` strength over --bg, as the browser paints it. */
+function mixOnBg(tokens: Tokens, token: string, percent: number): string {
+  const channels = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const bg = channels(tokens['--bg']);
+  const mixed = channels(tokens[token]).map((value, i) =>
+    Math.round((value * percent + bg[i] * (100 - percent)) / 100),
+  );
+  return `#${mixed.map((value) => value.toString(16).padStart(2, '0')).join('')}`;
+}
+
+const dotPercent = Number(
+  css.match(/--hero-dot:\s*color-mix\(in srgb, var\(--text-muted\) (\d+)%, transparent\);/)?.[1],
+);
+const dotOn = (tokens: Tokens) => mixOnBg(tokens, '--text-muted', dotPercent);
+
+const glowPercents = [
+  ...css.matchAll(/--hero-glow:\s*color-mix\(in srgb, var\(--accent\) ([\d.]+)%, transparent\);/g),
+].map(([, percent]) => Number(percent));
+
+test('--hero-dot is --text-muted at a set strength', () => {
+  assert.ok(dotPercent > 0 && dotPercent < 100, `--hero-dot strength: ${dotPercent}`);
+});
+
+test('the Hero dots are visible, and about the same strength in both themes', () => {
+  const dark = contrast(dotOn(themes.dark), themes.dark['--bg']);
+  const light = contrast(dotOn(themes.light), themes.light['--bg']);
+  console.log(`hero dot on --bg: dark ${dark.toFixed(2)}:1, light ${light.toFixed(2)}:1`);
+  for (const ratio of [dark, light]) assert.ok(ratio >= 1.5, `dot on --bg: ${ratio.toFixed(2)}:1`);
+  assert.ok(Math.abs(dark - light) <= 0.2, `dark ${dark.toFixed(2)}:1, light ${light.toFixed(2)}:1`);
+});
+
+test('--hero-glow is --accent in dark only', () => {
+  assert.equal(glowPercents.length, 1, `--hero-glow color-mix declarations: ${glowPercents.length}`);
+  assert.ok(glowPercents[0] > 0 && glowPercents[0] < 100, `--hero-glow strength: ${glowPercents[0]}`);
+});
+
+test('--hero-glow is transparent in light, saved and OS fallback, so light text is on plain --bg', () => {
+  assert.match(css, /:root\[data-theme='light'\] \{\s*--hero-glow: transparent;\s*\}/);
+  assert.match(css, /:root:not\(\[data-theme\]\) \{\s*--hero-glow: transparent;\s*\}/);
+});
+
+// --text: the title and View Projects. --text-muted: the tagline and the profile icons (4.5:1 here also
+// covers the icons' 3:1 minimum). --accent: the role line.
+for (const token of ['--text', '--text-muted', '--accent']) {
+  test(`dark: ${token} meets AA on the strongest point of the Hero glow`, () => {
+    const ratio = contrast(themes.dark[token], mixOnBg(themes.dark, '--accent', glowPercents[0]));
+    console.log(`dark: ${token} on the hero glow ${ratio.toFixed(2)}:1`);
+    assert.ok(ratio >= AA, `${token} on the glow: ${ratio.toFixed(2)}:1`);
+  });
+}

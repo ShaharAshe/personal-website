@@ -2,10 +2,11 @@
 // One project card (design-doc §6.4, .claude/rules/github-projects.md). Renders a ProjectCardView from
 // src/lib/projects-section.ts and holds no project text. Ships no JS.
 //
-// featured: the wide card at the top, title <h3>. portfolio: a "More projects" grid card, title <h4> (under
-// the "More projects" <h3>). Accent means "clickable": the links are accent text links (never chips, which
+// featured: the card at the top, title <h3>. portfolio: a "More projects" card, title <h4> (under the
+// "More projects" <h3>). Both look the same, so their text lines up. Accent means "clickable": the links are accent text links (never chips, which
 // are never accent), in the same tab, each with an aria-label that names the project; icons/arrows are
 // aria-hidden. No whole-card link, so no nested links. No accent fill, no motion (hover lift → Task 3.4).
+import ArrowUpRightIcon from './ArrowUpRightIcon.astro';
 import GitHubIcon from './GitHubIcon.astro';
 import type { ProjectCardView } from '../lib/projects-section';
 
@@ -24,10 +25,7 @@ const linkClass = 'inline-flex min-h-10 items-center gap-1.5 text-sm font-medium
 <article
   data-project-card={variant}
   data-project-name={card.name}
-  class:list={[
-    'flex h-full min-w-0 flex-col rounded-lg border border-border bg-surface p-5 [overflow-wrap:anywhere]',
-    variant === 'featured' && 'sm:p-6',
-  ]}
+  class="flex h-full min-w-0 flex-col rounded-lg border border-border bg-surface p-5 [overflow-wrap:anywhere]"
 >
   <Title data-project-title class="text-lg font-semibold">
     {card.title}
@@ -83,7 +81,8 @@ const linkClass = 'inline-flex min-h-10 items-center gap-1.5 text-sm font-medium
       </a>
       {card.demo && (
         <a href={card.demo.href} aria-label={card.demo.label} data-project-demo class={linkClass}>
-          Live demo <span aria-hidden="true">↗</span>
+          Live demo
+          <ArrowUpRightIcon size={14} class="shrink-0" />
         </a>
       )}
       {card.page && (

@@ -1,6 +1,7 @@
 ---
-// An envelope outline: the marker for mailto: links (the Hero email icon and Contact's "Open in mail
-// app"). Decorative: the link around it carries the accessible name. Takes the text color.
+// A filled envelope: the marker for mailto: links (the Hero email icon and Contact's "Open in mail app"),
+// matching the filled GitHub and LinkedIn icons. Decorative: the link around it carries the accessible
+// name. Takes the text color (fill="currentColor").
 interface Props {
   size: number;
   class?: string;
@@ -15,14 +16,9 @@ const { size, class: className } = Astro.props;
   width={size}
   height={size}
   viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
+  fill="currentColor"
   class={className}
   data-icon="mail"
 >
-  <rect x="2" y="4" width="20" height="16" rx="2"></rect>
-  <path d="m22 7-10 6L2 7"></path>
+  <path d="M2 4h20a2 2 0 0 1 2 2v.4l-12 7-12-7V6a2 2 0 0 1 2-2zM0 8.7V18a2 2 0 0 0 2 2h20a2 2 0 0 0 2-2V8.7l-12 7z"></path>
 </svg>

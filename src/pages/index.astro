@@ -1,7 +1,5 @@
 ---
-// Stub homepage. Real sections are assembled in Task 2.10.
-// Order: Hero, Experience, Projects, Skills, Contact; Task 2.10 adds the footer and sets the final page.
-// TEMPORARY (Task 2.1): token swatches below Contact to check both themes. Task 2.10 replaces them.
+// The homepage: Hero, Experience, Projects, Skills, Contact. The footer comes from BaseLayout.
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Contact from '../components/Contact.astro';
 import Experience from '../components/Experience.astro';
@@ -12,15 +10,6 @@ import { getResume } from '../lib/resume';
 
 // No resume text in this file (hard rule 1). Full SEO tags come in Task 2.13.
 const { name, label } = getResume().basics;
-
-const swatches = [
-  { token: '--bg', className: 'bg-bg' },
-  { token: '--surface', className: 'bg-surface' },
-  { token: '--text', className: 'bg-text' },
-  { token: '--text-muted', className: 'bg-text-muted' },
-  { token: '--accent', className: 'bg-accent' },
-  { token: '--border', className: 'bg-border' },
-];
 ---
 
 <BaseLayout title={name} description={`${name} – ${label}.`}>
@@ -29,47 +18,4 @@ const swatches = [
   <Projects />
   <Skills />
   <Contact />
-  <div class="mx-auto max-w-[720px] px-4 py-12">
-    <h2 class="text-xl font-semibold">Design tokens</h2>
-    <p class="mt-2 text-text-muted">Temporary swatch page (Task 2.1). Replaced by the homepage in Task 2.10.</p>
-
-    <ul class="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3">
-      {swatches.map(({ token, className }) => (
-        <li class="rounded-lg border border-border bg-surface p-3">
-          <div class:list={['h-16 rounded-md border border-border', className]} />
-          <code class="mt-2 block font-mono text-sm">{token}</code>
-        </li>
-      ))}
-    </ul>
-
-    <section class="mt-8 space-y-4 rounded-lg border border-border bg-surface p-6">
-      <h2 class="text-lg font-semibold">Text on --surface</h2>
-      <p>Body text uses --text.</p>
-      <p class="text-text-muted">Secondary text uses --text-muted.</p>
-      <p>
-        <a href="/resume.pdf" class="text-accent underline">
-          A link uses --accent
-        </a>
-      </p>
-      <div class="flex flex-wrap gap-3">
-        <a href="/resume.pdf" class="rounded-md bg-accent px-4 py-2 font-medium text-on-accent">
-          Accent button
-        </a>
-        <a href="/resume.pdf" class="rounded-md border border-border px-4 py-2 font-medium">
-          Outline button
-        </a>
-      </div>
-    </section>
-
-    <section class="mt-4 space-y-2 p-6">
-      <h2 class="text-lg font-semibold">Text on --bg</h2>
-      <p>Body text uses --text.</p>
-      <p class="text-text-muted">Secondary text uses --text-muted.</p>
-      <p>
-        <a href="/resume.pdf" class="text-accent underline">
-          A link uses --accent
-        </a>
-      </p>
-    </section>
-  </div>
 </BaseLayout>

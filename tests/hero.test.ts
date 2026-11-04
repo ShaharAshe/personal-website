@@ -91,6 +91,25 @@ test('the title and tagline come from resume.yaml', { skip }, () => {
   assert.equal(textOf(line ?? ''), tagline);
 });
 
+// The background layers, from the component source. tests/e2e/homepage.spec.ts checks the rendered pixels.
+const heroSource = fs.readFileSync(path.join(ROOT, 'src', 'components', 'Hero.astro'), 'utf8');
+
+test('the dot mask is transparent across the whole text column', () => {
+  const stops = heroSource.match(/transparent calc\(50% - (\d+)px\),\s*transparent calc\(50% \+ (\d+)px\)/);
+  assert.ok(stops, 'no transparent stops around the column in the dot mask');
+  const column = Number(heroSource.match(/max-w-\[(\d+)px\]/)?.[1]);
+  assert.equal(Number(stops[1]) * 2, column, 'left stop');
+  assert.equal(Number(stops[2]) * 2, column, 'right stop');
+});
+
+test('the dots and the glow are separate layers, each turned on by its own class', () => {
+  const classes = heroSource.match(/<section\b[^>]*\sclass="([^"]*)"/)?.[1].split(/\s+/) ?? [];
+  assert.ok(classes.includes('hero-dots'), 'no hero-dots class');
+  assert.ok(classes.includes('hero-glow'), 'no hero-glow class');
+  assert.match(heroSource, /\.hero-dots::before\s*\{[^}]*var\(--hero-dot\)/);
+  assert.match(heroSource, /\.hero-glow::after\s*\{[^}]*var\(--hero-glow\)/);
+});
+
 test('Download Resume links to /resume.pdf and downloads with the published file name', { skip }, () => {
   const link = anchors(hero).find((a) => textOf(a) === 'Download Resume');
   assert.ok(link, 'no "Download Resume" link');

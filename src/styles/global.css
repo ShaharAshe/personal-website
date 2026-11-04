@@ -89,9 +89,47 @@
 }
 
 @layer base {
+  /* The space between homepage sections: 64px, 96px from Tailwind's sm: (40rem) up. Each section only
+     pads its top (pt-(--section-gap)), so the gaps never double. */
+  :root {
+    --section-gap: 4rem;
+  }
+
+  @media (min-width: 40rem) {
+    :root {
+      --section-gap: 6rem;
+    }
+  }
+
+  /* The Hero's background layers (src/components/Hero.astro), checked by tests/design-tokens.test.ts.
+     --hero-dot: about the same strength in both themes, because --text-muted has about the same contrast on
+     --bg in each. --hero-glow: dark only. Light stays transparent: the accent role line only allows 3.5% there
+     (4.52:1), which is barely visible and shows a faint gray ellipse edge. */
+  :root {
+    --hero-dot: color-mix(in srgb, var(--text-muted) 35%, transparent);
+    --hero-glow: color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+
+  :root[data-theme='light'] {
+    --hero-glow: transparent;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme]) {
+      --hero-glow: transparent;
+    }
+  }
+
   html {
     background-color: var(--bg);
     color: var(--text);
+  }
+
+  /* In-page links (nav, View Projects, Back to top) scroll smoothly, unless the visitor reduces motion. */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
   }
 
   /* Visible keyboard focus everywhere (WCAG 2.4.7). */
@@ -100,8 +138,10 @@
     outline-offset: 2px;
   }
 
-  /* <main tabindex="-1"> is only focused by the skip link, never by Tab: no ring around the whole page. */
-  main:focus {
+  /* <main> and #top (tabindex="-1") are only focused by the skip link and Back to top, never by Tab: no
+     ring around the whole page. */
+  main:focus,
+  #top:focus {
     outline: none;
   }
 }

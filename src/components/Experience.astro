@@ -12,19 +12,20 @@ const roles = experienceContent(getResume());
 ---
 
 <section id="experience" aria-labelledby="experience-title" data-experience>
-  <div class="mx-auto max-w-[720px] px-4 py-16">
+  <div class="mx-auto max-w-[720px] px-4 pt-(--section-gap)">
     <h2 id="experience-title" class="text-xl font-semibold tracking-tight">
       Experience
     </h2>
 
-    <ol class="mt-8 space-y-8 border-l border-border pl-6">
+    {/* The dot's offset centers it on the line, so it changes together with the list's padding. */}
+    <ol class="mt-8 space-y-8 border-l border-border pl-4 sm:pl-6">
       {roles.map(({ company, position, dates, highlights }) => (
         <li data-role class="relative">
           <span
             aria-hidden="true"
-            class="absolute top-6 -left-[29px] size-2.5 rounded-full border-2 border-accent bg-bg"
+            class="absolute top-6 -left-[21px] size-2.5 rounded-full border-2 border-accent bg-bg sm:-left-[29px]"
           />
-          <article class="rounded-lg border border-border bg-surface p-5">
+          <article class="rounded-lg border border-border bg-surface p-4 sm:p-5">
             <div class="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
               <h3 data-role-company class="text-lg font-semibold">
                 {company}

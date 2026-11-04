@@ -4,9 +4,9 @@ Source code for my portfolio site. I'm a backend engineer (Java, Spring Boot, Ka
 
 **Live:** https://personal-website.shaharasher.workers.dev
 
-> **Work in progress.** The live site currently serves the resume at
-> [`/resume.pdf`](https://personal-website.shaharasher.workers.dev/resume.pdf) and a placeholder
-> homepage. The real sections are being built (see [Roadmap](#roadmap)).
+> **Work in progress.** The live site serves the homepage and the resume at
+> [`/resume.pdf`](https://personal-website.shaharasher.workers.dev/resume.pdf). The other pages are
+> being built (see [Roadmap](#roadmap)).
 
 ## Notable decisions
 
@@ -147,6 +147,5 @@ only runs on `main`, so pull requests are built and checked but never deployed.
 
 ## Roadmap
 
-Next: the homepage sections (hero, experience, projects, skills, contact), a `/resume` page, SEO, and
-security headers. After that: project deep-dive pages, a contact form, and a custom domain. Details
+Next: a `/resume` page, a 404 page, SEO, and security headers. After that: project deep-dive pages, a contact form, and a custom domain. Details
 and status are in [`docs/plan.md`](docs/plan.md).

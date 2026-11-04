@@ -19,8 +19,9 @@ import { RESUME_PDF_FILENAME, RESUME_PDF_URL } from '../lib/resume-pdf';
 const { name, title, tagline, socials } = heroContent(getResume());
 ---
 
-<section aria-labelledby="hero-title" data-hero class="hero relative isolate overflow-hidden">
-  <div class="mx-auto max-w-[720px] px-4 py-20 sm:py-28">
+{/* The background layers: remove hero-dots or hero-glow from this class list to turn that layer off. */}
+<section aria-labelledby="hero-title" data-hero class="hero-dots hero-glow relative isolate">
+  <div class="mx-auto max-w-[720px] px-4 pt-20 sm:pt-28">
     <h1 id="hero-title" class="text-display font-semibold tracking-tight">
       {name}
     </h1>
@@ -47,7 +48,8 @@ const { name, title, tagline, socials } = heroContent(getResume());
       </a>
     </div>
 
-    <ul class="mt-6 flex gap-2" aria-label="Profiles">
+    {/* -ml-2.5: the 20px icons are centered in 40px hit areas, so this lines their left edge up with the text. */}
+    <ul class="mt-6 -ml-2.5 flex gap-2" aria-label="Profiles">
       {socials.map(({ network, url, icon }) => (
         <li>
           <a
@@ -74,14 +76,34 @@ const { name, title, tagline, socials } = heroContent(getResume());
 </section>
 
 <style>
-  /* Subtle dot grid (design-doc §5.1: at most a subtle background), faded out toward the edges. */
-  .hero::before {
+  /* Dot grid in the margins only (design-doc §5.1). The first mask is transparent across the 720px text
+     column, so no dot is ever under the content, and at 720px wide or less no dots show at all. The second
+     fades the grid out at the Hero's top and bottom. */
+  .hero-dots::before {
     content: '';
     position: absolute;
     inset: 0;
     z-index: -1;
-    background-image: radial-gradient(var(--border) 1px, transparent 1px);
+    background-image: radial-gradient(var(--hero-dot) 2px, transparent 2px);
     background-size: 24px 24px;
-    mask-image: radial-gradient(ellipse at center, black 20%, transparent 75%);
+    mask-image:
+      linear-gradient(
+        to right,
+        black calc(50% - 520px),
+        transparent calc(50% - 360px),
+        transparent calc(50% + 360px),
+        black calc(50% + 520px)
+      ),
+      linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+    mask-composite: intersect;
+  }
+
+  /* Soft accent glow behind the heading. tests/design-tokens.test.ts checks the text against its strongest point. */
+  .hero-glow::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image: radial-gradient(ellipse 60% 70% at 35% 35%, var(--hero-glow), transparent);
   }
 </style>

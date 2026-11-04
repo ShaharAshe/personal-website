@@ -340,7 +340,8 @@ test('card links are accent text links, not outline chips; icons and arrows are 
     const repo = anchors.find((a) => /\sdata-project-repo\b/.test(a))!;
     assert.match(repo, /<svg\b[^>]*aria-hidden="true"[^>]*data-icon="github"/, `${name}: GitHub icon`);
     const demo = anchors.find((a) => /\sdata-project-demo\b/.test(a));
-    if (demo) assert.match(demo, /<span aria-hidden="true">↗<\/span>/, `${name}: Live demo arrow`);
+    if (demo)
+      assert.match(demo, /<svg\b[^>]*aria-hidden="true"[^>]*data-icon="arrow-up-right"/, `${name}: Live demo arrow`);
     const page = anchors.find((a) => /\sdata-project-page\b/.test(a));
     if (page) assert.match(page, /<span aria-hidden="true">→<\/span>/, `${name}: Read more arrow`);
   }
@@ -370,29 +371,39 @@ test('the GitHub icon path lives in one source file; the icon appears only where
     cards(section).length + (fallback ? 1 : 0),
     'one GitHub icon per card GitHub link (plus the fallback link)',
   );
-  // Plus the Contact section's "GitHub" link (Task 2.9).
+  // Plus the Contact section's "GitHub" link (Task 2.9) and the footer's GitHub profile link (Task 2.10).
   const contact = html.match(/<section\b[^>]*\bdata-contact\b[^>]*>[\s\S]*?<\/section>/)?.[0] ?? '';
   assert.equal([...contact.matchAll(/data-icon="github"/g)].length, 1, 'Contact GitHub link icon');
+  const footer = html.match(/<footer\b[\s\S]*?<\/footer>/)?.[0] ?? '';
+  assert.equal([...footer.matchAll(/data-icon="github"/g)].length, heroGitHub.length, 'footer GitHub link icon');
   assert.equal(
     [...html.matchAll(/data-icon="github"/g)].length,
-    heroGitHub.length + cards(section).length + (fallback ? 1 : 0) + 1,
+    heroGitHub.length + cards(section).length + (fallback ? 1 : 0) + 1 + heroGitHub.length,
     'GitHub icons on the whole page',
   );
 });
 
-test('practice links: accent text links ending in an aria-hidden ↗, no GitHub icon, 40px tall', { skip }, () => {
-  const anchors = [...section.matchAll(/<a\b[^>]*\sdata-practice-link=[^>]*>[\s\S]*?<\/a>/g)].map(([a]) => a);
-  const practice = getProjects().practice;
-  assert.equal(anchors.length, practice.length);
-  anchors.forEach((anchor, i) => {
-    const { title } = practice[i];
-    assert.doesNotMatch(anchor, /<svg\b|data-icon=/, `${title}: has an icon`);
-    assert.match(anchor, /<span aria-hidden="true">↗<\/span>\s*<\/a>$/, `${title}: no trailing aria-hidden ↗`);
-    assert.equal(textOf(anchor), `${title} ↗`, `${title}: visible text`);
-    const cls = (attr(anchor.match(/<a\b[^>]*>/)![0], 'class') ?? '').split(/\s+/);
-    assert.ok(cls.includes('text-accent') && cls.includes('min-h-10'), `${title}: accent text link, 40px tall`);
-  });
-});
+test(
+  'practice links: accent text links ending in an aria-hidden arrow icon, no GitHub icon, 40px tall',
+  { skip },
+  () => {
+    const anchors = [...section.matchAll(/<a\b[^>]*\sdata-practice-link=[^>]*>[\s\S]*?<\/a>/g)].map(([a]) => a);
+    const practice = getProjects().practice;
+    assert.equal(anchors.length, practice.length);
+    anchors.forEach((anchor, i) => {
+      const { title } = practice[i];
+      assert.doesNotMatch(anchor, /data-icon="github"/, `${title}: has a GitHub icon`);
+      assert.match(
+        anchor,
+        /<svg\b[^>]*aria-hidden="true"[^>]*data-icon="arrow-up-right"[^>]*>[\s\S]*?<\/svg>\s*<\/a>$/,
+        `${title}: no trailing aria-hidden arrow icon`,
+      );
+      assert.equal(textOf(anchor), title, `${title}: visible text`);
+      const cls = (attr(anchor.match(/<a\b[^>]*>/)![0], 'class') ?? '').split(/\s+/);
+      assert.ok(cls.includes('text-accent') && cls.includes('min-h-10'), `${title}: accent text link, 40px tall`);
+    });
+  },
+);
 
 test(
   'the practice group says once that the links go to GitHub: a muted, plain "Solutions on GitHub" line',

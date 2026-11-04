@@ -13,17 +13,22 @@ paths:
 - One accent-filled button per section at most. In the Hero it's "Download Resume"; in Contact it's
   the email "Copy" button. Other buttons are outline style.
 - Accent color means clickable: links and the one accent-filled button use it. Labels, chips and tags
-  never use accent (language chips are outline, topic chips use the `--border` fill). Link markers: the
-  shared `GitHubIcon` (`src/components/GitHubIcon.astro`) goes on links whose text is "GitHub" and on
-  icon-only GitHub links; ↗ marks other links that leave the site (e.g. Live demo, a list of repos); →
-  marks links within the site (e.g. View full resume, Read more). Don't repeat a logo on every item of a
-  list; if the destination isn't obvious, say it once for the group. The shared `LinkedInIcon`
-  (`src/components/LinkedInIcon.astro`) works the same way for LinkedIn: on links whose text names
-  LinkedIn and on icon-only LinkedIn links, without ↗. `mailto:` links get the shared `MailIcon`
-  (`src/components/MailIcon.astro`) instead of ↗ (they open a mail app, not a page).
-- Content width: ~720px for text, ~1100px for grids. Cards use a subtle 1px border, no heavy shadows.
-- Proposed for Task 2.10: one 720px column for every section, including Projects (2-column card grid),
-  so all section headings align. Decide there with screenshots; until then the ~1100px grid width stays.
+  never use accent (language chips are outline, topic chips use the `--border` fill). Links inside content
+  use accent. Site chrome (the nav, the footer and icon-only profile links) uses `text-text-muted` with
+  hover to `text-text`. Link markers: the shared `GitHubIcon` (`src/components/GitHubIcon.astro`) goes on
+  links whose text is "GitHub" and on icon-only GitHub links; the shared `ArrowUpRightIcon`
+  (`src/components/ArrowUpRightIcon.astro`) marks other links that leave the site (e.g. Live demo, a list
+  of repos); → marks links within the site (e.g. View full resume, Read more); the shared `ArrowUpIcon`
+  (`src/components/ArrowUpIcon.astro`) marks Back to top. These two arrows are SVGs because the ↗ character
+  can render as a colored emoji on phones; → has no emoji form, so it stays text. Don't repeat a logo on
+  every item of a list; if the destination isn't obvious, say it once for the group. The shared
+  `LinkedInIcon` (`src/components/LinkedInIcon.astro`) works the same way for LinkedIn: on links whose text
+  names LinkedIn and on icon-only LinkedIn links, without `ArrowUpRightIcon`. `mailto:` links get the shared
+  `MailIcon` (`src/components/MailIcon.astro`) instead of `ArrowUpRightIcon` (they open a mail app, not a
+  page).
+- Content width: one 720px column for every section, the nav and the footer, so headings and edges align.
+  Project cards are one column at every width, each spanning it: at half the column, descriptions wrap into
+  tall cards. Cards use a subtle 1px border, no heavy shadows.
 - Prefer an Astro component with a small script for simple interactions, such as the theme toggle
   (`src/components/ThemeToggle.astro`) and the copy-email button (`src/components/CopyEmail.astro`).
 - Use a React island only when the interaction is complex enough to need it, such as the contact
