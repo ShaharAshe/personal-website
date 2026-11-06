@@ -118,7 +118,7 @@
 └── /404                        → דף שגיאה מעוצב
 ```
 
-**ניווט עליון:** `Experience · Projects · Resume · Contact` + מתג Dark/Light + אייקוני GitHub/LinkedIn.
+**ניווט עליון:** `Experience · Projects · Resume · Contact` + מתג Dark/Light.
 
 **למה דף בית גולל + עמודי עומק?** מגייס רואה הכל בגלילה אחת בלי ללחוץ, ומי שרוצה עומק נכנס לעמוד הייעודי. דפים נפרדים כמו "About" ו-"Skills" בדרך כלל יוצאים רדודים.
 
@@ -211,7 +211,7 @@
 
 | Topic בריפו | איפה הוא מופיע |
 |---|---|
-| `portfolio-featured` | כרטיס רחב בראש סקשן Projects |
+| `portfolio-featured` | הכרטיס הראשון בסקשן Projects (כל הכרטיסים באותו רוחב) |
 | `portfolio` | כרטיס רגיל ב-More projects |
 | `portfolio-practice` | שורת "Algorithm practice" (קישורים בלבד) |
 | בלי אף אחד מאלה | לא מופיע באתר |
@@ -230,7 +230,7 @@
 | כוכבים | `stargazers_count` | מוצג רק אם > 0 |
 | עדכון אחרון | `pushed_at` | מיון + "Updated Oct 2026" |
 | קישור | `html_url` | קישור "GitHub" (עם אייקון GitHub) |
-| Demo | `homepage` | קישור "Live demo ↗", אם הוגדר Website בריפו |
+| Demo | `homepage` | קישור "Live demo" (עם האייקון המשותף `ArrowUpRightIcon`), אם הוגדר Website בריפו |
 
 **חיבור לעמוד עומק:** אם קיים `src/content/projects/<repo-name>.mdx`, הכרטיס מקבל קישור "Read more →" לעמוד הפנימי. ב-MDX אפשר גם לדרוס שדות (למשל `status: In progress`, `team: 2 developers`, תיאור ארוך יותר). `status` ו-`team` מוצגים בכרטיס בשורה קטנה מתחת לכותרת.
 
@@ -353,14 +353,16 @@ education:
   אמיתי) הוא תצוגה מקדימה של התוכן והעימוד בלבד, לא הקובץ שעולה לאוויר.
 
 ### 7.6 עמוד `/resume`
-- התוכן המלא, בעיצוב האתר.
-- כפתור **Download PDF** בראש העמוד.
-- Print stylesheet, כך ש-Ctrl+P מוציא דף נקי.
+- התוכן המלא, בעיצוב האתר, באותו סדר כמו ב-PDF: שם, כותרת (`basics.label`), פרטי קשר, תקציר, Experience (כל ה-highlights), Projects (מ-`resume.projects`), Skills (עם שורת Spoken Languages בסוף), Education. כמו ב-PDF, `tagline` ו-`location` לא מוצגים. `basics.label` הוא התוספת היחידה לעומת ה-PDF.
+- קישור **← Home** מעל הכותרת, וכפתור **Download PDF** בראש העמוד (המילוי היחיד בצבע accent בעמוד).
+- שורת קשר אחת, כמו ב-PDF: כתובת המייל (היא עצמה קישור ה-`mailto:`) וכפתור העתקה קטן עם אייקון בלבד, ואחריהם LinkedIn ו-GitHub, עם מפרידים. המייל רק דרך `CopyEmail` (`variant="compact"`). הטלפון לא מופיע, וגם ההדפסה לא מזכירה אותו.
+- כל פרויקט בנוי כמו רשומה ב-Experience: שם וסטטוס בשורה העליונה, קישור "GitHub" במקום התאריכים, ומתחת התיאור.
+- Print stylesheet (`@media print` ב-`global.css`), כך ש-Ctrl+P מוציא דף נקי: טקסט כהה על רקע לבן גם ב-dark theme, בלי ניווט, footer, כפתורים וקישור Home, כתובת המייל נשארת אם נחשפה, ואחרי קישורי הפרופיל מודפסת הכתובת שלהם. ה-PDF נשאר הגרסה הרשמית.
 
 ### 7.7 פרטים
 - **שם הקובץ:** `Shahar_Asher_CV.pdf`
 - **כתובת קבועה:** `/resume.pdf`, כדי שאפשר לשים אותה ב-LinkedIn ובמיילים.
-- **כפתור ההורדה:** ב-Hero, בתפריט העליון ובעמוד `/resume`.
+- **כפתור ההורדה:** ב-Hero ובעמוד `/resume`.
 
 ### 7.8 אפשרויות שנשקלו ונדחו
 - **רק PDF להורדה:** בלי תצוגה טובה באתר.
@@ -392,7 +394,7 @@ education:
 4. קישור ל-GitHub בתחתית.
 
 ### 8.3 Email
-- כפתור **Copy** שמעתיק את הכתובת ומציג "Copied ✓".
+- כפתור **Copy** שמעתיק את הכתובת, ולמשך כ-2 שניות מחליף את אייקון ההעתקה באייקון וי ומציג "Copied" (SVG, כי תווי הווי עלולים להופיע כאמוג'י צבעוני בטלפונים).
 - `mailto:` כאפשרות נוספת בלבד (לרוב המבקרים אין תוכנת מייל מוגדרת). גם הקישור הזה מורכב בדפדפן.
 - **הגנה מבוטים:** הכתובת מורכבת רק בדפדפן ולא מופיעה כטקסט רגיל ב-HTML. הקומפוננטות מקבלות אותה רק
   מ-`getEmailParts()` ב-`src/lib/resume.ts`, ובדיקת `no-email-in-dist` מכשילה את ה-build אם היא מופיעה ב-`dist/`.
@@ -454,7 +456,7 @@ education:
 | `base` | 1rem | טקסט רץ |
 | `lg` | 1.25rem | כותרות משנה |
 | `xl` | 1.75rem | כותרות סקשנים |
-| `display` | 2.25rem בנייד עד 3rem בדסקטופ (`clamp()`) | כותרת ה-Hero בלבד |
+| `display` | 2.25rem בנייד עד 3rem בדסקטופ (`clamp()`) | כותרת ה-Hero וה-`<h1>` של `/resume` בלבד |
 
 - הגופנים מאוחסנים באתר עצמו (self-host), לביצועים ולפרטיות.
 
@@ -475,7 +477,7 @@ education:
 | כרטיסי פרויקטים | Hover: הרמה קלה + border כחול | CSS |
 | כניסת סקשנים | Fade + slide קטן (8–16px), **פעם אחת** | CSS + IntersectionObserver |
 | מתג Theme | הצבעים מתחלפים מיד (בלי מעבר, כי מותר להנפיש רק `transform` ו-`opacity`); רק האייקון החדש מסתובב ונכנס ב-fade (200ms), ורק אחרי לחיצה, לא בטעינה | CSS animation |
-| כפתור Copy | שינוי ל-"Copied ✓" | CSS |
+| כפתור Copy | החלפה מיידית לאייקון וי ול-"Copied" | CSS |
 
 ### 10.2 מה לא
 - ❌ Three.js / 3D / WebGL

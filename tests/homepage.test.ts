@@ -143,12 +143,18 @@ test('no footer has email, script, or accent fill', { skip }, () => {
   }
 });
 
-// --- arrows that render as emoji on phones ---
+// --- characters that render as emoji on phones ---
 
 test('no link text on any page contains the arrow characters that can render as emoji', { skip }, () => {
   for (const { file, html: page } of pages) {
     for (const link of anchors(page)) {
       assert.doesNotMatch(textOf(link), /[↗↑]/, `${file}: "${textOf(link)}"`);
     }
+  }
+});
+
+test('no page contains the check characters that can render as emoji (buttons use CheckIcon)', { skip }, () => {
+  for (const { file, html: page } of pages) {
+    assert.doesNotMatch(page, /[✓✔]/, `${file} has a check character`);
   }
 });

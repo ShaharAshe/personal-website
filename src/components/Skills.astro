@@ -5,10 +5,16 @@
 // Category name sits left of its chips from `sm:` up and above them on mobile. Chips wrap, and a long item
 // name wraps inside its chip instead of overflowing. role="list" keeps list semantics in Safari/VoiceOver,
 // which drops them for `list-style: none`. No accent in this section; no motion (→ Task 3.4).
-import { skillsContent } from '../lib/skills';
+//
+// /resume reuses this section and passes `categories`, which adds its spoken-languages row.
+import { skillsContent, type SkillCategory } from '../lib/skills';
 import { getResume } from '../lib/resume';
 
-const categories = skillsContent(getResume());
+interface Props {
+  categories?: SkillCategory[];
+}
+
+const { categories = skillsContent(getResume()) } = Astro.props;
 ---
 
 <section id="skills" aria-labelledby="skills-title" data-skills>

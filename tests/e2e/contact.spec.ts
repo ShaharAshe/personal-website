@@ -1,5 +1,5 @@
 // Contact (Task 2.9) in a real browser: the email assembled after load (Contact and Hero mailto links,
-// the shown address), Copy by mouse and keyboard with the "Copied ✓" feedback, the clipboard-denied
+// the shown address), Copy by mouse and keyboard with the check icon and "Copied" feedback, the clipboard-denied
 // fallback, the no-JavaScript fallback, the nav link, and the layout at 375px and 1280px in both themes.
 // What the built HTML contains is checked by tests/contact.test.ts (npm test).
 //
@@ -10,7 +10,13 @@ import { expect, test, type Page } from '@playwright/test';
 import { THEMES } from '../../src/lib/theme.ts';
 import { COPY_FEEDBACK_MS, joinEmail, mailtoHref } from '../../src/lib/email-client.ts';
 import { getEmailParts } from '../../src/lib/resume.ts';
-import { expectFocusRing, expectTheme } from './helpers.ts';
+import {
+  expectCopyIconSwap,
+  expectFocusRing,
+  expectInstantCopySwap,
+  expectNoCheckIcon,
+  expectTheme,
+} from './helpers.ts';
 
 const ADDRESS = joinEmail(getEmailParts());
 const MAILTO = mailtoHref(getEmailParts());
@@ -50,7 +56,21 @@ test('after load, the address and both mailto links (Contact and Hero) point to 
 test.describe('with clipboard access', () => {
   test.use({ permissions: ['clipboard-read', 'clipboard-write'] });
 
-  test('clicking Copy copies the address and shows "Copied ✓" for about 2 seconds', async ({ page }) => {
+  test('copying swaps the copy icon for a check icon for about 2 seconds; the button keeps its size', async ({
+    page,
+  }) => {
+    await page.clock.install();
+    await page.goto('/');
+    await expectCopyIconSwap(page, copyButton(page), ADDRESS);
+  });
+
+  test('with reduced motion, the swap is instant', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/');
+    await expectInstantCopySwap(copyButton(page));
+  });
+
+  test('clicking Copy copies the address and shows "Copied" for about 2 seconds', async ({ page }) => {
     await page.clock.install();
     await page.goto('/');
     await expect(idle(page)).toBeVisible();
@@ -58,7 +78,7 @@ test.describe('with clipboard access', () => {
 
     await copyButton(page).click();
     await expect(copied(page)).toBeVisible();
-    await expect(copied(page)).toHaveText('Copied ✓');
+    await expect(copied(page)).toHaveText('Copied');
     await expect(idle(page)).toBeHidden();
     await expect(status(page)).toHaveText('Email address copied');
     expect((await clipboardText(page)) === ADDRESS).toBe(true);
@@ -106,6 +126,7 @@ test('clipboard denied: the address is selected and a hint says to copy it by ha
   await expect(status(page)).toContainText('The address is selected');
   await expect(copied(page)).toBeHidden();
   await expect(idle(page)).toBeVisible();
+  await expectNoCheckIcon(copyButton(page));
   expect((await page.evaluate(() => getSelection()?.toString())) === ADDRESS).toBe(true);
 });
 

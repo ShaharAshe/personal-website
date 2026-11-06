@@ -1,0 +1,136 @@
+---
+// The full resume in the site's design, in the PDF's order (design-doc §7.6): header, Experience, Projects,
+// Skills (with spoken languages), Education. All text comes from resume.yaml via src/lib/resume-page.ts. The
+// phone is only in the PDF. The email only reaches the page through CopyEmail, whose script is this page's only
+// JS besides the theme scripts in BaseLayout. Print styles are in src/styles/global.css (@media print).
+import ArrowUpRightIcon from '../components/ArrowUpRightIcon.astro';
+import CopyEmail from '../components/CopyEmail.astro';
+import GitHubIcon from '../components/GitHubIcon.astro';
+import LinkedInIcon from '../components/LinkedInIcon.astro';
+import ResumeEntry from '../components/ResumeEntry.astro';
+import ResumeSection from '../components/ResumeSection.astro';
+import Skills from '../components/Skills.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getResume } from '../lib/resume';
+import { RESUME_PDF_FILENAME, RESUME_PDF_URL } from '../lib/resume-pdf';
+import { resumePageContent } from '../lib/resume-page';
+
+const { meta, name, title, summary, socials, experience, projects, skills, education } = resumePageContent(getResume());
+const linkClass = 'inline-flex min-h-10 items-center gap-2 font-medium text-accent hover:underline';
+---
+
+<BaseLayout title={meta.title} description={meta.description}>
+  {/* --section-gap: tighter than the homepage, since this page reads as one document. */}
+  <div data-resume class="pb-(--section-gap) [--section-gap:3rem]">
+    <header class="mx-auto max-w-[720px] px-4 pt-8 sm:pt-12">
+      <p data-resume-home class="text-sm">
+        <a href="/" class="font-medium text-accent hover:underline">
+          <span aria-hidden="true">←</span> Home
+        </a>
+      </p>
+
+      <h1 class="mt-6 text-display font-semibold tracking-tight">{name}</h1>
+      <p data-resume-title class="mt-4 font-mono text-sm text-text-muted sm:text-base">
+        {title}
+      </p>
+
+      <p class="mt-8">
+        <a
+          href={RESUME_PDF_URL}
+          download={RESUME_PDF_FILENAME}
+          data-resume-download
+          class="inline-flex items-center rounded-md bg-accent px-5 py-2.5 font-medium text-on-accent hover:opacity-90"
+        >
+          Download PDF
+        </a>
+      </p>
+
+      {/* The contact line, like the PDF's. On phones the email takes the first line and the profiles the second, so
+          no line starts or ends with a separator. Without JS there's no address before LinkedIn, so no separator either. */}
+      <ul role="list" aria-label="Contact" data-resume-contact class="mt-4 flex flex-wrap items-center gap-x-3">
+        {/* Holds the email's space while it's hidden, so nothing moves when the script reveals it. The row is 228px
+            with the site's fonts; min-w-60 (240px) leaves room for a wider fallback font. */}
+        <li data-resume-email class="min-h-10 w-full sm:w-auto sm:min-w-60">
+          <CopyEmail variant="compact" />
+        </li>
+        {socials.map(({ network, url, icon }, index) => (
+          <li class="flex items-center gap-x-3">
+            <span
+              aria-hidden="true"
+              data-resume-separator
+              class:list={['text-text-muted', index === 0 && 'hidden sm:[@media(scripting:enabled)]:inline']}
+            >
+              ·
+            </span>
+            <a href={url} data-resume-profile={icon} class={linkClass}>
+              {icon === 'github' && <GitHubIcon size={16} class="shrink-0" />}
+              {icon === 'linkedin' && <LinkedInIcon size={16} class="shrink-0" />}
+              {network}
+            </a>
+          </li>
+        ))}
+      </ul>
+
+      <p data-resume-summary class="mt-4">
+        {summary}
+      </p>
+    </header>
+
+    <ResumeSection id="experience" title="Experience">
+      <div class="space-y-8">
+        {experience.map(({ company, position, dates, highlights }) => (
+          <ResumeEntry title={position} subtitle={company} dates={dates} highlights={highlights} />
+        ))}
+      </div>
+    </ResumeSection>
+
+    <ResumeSection id="projects" title="Projects">
+      <div class="space-y-8">
+        {projects.map(({ name: projectName, status, description, link }) => (
+          <article data-resume-project>
+            {/* The same top row as ResumeEntry, with the link where the dates are. */}
+            <div data-project-top class="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+              <div class="flex flex-wrap items-baseline gap-x-2">
+                <h3 data-project-name class="text-lg font-semibold">
+                  {projectName}
+                </h3>
+                {status && (
+                  <p data-project-status class="text-text-muted">
+                    <span aria-hidden="true">·</span> {status}
+                  </p>
+                )}
+              </div>
+              {link && (
+                <a
+                  href={link.url}
+                  data-project-link
+                  class="-my-1.5 inline-flex min-h-10 shrink-0 items-center gap-1.5 self-start font-medium text-accent hover:underline sm:self-auto"
+                >
+                  {link.icon === 'github' ? (
+                    <GitHubIcon size={16} class="shrink-0" />
+                  ) : (
+                    <ArrowUpRightIcon size={14} class="shrink-0" />
+                  )}
+                  {link.text}
+                </a>
+              )}
+            </div>
+            <p data-project-description class="mt-2">
+              {description}
+            </p>
+          </article>
+        ))}
+      </div>
+    </ResumeSection>
+
+    <Skills categories={skills} />
+
+    <ResumeSection id="education" title="Education">
+      <div class="space-y-8">
+        {education.map(({ degree, institution, dates, highlights }) => (
+          <ResumeEntry title={degree} subtitle={institution} dates={dates} highlights={highlights} />
+        ))}
+      </div>
+    </ResumeSection>
+  </div>
+</BaseLayout>

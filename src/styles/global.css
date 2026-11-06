@@ -71,7 +71,7 @@
 
   /*
    * Type scale (design-doc §9.3): exactly these six sizes; Tailwind's default sizes are removed.
-   * text-xs: tags, captions, dates. text-xl: section headings. text-display: the Hero title only.
+   * text-xs: tags, captions, dates. text-xl: section headings. text-display: the Hero title and the /resume <h1>.
    */
   --text-*: initial;
   --text-xs: 0.75rem;
@@ -143,5 +143,103 @@
   main:focus,
   #top:focus {
     outline: none;
+  }
+}
+
+/*
+ * Print (design-doc §7.6). Unlayered, so these win over Tailwind's utilities, and last in the file, because
+ * tests/design-tokens.test.ts reads the first match of each token selector above. Plain black and white in every
+ * theme state, so dark theme never reaches paper.
+ */
+@media print {
+  :root,
+  :root[data-theme='dark'],
+  :root[data-theme='light'],
+  :root:not([data-theme]) {
+    color-scheme: light;
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --text: #000000;
+    --text-muted: #444444;
+    --accent: #000000;
+    --border: #bbbbbb;
+    --hero-dot: transparent;
+    --hero-glow: transparent;
+  }
+
+  @page {
+    margin: 1.5cm;
+  }
+
+  html {
+    font-size: 14px;
+  }
+
+  html,
+  body {
+    background: #ffffff;
+    color: #000000;
+  }
+
+  /* Flex and min-h-screen can add a blank last page and make page breaks unreliable. */
+  body {
+    display: block;
+    min-height: 0;
+  }
+
+  /* Everything interactive, and the page chrome. */
+  body > a[href='#main'],
+  body > header,
+  body > footer,
+  button,
+  [data-email-link]:not(:has([data-email-address])),
+  [data-copy-hint],
+  [data-copy-status],
+  [data-email-nojs],
+  [data-resume-home],
+  [data-resume-download],
+  [data-resume-separator] {
+    display: none;
+  }
+
+  /* Only the /resume page from here on. */
+  [data-resume] {
+    --section-gap: 1.25rem;
+  }
+
+  [data-resume-email] {
+    min-width: 0;
+    min-height: 0;
+  }
+
+  [data-resume] a {
+    text-decoration: underline;
+  }
+
+  /* The link with its full URL doesn't fit beside the name, so it goes under it, as on phones. */
+  [data-project-top] {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  [data-project-link] {
+    align-self: flex-start;
+  }
+
+  /* On paper a link needs its address. */
+  [data-resume-profile]::after,
+  [data-project-link]::after {
+    content: ' (' attr(href) ')';
+  }
+
+  [data-resume-entry],
+  [data-resume-project] {
+    break-inside: avoid;
+  }
+
+  [data-resume] h1,
+  [data-resume] h2,
+  [data-resume] h3 {
+    break-after: avoid;
   }
 }

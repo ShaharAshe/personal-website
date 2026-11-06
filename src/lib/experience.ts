@@ -1,7 +1,7 @@
-// Content for the homepage Experience section (src/components/Experience.astro), taken from the validated
-// resume so the component holds no resume text. Only highlights marked `featured: true` are shown on the
-// homepage (design-doc §5.1); the full list is on /resume. A role with no featured highlights is still
-// listed (company, position, dates), so the timeline has no gaps.
+// Work content, taken from the validated resume so components hold no resume text. By default only highlights
+// marked `featured: true`, for the homepage Experience section (src/components/Experience.astro, design-doc
+// §5.1); a role with no featured highlights is still listed (company, position, dates), so the timeline has no
+// gaps. /resume asks for { highlights: 'all' }.
 
 import type { PublicResume } from './resume.ts';
 import { dateParts, dateRange, type DateParts } from './resume-dates.ts';
@@ -14,11 +14,18 @@ export interface ExperienceRole {
   highlights: string[];
 }
 
-export function experienceContent(resume: PublicResume): ExperienceRole[] {
+export interface ExperienceOptions {
+  highlights?: 'featured' | 'all';
+}
+
+export function experienceContent(
+  resume: PublicResume,
+  { highlights = 'featured' }: ExperienceOptions = {},
+): ExperienceRole[] {
   return resume.work.map((job) => ({
     company: job.company,
     position: job.position,
     dates: { ...dateParts(job), text: dateRange(job) },
-    highlights: job.highlights.filter((h) => h.featured === true).map((h) => h.text),
+    highlights: job.highlights.filter((h) => highlights === 'all' || h.featured === true).map((h) => h.text),
   }));
 }

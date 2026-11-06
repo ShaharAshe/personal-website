@@ -7,7 +7,7 @@
 
 import type { EmailParts } from './resume.ts';
 
-/** How long the Copy button shows "Copied ✓" before going back to "Copy". */
+/** How long the Copy button shows its check icon and "Copied" before going back to the copy icon. */
 export const COPY_FEEDBACK_MS = 2000;
 
 export type CopyResult = 'copied' | 'manual';

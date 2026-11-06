@@ -14,13 +14,15 @@ interface Props {
 
 const { title, description } = Astro.props;
 
-// /resume is built in Task 2.11.
 const navLinks = [
   { label: 'Experience', href: '/#experience' },
   { label: 'Projects', href: '/#projects' },
   { label: 'Resume', href: '/resume' },
   { label: 'Contact', href: '/#contact' },
 ];
+
+// The built path can end in a slash (/resume/). The homepage's section links (/#...) never match a path.
+const currentPath = Astro.url.pathname.replace(/\/+$/, '');
 ---
 
 <html lang="en">
@@ -55,7 +57,12 @@ const navLinks = [
         <ul class="flex min-w-0 flex-wrap justify-end gap-x-4 gap-y-2 text-sm sm:gap-x-6">
           {navLinks.map(({ label, href }) => (
             <li>
-              <a href={href} class="text-text-muted hover:text-text">
+              {/* Current page: --text and an underline, not accent (site chrome stays muted, .claude/rules/ui.md). */}
+              <a
+                href={href}
+                aria-current={href === currentPath ? 'page' : undefined}
+                class="text-text-muted underline-offset-4 hover:text-text aria-[current=page]:text-text aria-[current=page]:underline"
+              >
                 {label}
               </a>
             </li>

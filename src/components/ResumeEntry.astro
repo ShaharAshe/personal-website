@@ -1,0 +1,36 @@
+---
+// One dated /resume entry, a job or a degree: title, subtitle, dates and bullets, in the PDF's order. Unboxed,
+// unlike the homepage's timeline cards, so it reads and prints like a document.
+import DateRange from './DateRange.astro';
+import type { DateParts } from '../lib/resume-dates';
+
+interface Props {
+  title: string;
+  subtitle: string;
+  dates: DateParts;
+  highlights: string[];
+}
+
+const { title, subtitle, dates, highlights } = Astro.props;
+---
+
+<article data-resume-entry>
+  <div class="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+    <h3 data-entry-title class="text-lg font-semibold">
+      {title}
+    </h3>
+    <p data-entry-dates class="shrink-0 font-mono text-sm text-text-muted">
+      <DateRange dates={dates} />
+    </p>
+  </div>
+  <p data-entry-subtitle class="mt-1 text-text-muted">
+    {subtitle}
+  </p>
+  {highlights.length > 0 && (
+    <ul class="mt-4 list-disc space-y-2 pl-5 marker:text-text-muted">
+      {highlights.map((text) => (
+        <li data-entry-highlight>{text}</li>
+      ))}
+    </ul>
+  )}
+</article>

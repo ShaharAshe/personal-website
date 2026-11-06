@@ -836,7 +836,7 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
     - The arrow icons still need a look on a real phone, and `#top` focus a look in Safari/Firefox (e2e is Chromium only).
   - Depends on: 2.5–2.9.
 
-- [ ] **2.11 `/resume` page** — Full resume in site styling, Download PDF button at top, print stylesheet. Reuses the same `CopyEmail` component (`src/components/CopyEmail.astro`) as Contact (2.9) for the email — never plain text.
+- [x] **2.11 `/resume` page** — Full resume in site styling, Download PDF button at top, print stylesheet. Reuses the same `CopyEmail` component (`src/components/CopyEmail.astro`) as Contact (2.9) for the email — never plain text.
   - Files: `src/pages/resume.astro`.
   - Verify: Ctrl+P produces a clean printed page; phone never rendered; email not plain text on this page either (confirm the `CopyEmail` component is used).
   - Note (from 1.5): the Download PDF button is `<a href="/resume.pdf" download="Shahar_Asher_CV.pdf">`,
@@ -848,6 +848,44 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
   - Note (from 2.7): spoken languages (`resume.languages`, e.g. Hebrew – Native) are shown here, not in
     the homepage Skills section (user decision in 2.7).
   - Depends on: 2.4, 2.2, 2.9.
+  - Done (2026-11-06). Notes / deviations:
+    - **Files beyond the task text:** new `src/lib/resume-page.ts` (`resumePageContent`, `displayUrl`),
+      `src/components/DateRange.astro`, `ResumeSection.astro`, `ResumeEntry.astro`; changed `experience.ts`,
+      `CopyEmail.astro`, `Contact.astro`, `Skills.astro`, `Experience.astro`, `BaseLayout.astro`, `global.css`.
+    - **Content (user decisions):** the PDF's Projects section is included, and the order is the PDF's: header, Experience,
+      Projects, Skills (Spoken Languages as the last row, `Hebrew (Native)` as in the PDF), Education. `basics.label` is
+      shown although the PDF doesn't print it; `tagline` and `location` aren't shown, as in the PDF.
+    - **Header and Projects, reworked after the first review (user request):**
+      - One contact line, like the PDF's: address as the mailto link, an icon-only copy button (new `CopyIcon.astro`),
+        LinkedIn, GitHub, with muted aria-hidden separators. It's `CopyEmail variant="compact"`, on the same script.
+        Contact is unchanged.
+      - "Copied" floats above the button instead of sitting beside the icon: beside it, it would push LinkedIn along
+        and could wrap the line on a phone. Nothing moves when it shows.
+      - Reserved space: `min-h-10` and, from `sm:`, `min-w-60` (240px), since the email shares a line with the profile
+        links there. The row is 228px with the site's fonts; the first value, 228px, had no headroom and failed with a
+        wider fallback font. Fixed headroom instead of `ch`: `ch` needs the address length in an inline style, which the
+        CSP (2.14) would have to allow. On phones the email has its own line, so no line starts or ends with a
+        separator. A test fails if a longer address outgrows the width.
+      - Copy feedback (both variants): new `CheckIcon.astro` replaces `CopyIcon` for about 2 seconds, same color and
+        same button size, with "Copied" text. The ✓ character is gone, and a test keeps ✓ and ✔ out of every built
+        page. Contact's Copy button gained the copy icon (it had none to swap), so it's slightly wider.
+      - Each project is laid out like an Experience entry, with the link where the dates are. The status uses the YAML's
+        wording ("In Progress"). A non-GitHub URL would show its short URL with `ArrowUpRightIcon`, not "GitHub".
+    - **Reused:** `Skills.astro` gets an optional `categories` prop. `CopyEmail` gets `variant="compact"`, so Download PDF
+      is the page's one accent fill. Its `<noscript>` line moved in from `Contact.astro`. `experienceContent()` gets
+      `{ highlights: 'all' }`; the homepage default is unchanged. Experience's date markup became `DateRange.astro`.
+    - **Added by the user during planning:** "← Home" above the `<h1>`, the `←` as text (no emoji form, like `→`), hidden
+      in print; ui.md's link-marker rule updated.
+    - **`text-display`** is now "the Hero title and the `/resume` `<h1>`" (`global.css`, design-doc §9.3): at any other size
+      the `<h1>` would be no larger than the `<h2>`s.
+    - **Print** (`@media print` at the end of `global.css`): tokens become black/white/gray in every theme state; nav, footer,
+      skip link, toggle, buttons, mail link and Home are hidden; the address stays if revealed; profile links print their URL.
+      The token and chrome rules are site-wide, so the homepage prints cleaner too. The page doesn't mention the phone.
+    - **Docs:** design-doc §4, §6, §7.6, §7.7 (no download button in the nav), §9.3; ui.md; github-projects.md; README.
+    - Tests: new `tests/resume-page.test.ts` and `tests/e2e/resume.spec.ts`; `tests/experience.test.ts` extended. `npm test`:
+      316. `npm run test:e2e`: 137. `npm run screenshots` also writes `print-preview-resume.pdf`, to check the page breaks.
+    - /resume JS: 1.24 KB gzipped, the same scripts as the homepage.
+  - Left open: check on the live site whether Cloudflare redirects `/resume` to `/resume/` (links work either way).
 
 - [ ] **2.12 404 page**
   - Files: `src/pages/404.astro`.
@@ -857,6 +895,9 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
   - Files: `src/layouts/BaseLayout.astro`, `public/og-image.*`, `astro.config.mjs`, `public/robots.txt`.
   - Note (from 2.5): `index.astro`'s `title`/`description` now come from `getResume()` (`name`,
     `` `${name} – ${label}.` ``) instead of hardcoded text; keep it that way for the full SEO tags.
+  - Open item (from 2.11): Header home link: consider the name on the left of the header as a link to /, on every
+    page. It fills the empty left side at 1280px. At 375px the nav has about 6px to spare, so decide whether it's
+    hidden or shortened there.
   - Depends on: 2.2, 2.4; needs action item #6.
 
 - [ ] **2.14 Security headers** — Real CSP, `X-Content-Type-Options`, `Referrer-Policy` in `public/_headers`.

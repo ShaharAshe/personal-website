@@ -12,7 +12,7 @@ paths:
   Never fetch from GitHub in the browser.
 - User: `ShaharAshe`. In CI, authenticate with `GITHUB_TOKEN` to avoid rate limits.
 - Topic mapping:
-  - `portfolio-featured` → wide card at the top of Projects
+  - `portfolio-featured` → first card in Projects (all project cards are the same width)
   - `portfolio` → regular card under "More projects"
   - `portfolio-practice` → links only, in the "Algorithm practice" line
   - none of these → not shown
@@ -20,7 +20,7 @@ paths:
 - Sort each group by `pushed_at`, newest first.
 - Fields used: `name` (prettified for display, e.g. `log-analytics-platform` → "Log Analytics Platform"),
   `description`, languages, `topics` (minus the `portfolio-*` ones), `stargazers_count` (show only if > 0),
-  `pushed_at`, `html_url`, `homepage` (shows a "Live demo" button when set).
+  `pushed_at`, `html_url`, `homepage` (shows a "Live demo" link when set).
 - If `src/content/projects/<repo-name>.mdx` exists, the card links to `/projects/<repo-name>` and the MDX
   frontmatter can override fields (e.g. `status: In progress`, `team: 2 developers`).
 - Fail the build, with a clear message, if a `portfolio-featured` or `portfolio` repo has no description,

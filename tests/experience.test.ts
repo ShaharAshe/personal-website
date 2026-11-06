@@ -107,6 +107,26 @@ test('experienceContent follows the featured flags of the real resume, in order'
   );
 });
 
+test("experienceContent with highlights: 'all' returns every highlight, in YAML order", () => {
+  for (const resume of [getResume(), getResume(validFixture)]) {
+    assert.deepEqual(
+      experienceContent(resume, { highlights: 'all' }).map((role) => role.highlights),
+      resume.work.map((job) => job.highlights.map((h) => h.text)),
+    );
+  }
+});
+
+test("experienceContent's default is what the homepage gets: featured only, and only highlights differ from 'all'", () => {
+  for (const resume of [getResume(), getResume(validFixture)]) {
+    const homepage = experienceContent(resume);
+    assert.deepEqual(experienceContent(resume, { highlights: 'featured' }), homepage);
+    assert.deepEqual(experienceContent(resume, {}), homepage);
+    const withoutHighlights = (roles: ReturnType<typeof experienceContent>) =>
+      roles.map((role) => ({ ...role, highlights: [] }));
+    assert.deepEqual(withoutHighlights(experienceContent(resume, { highlights: 'all' })), withoutHighlights(homepage));
+  }
+});
+
 test('the real resume has 3–4 featured highlights (design-doc §5.1)', () => {
   const count = experienceContent(getResume()).reduce((sum, role) => sum + role.highlights.length, 0);
   assert.ok(
