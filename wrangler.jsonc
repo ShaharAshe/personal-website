@@ -9,5 +9,7 @@
   "workers_dev": true,
   "assets": {
     "directory": "./dist",
+    // /resume answers 200 from resume/index.html, and /resume/ redirects to /resume (design-doc §13.1).
+    "html_handling": "drop-trailing-slash",
   },
 }

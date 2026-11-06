@@ -885,7 +885,10 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
     - Tests: new `tests/resume-page.test.ts` and `tests/e2e/resume.spec.ts`; `tests/experience.test.ts` extended. `npm test`:
       316. `npm run test:e2e`: 137. `npm run screenshots` also writes `print-preview-resume.pdf`, to check the page breaks.
     - /resume JS: 1.24 KB gzipped, the same scripts as the homepage.
-  - Left open: check on the live site whether Cloudflare redirects `/resume` to `/resume/` (links work either way).
+  - Resolved (2026-11-06): the live site answered `/resume` with a 307 to `/resume/` (Cloudflare's default
+    `auto-trailing-slash`). Now `html_handling: "drop-trailing-slash"` in `wrangler.jsonc` and `trailingSlash: 'never'`
+    in `astro.config.mjs`, with `build.format` unchanged; see design-doc §13.1. `tests/trailing-slash.test.ts` checks
+    both settings and that no internal href in the built HTML ends in a slash.
 
 - [ ] **2.12 404 page**
   - Files: `src/pages/404.astro`.

@@ -36,7 +36,7 @@ async function clipboardText(page: Page): Promise<string> {
 
 async function expectOnResume(page: Page, status: number): Promise<void> {
   expect(status).toBe(200);
-  await expect(page).toHaveURL(/\/resume\/?$/);
+  await expect(page).toHaveURL(/\/resume$/);
   await expect(page.getByRole('heading', { level: 1, name: getResume().basics.name })).toBeVisible();
 }
 
