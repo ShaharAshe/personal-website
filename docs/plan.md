@@ -890,14 +890,38 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
     in `astro.config.mjs`, with `build.format` unchanged; see design-doc §13.1. `tests/trailing-slash.test.ts` checks
     both settings and that no internal href in the built HTML ends in a slash.
 
-- [ ] **2.12 404 page**
+- [x] **2.12 404 page**
   - Files: `src/pages/404.astro`.
   - Depends on: 2.2.
+  - Done (2026-11-06). Notes / deviations:
+    - **Files beyond the task text:** `BaseLayout.astro` gets an optional `noindex` prop for the robots tag (only this
+      page sets it); `wrangler.jsonc` sets `not_found_handling: "404-page"` (design-doc §13.1); README roadmap line.
+    - **Content:** `<h1>` "Page not found", one line of text, and "← Back to home" as the page's one accent-filled
+      button. No link to `/resume`: the nav's Resume link is directly above it.
+    - **`text-xl` for the `<h1>`:** design-doc §9.3 keeps `text-display` for the Hero and the `/resume` `<h1>` only, and
+      this page has no `<h2>` to outrank.
+    - **`wrangler dev`:** `/no-such-page`, `/no/such/page`, `/no-such-page/` and `/_headers` → 404 with the page's HTML;
+      `/`, `/resume`, `/resume.pdf` → 200; `/resume/` → 307 to `/resume`; `/404.html` → 307 to `/404`.
+    - **Known and accepted:** `/404` itself answers 200 with this page, because asset routing maps it to `404.html`. Only
+      that exact URL is affected. Nothing links to it and it's `noindex`, so no workaround was added.
+    - `astro preview` also returns a real 404 for unknown paths, so the e2e status checks are genuine. For
+      `/no-such-page/` it answers with Astro's own template instead (`trailingSlash: 'never'`), so only `wrangler dev`
+      covers that URL.
+    - The no-phone and no-email checks needed no change: `listSiteFiles` scans `dist/` recursively, and a test asserts
+      `404.html` is in its list.
+    - **Back to top (user request):** the footer's link only shows on pages long enough to scroll. New optional
+      `backToTop` prop (default true) on `BaseLayout` and `Footer`; this page sets it to false, so `tests/homepage.test.ts`
+      now requires the link on every page except this one. Design-doc §5 Footer updated.
+    - Tests: new `tests/not-found-page.test.ts` and `tests/e2e/not-found.spec.ts`; `tests/e2e/resume.spec.ts` extended.
+      `npm test`: 330. `npm run test:e2e`: 146.
+    - 404 JS: 0.56 KB gzipped (the theme script and the toggle's script only).
 
 - [ ] **2.13 SEO, OG image, sitemap, JSON-LD** — Unique `<title>`/meta description per page, OG image, `sitemap.xml` (`@astrojs/sitemap`), `robots.txt`, `Person` JSON-LD from `resume.yaml` excluding `email`/`phone`.
   - Files: `src/layouts/BaseLayout.astro`, `public/og-image.*`, `astro.config.mjs`, `public/robots.txt`.
   - Note (from 2.5): `index.astro`'s `title`/`description` now come from `getResume()` (`name`,
     `` `${name} – ${label}.` ``) instead of hardcoded text; keep it that way for the full SEO tags.
+  - Note (from 2.12): confirm `/404` isn't in the sitemap. It answers 200 at that exact URL and is `noindex`. Keep the
+    `noindex` prop working when the SEO tags are added to `BaseLayout`.
   - Open item (from 2.11): Header home link: consider the name on the left of the header as a link to /, on every
     page. It fills the empty left side at 1280px. At 375px the nav has about 6px to spare, so decide whether it's
     hidden or shortened there.
@@ -907,6 +931,7 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
   - Files: `public/_headers`.
   - Verify: Headers present in a deployed response; CSP doesn't break islands or fonts.
   - Depends on: 1.5.
+  - Note (from 2.12): the CSP must also cover `404.html`, and the check should include a 404 response, not only 200s.
   - Note (from 2.2): every page has the **inline no-flash theme script** (`themeInitScript` in
     `src/lib/theme.ts`, inlined by BaseLayout), so `script-src` needs its `'sha256-…'` hash, computed
     from the script text exactly as it appears in the built HTML (a test can recompute it from

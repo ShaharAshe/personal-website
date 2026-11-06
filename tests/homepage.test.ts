@@ -115,8 +115,11 @@ test('every footer links to basics.profiles, in order, with the shared icons', {
   }
 });
 
-test('every footer has a Back to top link with an arrow icon, to a focusable #top', { skip }, () => {
-  for (const { file, html: page } of pages) {
+test('every footer but the 404 page has a Back to top link with an arrow icon, to a focusable #top', { skip }, () => {
+  const scrollable = pages.filter(({ file }) => file !== '404.html');
+  assert.ok(scrollable.some(({ file }) => file === 'index.html'));
+  assert.ok(scrollable.some(({ file }) => file === path.join('resume', 'index.html')));
+  for (const { file, html: page } of scrollable) {
     const link = anchors(footerOf(page)).find((a) => /\sdata-back-to-top\b/.test(a)) ?? '';
     assert.ok(link, `${file}: no Back to top link`);
     assert.equal(attr(link, 'href'), '#top', `${file}: href`);

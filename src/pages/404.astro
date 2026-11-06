@@ -1,0 +1,30 @@
+---
+// The page for unknown URLs. Cloudflare serves it with status 404 (not_found_handling in wrangler.jsonc, design-doc
+// §13.1). Ships no JS besides the theme scripts in BaseLayout. Asset and nav URLs are absolute, so it also works from
+// a nested path. text-xl: text-display is only for the Hero and the /resume <h1> (design-doc §9.3).
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getResume } from '../lib/resume';
+
+const { name } = getResume().basics;
+---
+
+<BaseLayout
+  title={`${name} – Page not found`}
+  description={`This page doesn't exist on ${name}'s site.`}
+  noindex
+  backToTop={false}
+>
+  <div class="mx-auto max-w-[720px] px-4 py-(--section-gap)">
+    <h1 class="text-xl font-semibold tracking-tight">Page not found</h1>
+    <p class="mt-4 text-text-muted">There's nothing at this address. It may have moved, or the link may be wrong.</p>
+    <p class="mt-8">
+      <a
+        href="/"
+        data-not-found-home
+        class="inline-flex items-center gap-2 rounded-md bg-accent px-5 py-2.5 font-medium text-on-accent hover:opacity-90"
+      >
+        <span aria-hidden="true">←</span> Back to home
+      </a>
+    </p>
+  </div>
+</BaseLayout>

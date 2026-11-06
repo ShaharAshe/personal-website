@@ -27,6 +27,12 @@ for (const width of WIDTHS) {
         await page.screenshot({ path: `${OUT_DIR}/${width}-${theme}-resume.png`, fullPage: true });
       });
 
+      test('404 page', async ({ page }) => {
+        await page.goto('/no-such-page');
+        await page.evaluate(() => document.fonts.ready);
+        await page.screenshot({ path: `${OUT_DIR}/${width}-${theme}-404.png`, fullPage: true });
+      });
+
       test('toggle focused', async ({ page }) => {
         await page.goto('/');
         await page.evaluate(() => document.fonts.ready);

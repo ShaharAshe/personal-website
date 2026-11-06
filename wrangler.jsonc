@@ -11,5 +11,7 @@
     "directory": "./dist",
     // /resume answers 200 from resume/index.html, and /resume/ redirects to /resume (design-doc §13.1).
     "html_handling": "drop-trailing-slash",
+    // Unknown paths get the nearest 404.html with status 404, instead of an empty 404 (design-doc §13.1).
+    "not_found_handling": "404-page",
   },
 }

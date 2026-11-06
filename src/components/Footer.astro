@@ -10,6 +10,12 @@ import LinkedInIcon from './LinkedInIcon.astro';
 import { heroContent } from '../lib/hero';
 import { getResume } from '../lib/resume';
 
+interface Props {
+  /** False on pages too short to scroll (the 404 page). */
+  backToTop?: boolean;
+}
+
+const { backToTop = true } = Astro.props;
 const { name, socials } = heroContent(getResume());
 const year = new Date().getFullYear();
 const linkClass = 'inline-flex min-h-10 items-center gap-1.5 text-text-muted hover:text-text';
@@ -30,12 +36,14 @@ const linkClass = 'inline-flex min-h-10 items-center gap-1.5 text-text-muted hov
           </a>
         </li>
       ))}
-      <li>
-        <a href="#top" data-back-to-top class={linkClass}>
-          Back to top
-          <ArrowUpIcon size={14} class="shrink-0" />
-        </a>
-      </li>
+      {backToTop && (
+        <li>
+          <a href="#top" data-back-to-top class={linkClass}>
+            Back to top
+            <ArrowUpIcon size={14} class="shrink-0" />
+          </a>
+        </li>
+      )}
     </ul>
   </div>
 </footer>

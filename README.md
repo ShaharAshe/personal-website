@@ -147,5 +147,5 @@ only runs on `main`, so pull requests are built and checked but never deployed.
 
 ## Roadmap
 
-Next: a 404 page, SEO, and security headers. After that: project deep-dive pages, a contact form, and a custom domain. Details
+Next: SEO and security headers. After that: project deep-dive pages, a contact form, and a custom domain. Details
 and status are in [`docs/plan.md`](docs/plan.md).

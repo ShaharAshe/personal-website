@@ -10,9 +10,13 @@ import '../styles/global.css';
 interface Props {
   title: string;
   description: string;
+  /** Keeps the page out of search results (the 404 page). */
+  noindex?: boolean;
+  /** The footer's Back to top link. Pages too short to scroll turn it off (the 404 page). */
+  backToTop?: boolean;
 }
 
-const { title, description } = Astro.props;
+const { title, description, noindex = false, backToTop = true } = Astro.props;
 
 const navLinks = [
   { label: 'Experience', href: '/#experience' },
@@ -33,6 +37,7 @@ const currentPath = Astro.url.pathname.replace(/\/+$/, '');
     <script is:inline set:html={themeInitScript} />
     <title>{title}</title>
     <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex" />}
     {/* Preload only body text (Inter 400); other weights load on demand. */}
     <Font cssVariable="--font-inter" preload={[{ weight: 400 }]} />
     <Font cssVariable="--font-jetbrains-mono" />
@@ -76,6 +81,6 @@ const currentPath = Astro.url.pathname.replace(/\/+$/, '');
       <slot />
     </main>
 
-    <Footer />
+    <Footer backToTop={backToTop} />
   </body>
 </html>

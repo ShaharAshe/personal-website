@@ -66,6 +66,17 @@ test('the Home link goes back to the homepage', async ({ page }) => {
   await expect(page.locator('[data-hero]')).toBeVisible();
 });
 
+test('Back to top scrolls to the top of /resume and stays on /resume', async ({ page }) => {
+  await page.goto('/resume');
+  const link = page.getByRole('contentinfo').getByRole('link', { name: 'Back to top' });
+  await link.scrollIntoViewIfNeeded();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  await link.click();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  await expect(page.locator('#top')).toBeFocused();
+  expect(new URL(page.url()).pathname).toBe('/resume');
+});
+
 test('on /resume the nav marks Resume as current, visibly and without accent', async ({ page }) => {
   await page.goto('/resume');
   const current = nav(page).getByRole('link', { name: 'Resume' });
