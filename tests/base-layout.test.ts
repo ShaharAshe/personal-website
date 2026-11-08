@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { getResume } from '../src/lib/resume.ts';
 import { themeInitScript } from '../src/lib/theme.ts';
 
 const ROOT = path.join(import.meta.dirname, '..');
@@ -49,10 +50,10 @@ test('the skip link is the first focusable element and targets <main id="main">'
   assert.match(body, /<main id="main"/);
 });
 
-test('the nav has the four section links, and there is a footer', { skip }, () => {
+test('the nav has the home link (the name) and the four section links, and there is a footer', { skip }, () => {
   const nav = body.match(/<nav aria-label="Main"[\s\S]*?<\/nav>/)?.[0] ?? '';
   const labels = [...nav.matchAll(/<a [^>]*>([^<]+)<\/a>/g)].map(([, label]) => label.trim());
-  assert.deepEqual(labels, ['Experience', 'Projects', 'Resume', 'Contact']);
+  assert.deepEqual(labels, [getResume().basics.name, 'Experience', 'Projects', 'Resume', 'Contact']);
   assert.match(body, /<footer\b/);
 });
 

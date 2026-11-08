@@ -3,6 +3,7 @@
 // by tests/base-layout.test.ts (node:test).
 
 import { expect, test } from '@playwright/test';
+import { getResume } from '../../src/lib/resume.ts';
 import { expectFocusRing, NAV_LINKS } from './helpers.ts';
 
 test('skip link: hidden until focused, first Tab stop, Enter moves focus to <main>', async ({ page }) => {
@@ -23,7 +24,8 @@ test('nav links show a focus ring when reached by keyboard', async ({ page }) =>
   const nav = page.getByRole('navigation', { name: 'Main' });
 
   await page.keyboard.press('Tab'); // skip link
-  for (const name of NAV_LINKS) {
+  // The default 1280px viewport shows the home link (the name) before the section links.
+  for (const name of [getResume().basics.name, ...NAV_LINKS]) {
     await page.keyboard.press('Tab');
     await expectFocusRing(nav.getByRole('link', { name }));
   }

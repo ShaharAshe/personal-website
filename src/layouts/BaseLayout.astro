@@ -1,9 +1,12 @@
 ---
-// Shared page shell: <head> (no-flash theme script, fonts, title/description), skip link, nav, footer.
-// Full SEO tags (Open Graph, JSON-LD, ...) come in Task 2.13.
+// Shared page shell: <head> (no-flash theme script, title/description, canonical, Open Graph, fonts), skip link,
+// nav (with the home link), footer. Every absolute URL comes from `site` in astro.config.mjs (src/lib/seo.ts).
+// Page-specific head tags (the homepage's JSON-LD) go in the "head" slot.
 import { Font } from 'astro:assets';
 import Footer from '../components/Footer.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
+import { getResume } from '../lib/resume';
+import { OG_IMAGE, absoluteUrl, ogImageAlt } from '../lib/seo';
 import { themeInitScript } from '../lib/theme';
 import '../styles/global.css';
 
@@ -27,6 +30,11 @@ const navLinks = [
 
 // The built path can end in a slash (/resume/). The homepage's section links (/#...) never match a path.
 const currentPath = Astro.url.pathname.replace(/\/+$/, '');
+
+const { name, label } = getResume().basics;
+// A noindex page (the 404 page) has no canonical and no og:url: it isn't a page to index or share.
+const canonical = noindex ? undefined : absoluteUrl(Astro.url.pathname, Astro.site);
+const ogImage = absoluteUrl(OG_IMAGE.path, Astro.site);
 ---
 
 <html lang="en">
@@ -38,6 +46,19 @@ const currentPath = Astro.url.pathname.replace(/\/+$/, '');
     <title>{title}</title>
     <meta name="description" content={description} />
     {noindex && <meta name="robots" content="noindex" />}
+    {canonical && <link rel="canonical" href={canonical} />}
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={name} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    {canonical && <meta property="og:url" content={canonical} />}
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content={String(OG_IMAGE.width)} />
+    <meta property="og:image:height" content={String(OG_IMAGE.height)} />
+    <meta property="og:image:type" content={OG_IMAGE.type} />
+    <meta property="og:image:alt" content={ogImageAlt(name, label)} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <slot name="head" />
     {/* Preload only body text (Inter 400); other weights load on demand. */}
     <Font cssVariable="--font-inter" preload={[{ weight: 400 }]} />
     <Font cssVariable="--font-jetbrains-mono" />
@@ -57,6 +78,15 @@ const currentPath = Astro.url.pathname.replace(/\/+$/, '');
 
     <header class="border-b border-border">
       <nav aria-label="Main" class="mx-auto flex max-w-[720px] items-center justify-end gap-4 px-4 py-4 sm:gap-6">
+        {/* Home link: muted site chrome. Hidden below sm, where the nav has no room for it (the page itself starts
+            with the name there); mr-auto pushes the links and toggle to the right. */}
+        <a
+          href="/"
+          data-home-link
+          class="mr-auto hidden min-h-10 shrink-0 items-center font-medium text-text-muted hover:text-text sm:inline-flex"
+        >
+          {name}
+        </a>
         {/* Tighter gaps below sm keep links + toggle on one line at 375px; min-w-0 + flex-wrap let the
             links wrap (never overflow) on anything narrower. */}
         <ul class="flex min-w-0 flex-wrap justify-end gap-x-4 gap-y-2 text-sm sm:gap-x-6">

@@ -26,7 +26,7 @@ const resume = (page: Page) => page.locator('[data-resume]');
 const emailLink = (page: Page) => resume(page).locator('a[data-email-link]');
 const nav = (page: Page) => page.getByRole('navigation', { name: 'Main' });
 const download = (page: Page) => resume(page).getByRole('link', { name: 'Download PDF' });
-const home = (page: Page) => resume(page).getByRole('link', { name: 'Home', exact: true });
+const home = (page: Page) => resume(page).getByRole('link', { name: 'Back to home', exact: true });
 const copyButton = (page: Page) => resume(page).locator('button[data-email-copy]');
 const copied = (page: Page) => copyButton(page).locator('[data-copy-done]');
 
@@ -58,7 +58,7 @@ test('the nav Resume link opens /resume', async ({ page }) => {
   await expectOnResume(page, response.status());
 });
 
-test('the Home link goes back to the homepage', async ({ page }) => {
+test('the Back to home link goes back to the homepage', async ({ page }) => {
   await page.goto('/resume');
   await home(page).click();
   await expect(page).toHaveURL(/\/$/);

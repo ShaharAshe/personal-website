@@ -118,7 +118,7 @@
 └── /404                        → דף שגיאה מעוצב
 ```
 
-**ניווט עליון:** `Experience · Projects · Resume · Contact` + מתג Dark/Light.
+**ניווט עליון:** `Experience · Projects · Resume · Contact` + מתג Dark/Light. משמאל: השם (מ-`resume.yaml`) כקישור ל-`/`, בצבע מושתק כמו שאר ה-chrome. הוא מוצג מ-640px (`sm`) ומעלה. ברוחב טלפון אין לו מקום בשורה, והעמוד עצמו מתחיל בשם. לכן ב-`/resume` נשאר הקישור "← Back to home".
 
 **למה דף בית גולל + עמודי עומק?** מגייס רואה הכל בגלילה אחת בלי ללחוץ, ומי שרוצה עומק נכנס לעמוד הייעודי. דפים נפרדים כמו "About" ו-"Skills" בדרך כלל יוצאים רדודים.
 
@@ -518,10 +518,18 @@ education:
 - `prefers-reduced-motion`.
 
 ### SEO ושיתוף
-- `<title>` ו-`<meta description>` ייחודיים לכל עמוד.
+- `<title>` ו-`<meta description>` ייחודיים לכל עמוד. בדף הבית: הכותרת היא `שם – תפקיד` והתיאור הוא ה-tagline, שניהם מ-`resume.yaml`. כך כרטיס השיתוף (כותרת ותיאור מתחת לתמונה) לא חוזר על השם.
 - **Open Graph image:** תמונה מעוצבת שמופיעה כשמשתפים את הקישור ב-LinkedIn או WhatsApp.
 - `sitemap.xml` ו-`robots.txt`.
 - JSON-LD מסוג `Person`, שנבנה מ-`resume.yaml`.
+
+**איך זה בנוי (Task 2.13):**
+- **כתובת בסיס אחת:** `site` ב-`astro.config.mjs`. כל כתובת מלאה (canonical, `og:url`, `og:image`, ה-sitemap ו-robots.txt) נגזרת ממנה דרך `src/lib/seo.ts`. מעבר לדומיין הוא שינוי של שורה אחת. אין `/` בסוף כתובת, חוץ מהשורש.
+- **בכל עמוד:** canonical, תגיות Open Graph (`og:title`, `og:description`, `og:url`, `og:image` עם מידות ו-alt, `og:type`) ו-`twitter:card` מסוג `summary_large_image`. לדף ה-404 יש `noindex`, ואין לו canonical ואין `og:url`.
+- **sitemap.xml ו-robots.txt** הם endpoints קטנים ב-`src/pages/`, לא `@astrojs/sitemap`. כך אין תלות חדשה, הקובץ נקרא `sitemap.xml` (ה-integration כותב `sitemap-index.xml`), ושורת ה-Sitemap ב-robots.txt נגזרת מ-`site`. ה-sitemap מכיל רק את `/` ואת `/resume`, בלי `/404`. ב-robots.txt אין אף Disallow, אחרת סורקים לא יראו את ה-noindex.
+- **תמונת OG:** `public/og-image.png` בגודל 1200×630, נשמרת ב-git. היא נוצרת ב-`npm run og`: תבנית HTML עם השם, התפקיד וה-tagline מ-`resume.yaml`, בצבעי ה-dark ובגופנים של האתר, שמרונדרת עם ה-Playwright שכבר מותקן. הטקסט ממורכז, כדי שחיתוך ריבועי (WhatsApp) עדיין יראה את השם והתפקיד. הקובץ חייב להיות קטן מ-300KB. hash של מקורות התמונה נשמר בתוך ה-PNG, ו-`npm test` נכשל כשהוא כבר לא תואם (למשל אחרי שינוי בתפקיד ב-YAML).
+- **JSON-LD** רק בדף הבית: `name`, `jobTitle`, `description`, `url`, `sameAs` (הפרופילים), `knowsAbout` (הכישורים), `alumniOf`. אף פעם לא אימייל, טלפון או כתובת.
+- **noindex:** ה-`X-Robots-Tag: noindex` בכל האתר נשאר עד המעבר לדומיין, כדי ש-Google לא יאנדקס את כתובת ה-workers.dev ככפילות.
 
 ---
 
@@ -567,7 +575,7 @@ education:
 - **ההחלטה תתקבל בסוף העבודה.** בינתיים האתר זמין בכתובת החינמית של Cloudflare.
 - **מועמדים:** `shaharasher.dev`, `shaharasher.com`.
 - **רכישה דרך Cloudflare Registrar:** מחיר עלות בלי רווח, וחידוש באותו מחיר. `.dev` עולה בערך 10–15$ לשנה.
-- **אחרי הרכישה:** לעדכן את הקישור ב-LinkedIn, בפרופיל GitHub וב-`resume.yaml`.
+- **אחרי הרכישה:** לעדכן את הקישור ב-LinkedIn, בפרופיל GitHub וב-`resume.yaml`. באתר: לשנות את `site` ב-`astro.config.mjs` (שורה אחת), ולהסיר את `X-Robots-Tag: noindex` מ-`public/_headers`.
 
 ### 13.3 CI/CD (GitHub Actions)
 
@@ -619,19 +627,20 @@ portfolio/
 │   │   ├── check-pdf.ts             # בדיקה שה-PDF הוא עמוד אחד (pdf-parse)
 │   │   └── publish-pdf.ts           # העתקת ה-PDF ל-dist/resume.pdf (סוף ה-build)
 │   ├── checks/                      # בדיקות אתר: טלפון ואימייל לא ב-dist/ וכו' (npm run check)
+│   ├── og/                          # יצירת og-image.png (npm run og) + בדיקת PNG לזיהוי תמונה לא מעודכנת
 │   └── github/
 │       └── fetch-projects.ts        # משיכה מ-GitHub API → src/data/projects.json
 ├── src/
 │   ├── content.config.ts            # Content collections: עמודי העומק של הפרויקטים (MDX)
 │   ├── lib/
 │   │   ├── resume.ts                # קורות חיים מאומתים לקומפוננטות (בלי אימייל; getEmailParts() בנפרד)
+│   │   ├── seo.ts                   # כתובות מלאות מ-site, טקסט ה-sitemap ו-robots, JSON-LD מסוג Person
 │   │   └── projects.ts              # projects.json מאומת לקומפוננטות (ה-schema הוא מקור הטיפוסים)
 │   ├── data/
 │   │   ├── resume.yaml              # ⭐ המקור היחיד לקורות החיים
 │   │   ├── resume.schema.ts         # Schema ל-resume.yaml (משותף לסקריפטים ול-src/lib/resume.ts)
 │   │   ├── project-page.schema.ts   # Schema ל-frontmatter של עמודי הפרויקטים
-│   │   ├── projects.json            # נוצר ב-build (לא נשמר ב-git)
-│   │   └── site.ts                  # הגדרות כלליות (כתובת האתר, מטא-דאטה)
+│   │   └── projects.json            # נוצר ב-build (לא נשמר ב-git)
 │   ├── content/
 │   │   ├── projects/
 │   │   │   └── log-analytics-platform.mdx
@@ -658,6 +667,8 @@ portfolio/
 │   │   ├── projects/[slug].astro
 │   │   ├── case-studies/[slug].astro
 │   │   ├── 404.astro
+│   │   ├── sitemap.xml.ts           # endpoint: ה-sitemap (כתובת האתר מ-site ב-astro.config.mjs)
+│   │   ├── robots.txt.ts            # endpoint: robots.txt עם שורת Sitemap
 │   │   └── api/contact.ts           # שלב 2: הפונקציה של הטופס
 │   └── styles/
 │       └── global.css               # Design tokens

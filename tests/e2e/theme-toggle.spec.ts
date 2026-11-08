@@ -2,6 +2,7 @@
 // layout. The pure logic and the built markup are covered by tests/theme-toggle.test.ts (node:test).
 
 import { expect, test, type Page } from '@playwright/test';
+import { getResume } from '../../src/lib/resume.ts';
 import { nextTheme, THEME_STORAGE_KEY, THEMES } from '../../src/lib/theme.ts';
 import { changeOsTheme, expectFocusRing, expectTheme, expectToggleFor, NAV_LINKS, themeToggle } from './helpers.ts';
 
@@ -87,7 +88,7 @@ for (const saved of THEMES) {
   });
 }
 
-test('keyboard: Tab reaches the toggle after the skip link and nav links; Enter and Space switch it', async ({
+test('keyboard: Tab reaches the toggle after the skip link, home link and nav links; Enter and Space switch it', async ({
   page,
 }) => {
   await page.emulateMedia({ colorScheme: 'dark' });
@@ -98,7 +99,8 @@ test('keyboard: Tab reaches the toggle after the skip link and nav links; Enter 
 
   await page.keyboard.press('Tab');
   await expect(page.getByRole('link', { name: 'Skip to content' })).toBeFocused();
-  for (const name of NAV_LINKS) {
+  // The default 1280px viewport shows the home link (the name) before the section links.
+  for (const name of [getResume().basics.name, ...NAV_LINKS]) {
     await page.keyboard.press('Tab');
     await expect(nav.getByRole('link', { name })).toBeFocused();
   }

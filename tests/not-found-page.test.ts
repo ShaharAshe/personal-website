@@ -78,10 +78,13 @@ test('<main> has one accent-filled element at most', { skip }, () => {
 
 test('the 404 page ships only the theme scripts: no email or clipboard code', { skip }, () => {
   assert.doesNotMatch(html, /data-email-/);
-  const scripts = [...html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)].map(([, attrs, text]) => {
-    const src = attrs.match(/\bsrc="([^"]+)"/)?.[1];
-    return src ? fs.readFileSync(path.join(DIST, src)).toString() : text;
-  });
+  // JSON-LD (type="application/ld+json") is data the browser never runs, so it isn't JS.
+  const scripts = [...html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)]
+    .filter(([, attrs]) => !attrs.includes('application/ld+json'))
+    .map(([, attrs, text]) => {
+      const src = attrs.match(/\bsrc="([^"]+)"/)?.[1];
+      return src ? fs.readFileSync(path.join(DIST, src)).toString() : text;
+    });
   assert.ok(scripts.length > 0);
   for (const code of scripts) assert.doesNotMatch(code, /clipboard/i);
   const bytes = scripts.reduce((sum, code) => sum + zlib.gzipSync(code).length, 0);

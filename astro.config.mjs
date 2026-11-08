@@ -5,6 +5,9 @@ import tailwindcss from '@tailwindcss/vite';
 
 // https://docs.astro.build/en/reference/configuration-reference/
 export default defineConfig({
+  // The one base URL: canonical, og:url, og:image, sitemap.xml and robots.txt all derive from it (src/lib/seo.ts).
+  // Moving to the custom domain (plan.md Task 4.2) changes only this line. No trailing slash.
+  site: 'https://personal-website.shaharasher.workers.dev',
   // Dev and preview match production, where wrangler.jsonc sets html_handling (design-doc §13.1).
   trailingSlash: 'never',
   integrations: [react()],

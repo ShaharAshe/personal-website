@@ -88,7 +88,7 @@ Reality check performed before this plan:
 | 3 | Create a free Cloudflare account | Milestone 1, Task 1.5 |
 | 4 | Create a Cloudflare API token (Workers deploy scope) and the account ID; add both as GitHub Actions secrets (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`) | Milestone 1, Task 1.5 |
 | 5 | Enable Cloudflare Web Analytics on the site once it has a URL, grab the beacon token | Milestone 2, Task 2.15 |
-| 6 | Decide/approve the OG image design (or approve a simple generated placeholder) | Milestone 2, Task 2.13 |
+| 6 | Decide/approve the OG image design (or approve a simple generated placeholder) | Milestone 2, Task 2.13. **Done**: name + title + tagline, generated from `resume.yaml` (approved in 2.13's plan) |
 | 7 | Draft the real content: Log Analytics Platform architecture + narrative, and the table-migration case study narrative (checked against §12 confidentiality) | Milestone 3, Tasks 3.1–3.2 |
 | 8 | Decide contact-form email provider: Cloudflare Email Routing vs Resend; provide its secret/API key as a Cloudflare secret | Milestone 3, Task 3.3 |
 | 9 | Choose and purchase the domain via Cloudflare Registrar | Milestone 4, Task 4.1 |
@@ -103,7 +103,7 @@ Reality check performed before this plan:
 (beyond what `create_cv.js` already needs: `docx`, `js-yaml`)
 
 `astro`, `typescript`, `tailwindcss` + `@tailwindcss/vite`, `@astrojs/react` + `react` + `react-dom`,
-`@astrojs/mdx` (moved from Task 2.4 to Task 3.1, where the first MDX page is written), `@astrojs/sitemap`, `pdf-parse` (replaced `pdf-lib` in Task 1.2), `@types/js-yaml`
+`@astrojs/mdx` (moved from Task 2.4 to Task 3.1, where the first MDX page is written), ~~`@astrojs/sitemap`~~ (dropped in Task 2.13: a small `sitemap.xml` endpoint instead), `pdf-parse` (replaced `pdf-lib` in Task 1.2), `@types/js-yaml`
 (dev), ~~`tsx`~~ (dropped in Task 1.2: Node 22 runs the `.ts` scripts natively), `eslint` + `typescript-eslint` +
 `eslint-plugin-astro`, `prettier` + `prettier-plugin-astro` + `prettier-plugin-tailwindcss`,
 `@astrojs/check` (added in Task 1.4, needed by `astro check`), `wrangler` (dev, added in Task 1.5 for the Cloudflare deploy), `@playwright/test` (dev, added in Task 2.3a for e2e tests and review screenshots). `@astrojs/cloudflare` is added
@@ -611,7 +611,8 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       `target="_blank"`), `aria-label` = the network name, inline-SVG icons. An unknown network fails
       the build. No email icon yet (→ 2.9).
     - `index.astro`: Hero on top; the swatch heading is now an `<h2>` (one `<h1>` per page); the page
-      `title`/`description` were hardcoded resume text and now come from `getResume()` (same output).
+      `title`/`description` were hardcoded resume text and now come from `getResume()` (same output). Changed in
+      2.13: title `` `${name} – ${label}` ``, description `basics.tagline`.
     - Visual: subtle dot grid (`--border` dots, faded edges) via a scoped `::before`. Zero JS, no motion
       (→ 3.4). Homepage JS still 0.56 KB gzipped.
     - Tests: `tests/hero.test.ts` (13: helpers, file name, built HTML: one `<h1>` = name, title and
@@ -916,16 +917,53 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       `npm test`: 330. `npm run test:e2e`: 146.
     - 404 JS: 0.56 KB gzipped (the theme script and the toggle's script only).
 
-- [ ] **2.13 SEO, OG image, sitemap, JSON-LD** — Unique `<title>`/meta description per page, OG image, `sitemap.xml` (`@astrojs/sitemap`), `robots.txt`, `Person` JSON-LD from `resume.yaml` excluding `email`/`phone`.
+- [x] **2.13 SEO, OG image, sitemap, JSON-LD** — Unique `<title>`/meta description per page, OG image, `sitemap.xml` (`@astrojs/sitemap`), `robots.txt`, `Person` JSON-LD from `resume.yaml` excluding `email`/`phone`.
   - Files: `src/layouts/BaseLayout.astro`, `public/og-image.*`, `astro.config.mjs`, `public/robots.txt`.
   - Note (from 2.5): `index.astro`'s `title`/`description` now come from `getResume()` (`name`,
-    `` `${name} – ${label}.` ``) instead of hardcoded text; keep it that way for the full SEO tags.
+    `` `${name} – ${label}.` ``) instead of hardcoded text; keep it that way for the full SEO tags. Changed in 2.13
+    (user request): the title is `` `${name} – ${label}` `` and the description is `basics.tagline` (143 characters),
+    so a share card (title and description under the image) doesn't repeat the name.
   - Note (from 2.12): confirm `/404` isn't in the sitemap. It answers 200 at that exact URL and is `noindex`. Keep the
     `noindex` prop working when the SEO tags are added to `BaseLayout`.
   - Open item (from 2.11): Header home link: consider the name on the left of the header as a link to /, on every
     page. It fills the empty left side at 1280px. At 375px the nav has about 6px to spare, so decide whether it's
     hidden or shortened there.
   - Depends on: 2.2, 2.4; needs action item #6.
+  - Done (2026-11-08). Notes / deviations:
+    - **One base URL:** `site: 'https://personal-website.shaharasher.workers.dev'` in `astro.config.mjs`. Canonical,
+      og:url, og:image, the sitemap and robots.txt all come from it through `absoluteUrl()` (`src/lib/seo.ts`); a test
+      fails if the host appears anywhere in `src/` or `public/`. No trailing slash except the root.
+    - **Head (BaseLayout):** canonical (not on noindex pages), `og:type` website, `og:site_name`, `og:title`,
+      `og:description`, `og:url` (with the canonical only), `og:image` + width/height/type/alt, `twitter:card`
+      `summary_large_image`, and a `head` slot. The 404 page keeps `noindex`, and has no canonical and no og:url.
+    - **Sitemap: an endpoint, not `@astrojs/sitemap`** (user-approved): `src/pages/sitemap.xml.ts` writes
+      `dist/sitemap.xml` from `SITEMAP_PATHS` (`/`, `/resume`). No new dependency, and the file is `sitemap.xml` (the
+      integration writes `sitemap-index.xml`). A dist test fails if a built page without noindex is missing from it,
+      so 3.1/3.2 must add their pages to `SITEMAP_PATHS`.
+    - **robots.txt** is an endpoint too (`src/pages/robots.txt.ts`), so the Sitemap line uses `site`: `Allow: /`, no
+      Disallow.
+    - **OG image:** `public/og-image.png`, committed, made by the new `npm run og` (`scripts/og/`): an HTML template
+      (name, title, tagline from `heroContent()`; dark tokens from `global.css`; the Hero's dots and glow; the site's
+      fonts from `dist/`) rendered with the installed Playwright (Edge locally, Chromium in CI). The script refuses
+      to write if the name or title leaves the center 630×630 square (WhatsApp's crop), the tagline is over 2 lines,
+      or the PNG is 300 KB or more. Result: 191 KB, tagline 2 lines. **Stale check:** a PNG `tEXt` chunk holds the
+      sha256 of the template HTML (line endings normalized, no paths, so Windows and Linux agree);
+      `tests/og-image.test.ts` recomputes it. Refresh: `npm run build` → `npm run og` → `npm run build`, commit.
+    - **JSON-LD** (homepage only, in `<head>`): `Person` with `name`, `jobTitle`, `description` (summary), `url`,
+      `sameAs` (profiles), `knowsAbout` (skills), `alumniOf` (education). No email, telephone or address, and no
+      `worksFor` (it would go stale between roles). `<` is escaped. 940 bytes (600 gzipped). It's data the browser
+      never runs, so the JS budget tests skip `application/ld+json`.
+    - **Header home link:** the name (from `resume.yaml`) first in the nav, linking to `/`, muted chrome. Hidden below
+      `sm` (640px) where the nav has no room (user decision); at 640px the whole nav fits on one row (e2e test).
+      /resume keeps its link, renamed "← Back to home" to match the 404 page, because phones have no other one.
+    - The no-phone and no-email checks needed no change: `listSiteFiles` already scans `.xml` and `.txt`, and the
+      JSON-LD is inside `index.html`.
+    - **noindex:** the site-wide `X-Robots-Tag: noindex` in `public/_headers` stays until the custom domain (see 4.2).
+    - Tests: new `tests/seo.test.ts`, `tests/seo-dist.test.ts`, `tests/og-image.test.ts`, `tests/e2e/seo.spec.ts`;
+      updated base-layout, resume-page, theme-toggle, not-found-page, and the e2e base-layout, resume and theme-toggle
+      specs (the Tab order now has the home link). `review-screenshots.ts` adds header clips (375/640/1280) and the OG
+      image at full size, 500px and as a square. `npm test`: 364. `npm run test:e2e`: 185.
+    - JS unchanged: homepage 1.24 KB gzipped, /resume 1.24 KB, 404 0.56 KB.
 
 - [ ] **2.14 Security headers** — Real CSP, `X-Content-Type-Options`, `Referrer-Policy` in `public/_headers`.
   - Files: `public/_headers`.
@@ -944,6 +982,9 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
     `ThemeToggle.astro`'s script or `src/lib/theme.ts`. Options: compute the hashes from `dist/` at
     build time, or set `vite.build.assetsInlineLimit: 0` (or similar) so the script is an external
     file covered by `'self'`. Pick one here.
+  - Note (from 2.13): the homepage's JSON-LD (`<script type="application/ld+json">`) needs nothing in the CSP: it's a
+    data block the browser never runs, so `script-src` doesn't apply to it. No hash and no `'unsafe-inline'` for it.
+    `sitemap.xml`, `robots.txt` and `og-image.png` are plain static files.
 
 - [ ] **2.15 Cloudflare Web Analytics** — Beacon script in `BaseLayout`.
   - Files: `src/layouts/BaseLayout.astro`.
@@ -951,6 +992,9 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
 
 - [ ] **2.16 MVP deploy + visual verification** — Full homepage + `/resume` live on the Cloudflare free URL.
   - Verify: Playwright screenshots at 375px/1280px, dark/light, reviewed; Lighthouse spot-check; `npm run check` and `npm run build` both green.
+  - Note (from 2.13): the site-wide `X-Robots-Tag: noindex` stays on the workers.dev URL, so Google doesn't index it
+    as a duplicate of the future domain. It's removed at the domain switch (4.2), not here. Lighthouse's SEO score
+    will flag it; that's expected.
   - Depends on: everything above in Milestone 2.
 
 ## Milestone 3 — Depth (design-doc §16 Phase 2)
@@ -995,9 +1039,13 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
 - [ ] **4.2 Point domain at the site, update links**
   - Files: `wrangler.jsonc`/Cloudflare dashboard routes, `src/data/resume.yaml`, LinkedIn/GitHub profile links.
   - Depends on: 4.1.
+  - Note (from 2.13): change `site` in `astro.config.mjs` (one line; every absolute URL derives from it, and the OG
+    image doesn't show the URL, so it needs no regenerating). Then remove `X-Robots-Tag: noindex` from
+    `public/_headers` (keep robots.txt without any Disallow), and submit `https://<domain>/sitemap.xml` in Google
+    Search Console. Consider a redirect from the workers.dev URL to the domain.
 
 - [ ] **4.3 Final QA** — Lighthouse 95+ all categories, every section at 375px, WCAG AA contrast both themes, every link resolves, full keyboard pass.
-  - Before launch: remove `X-Robots-Tag: noindex` from `public/_headers` (added in 1.5).
+  - Check the `X-Robots-Tag: noindex` is gone from live responses (removed in 4.2, see its note).
   - README (from 2.4b): add a screenshot of the site and the custom-domain link; replace the
     `workers.dev` link and the work-in-progress line.
   - Making the repo public and branch protection on `main` moved out of this task (in 2.4c) to

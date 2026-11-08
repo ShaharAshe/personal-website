@@ -7,12 +7,18 @@ import Hero from '../components/Hero.astro';
 import Projects from '../components/Projects.astro';
 import Skills from '../components/Skills.astro';
 import { getResume } from '../lib/resume';
+import { jsonLdScript, personJsonLd } from '../lib/seo';
 
-// No resume text in this file (hard rule 1). Full SEO tags come in Task 2.13.
-const { name, label } = getResume().basics;
+// No resume text in this file (hard rule 1). og:title/og:description follow from these props in BaseLayout. The
+// title has the role, so share cards (which show title and description under the image) don't repeat the name.
+const resume = getResume();
+const { name, label, tagline } = resume.basics;
+const jsonLd = jsonLdScript(personJsonLd(resume, Astro.site));
 ---
 
-<BaseLayout title={name} description={`${name} – ${label}.`}>
+<BaseLayout title={`${name} – ${label}`} description={tagline}>
+  {/* schema.org Person from resume.yaml, never email or phone (src/lib/seo.ts). Data, not code: it runs nothing. */}
+  <script slot="head" type="application/ld+json" is:inline set:html={jsonLd} />
   <Hero />
   <Experience />
   <Projects />

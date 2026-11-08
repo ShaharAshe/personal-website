@@ -60,7 +60,15 @@ flowchart LR
    writing them to `src/data/projects.json` (generated, not committed). The build fails if a shown
    repo has no description or the API call fails.
 3. **Site:** `astro build` produces static HTML in `dist/`. Fonts are downloaded at build time and
-   served from the site itself.
+   served from the site itself. It also writes `sitemap.xml` and `robots.txt` (small endpoints in
+   `src/pages/`). Every absolute URL (canonical, Open Graph, sitemap) comes from `site` in
+   `astro.config.mjs`, so moving to another domain is a one-line change.
+
+**The Open Graph image** (`public/og-image.png`, 1200×630) is generated from `resume.yaml` (name, title,
+tagline) and the design tokens, and committed. It isn't rebuilt on every build. After changing one of those, run
+`npm run build`, then `npm run og` (it renders with the installed Edge, or Playwright's Chromium in CI, using the
+built fonts), then `npm run build` again, and commit the new image. `npm test` fails while the image is stale: a
+hash of its inputs is stored inside the PNG and compared with the current ones.
 
 In CI, a pushed commit goes through build → `npm run check` → Playwright e2e → deploy to Cloudflare
 (`main` only).
@@ -108,10 +116,11 @@ nothing. To run the same check by hand: `npm run check:staged`.
 | `npm run preview` | Serve the production build from `dist/` |
 | `npm run cv` | Validate `resume.yaml`, generate the `.docx` and `.pdf` into `.generated/cv/`, check the PDF is one page |
 | `npm run projects` | Fetch the tagged GitHub repos into `src/data/projects.json` |
+| `npm run og` | Render `public/og-image.png` from `resume.yaml` and the design tokens (needs a build first, for the fonts) |
 | `npm test` | Unit and integration tests (`node:test`, `tests/**/*.test.ts`) |
 | `npm run test:update-golden` | Re-record the golden Word files that pin the resume design (only after an intended design change) |
 | `npm run test:e2e` | Playwright end-to-end tests against the existing build (`astro preview` on port 4322) |
-| `npm run screenshots` | Review screenshots (375px and 1280px, dark and light) into `screenshots/` |
+| `npm run screenshots` | Review screenshots (375px and 1280px, dark and light, plus header clips at 640px and the OG image) into `screenshots/` |
 | `npm run check` | On an existing build: `astro check` → lint → `npm test` → site checks → format check |
 | `npm run check:site` | Site checks: no phone in `dist/` or tracked files, phone present in the published PDF, no email in `dist/` |
 | `npm run check:staged` | The pre-commit check: no `CV_PHONE` number in staged changes (fails if `CV_PHONE` isn't set) |
@@ -147,5 +156,5 @@ only runs on `main`, so pull requests are built and checked but never deployed.
 
 ## Roadmap
 
-Next: SEO and security headers. After that: project deep-dive pages, a contact form, and a custom domain. Details
+Next: security headers. After that: project deep-dive pages, a contact form, and a custom domain. Details
 and status are in [`docs/plan.md`](docs/plan.md).

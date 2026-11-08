@@ -118,6 +118,8 @@ test('the icon animation only exists without reduced motion', { skip }, () => {
 test('homepage JS stays under 30KB gzipped (CLAUDE.md quality target)', { skip }, () => {
   let bytes = 0;
   for (const [, attrs, text] of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)) {
+    // JSON-LD (type="application/ld+json") is data the browser never runs, so it isn't JS.
+    if (attrs.includes('application/ld+json')) continue;
     const src = attrs.match(/\bsrc="([^"]+)"/)?.[1];
     const code = src ? fs.readFileSync(path.join(DIST, src)) : Buffer.from(text);
     bytes += zlib.gzipSync(code).length;

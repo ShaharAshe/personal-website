@@ -335,11 +335,11 @@ test('Download PDF uses the shared URL and file name, and is the one accent-fill
   assert.match(filled[0][0], /data-resume-download/);
 });
 
-test('the Home link is above the <h1> and goes to /', { skip }, () => {
+test('the Back to home link is above the <h1> and goes to / (same text as the 404 page)', { skip }, () => {
   const home = main.match(/<p\b[^>]*\sdata-resume-home\b[^>]*>[\s\S]*?<\/p>/)?.[0] ?? '';
   const link = home.match(/<a\b[^>]*>[\s\S]*?<\/a>/)?.[0] ?? '';
   assert.equal(attr(link, 'href'), '/');
-  assert.equal(textOf(link), '← Home');
+  assert.equal(textOf(link), '← Back to home');
   assert.match(link, /<span aria-hidden="true">←<\/span>/);
   assert.ok(main.indexOf('data-resume-home') < main.indexOf('<h1'));
   assert.ok(link.match(/<a\b[^>]*>/)![0].includes('text-accent'));
@@ -385,11 +385,14 @@ test('the nav Resume link has aria-current="page" on /resume and no link has it 
 
 // --- JS ---
 
+// JSON-LD (type="application/ld+json", homepage only) is data the browser never runs, so it isn't JS.
 const scriptsOf = (page: string) =>
-  [...page.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)].map(([, attrs, text]) => {
-    const src = attrs.match(/\bsrc="([^"]+)"/)?.[1];
-    return src ? fs.readFileSync(path.join(DIST, src)).toString() : text;
-  });
+  [...page.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)]
+    .filter(([, attrs]) => !attrs.includes('application/ld+json'))
+    .map(([, attrs, text]) => {
+      const src = attrs.match(/\bsrc="([^"]+)"/)?.[1];
+      return src ? fs.readFileSync(path.join(DIST, src)).toString() : text;
+    });
 
 test('/resume JS stays under 30KB gzipped', { skip }, () => {
   const bytes = scriptsOf(html).reduce((sum, code) => sum + zlib.gzipSync(code).length, 0);

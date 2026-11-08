@@ -1,6 +1,7 @@
 # Response headers for Cloudflare Workers static assets (copied to dist/_headers by astro build).
 # Stub: the real security headers (CSP etc.) come in Task 2.14.
-# X-Robots-Tag: noindex keeps search engines out until launch. Removed in Task 4.3.
+# X-Robots-Tag: noindex keeps search engines from indexing the workers.dev URL as a duplicate. Removed at the
+# switch to the custom domain (plan.md Task 4.2). robots.txt must never Disallow, or crawlers can't see it.
 /*
   X-Robots-Tag: noindex
   X-Content-Type-Options: nosniff
