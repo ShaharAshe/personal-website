@@ -999,6 +999,31 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       `/resume` and `/no-such-page`, the apple icon is opaque). `review-screenshots.ts` writes `screenshots/icons.png`
       (1× and 8× on light and dark strips). `npm test`: 380. `npm run test:e2e`: 191.
 
+- [x] **2.13b Skills as a card**: the homepage Skills section restyled to match the rest of the page. Added before
+  2.14 (user request): Experience, Projects and Contact all use cards, and Skills was the only section without one
+  and the only one with its labels in a side column.
+  - Files: new `src/components/TechChip.astro`; `src/components/Skills.astro`, `src/components/ProjectCard.astro`,
+    `src/pages/resume.astro`; tests (`tests/skills.test.ts`, `tests/resume-page.test.ts`,
+    `tests/e2e/skills.spec.ts`, `tests/e2e/review-screenshots.ts`); design-doc §5.1 and §9.4, `.claude/rules/ui.md`.
+  - Done (2026-11-11). Notes / deviations:
+    - **Homepage:** one card with the Experience card's classes; each category's name (muted `text-sm`) above its
+      chips at every width. The chips are the shared `TechChip`, the project card's outlined language chip.
+      Outlined = a technology everywhere; filled = a repo topic.
+    - **`TechChip`** holds the language chip's exact classes. `[overflow-wrap:anywhere]` stays on the container
+      (the project card, the Skills card), as before, so a long item wraps inside its chip. A bare flag
+      (`data-skill`) would render as `data-skill="true"` through the spread, so the component passes it as an empty
+      string and the markup stays `<li data-skill …>`.
+    - **`/resume` unchanged:** `Skills layout="columns"` keeps the old markup. Built before and after and diffed
+      `dist/resume/index.html` (with the CSS bundle hash normalized): identical. The homepage outside Skills
+      (including every project card) is identical too.
+    - The real items all fit on one line at 375px in `text-xs`, so the e2e wrap test makes the longest item (and
+      one 80-character word) longer than the card.
+    - Tests: `tests/skills.test.ts` +3 (one card with the Experience card's classes; every category and item inside
+      it, stacked; skill chips and language chips share one class list), `tests/resume-page.test.ts` +1 (/resume
+      keeps its layout and chips). `tests/e2e/skills.spec.ts` now covers / and /resume at 375, 640 and 1280px in both
+      themes, plus the long-item wrap. `review-screenshots.ts` writes `*-skills.png` and `*-resume-skills.png`.
+      `npm test`: 384. `npm run test:e2e`: 200.
+
 - [ ] **2.14 Security headers** — Real CSP, `X-Content-Type-Options`, `Referrer-Policy` in `public/_headers`.
   - Files: `public/_headers`.
   - Verify: Headers present in a deployed response; CSP doesn't break islands or fonts.

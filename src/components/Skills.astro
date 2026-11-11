@@ -1,20 +1,25 @@
 ---
-// Homepage Skills (design-doc §5.1): each category from resume.yaml with its items as small outline chips,
-// in YAML order. No progress bars, percentages or levels. All text comes from src/lib/skills.ts. Ships no JS.
+// Skills (design-doc §5.1): each category from resume.yaml with its items as chips, in YAML order. No progress
+// bars, percentages or levels. All text comes from src/lib/skills.ts (or the caller's `categories`). Ships no JS.
 //
-// Category name sits left of its chips from `sm:` up and above them on mobile. Chips wrap, and a long item
-// name wraps inside its chip instead of overflowing. role="list" keeps list semantics in Safari/VoiceOver,
-// which drops them for `list-style: none`. No accent in this section; no motion (→ Task 3.4).
+// layout="card" (the homepage, default): one card like the Experience cards, each category name above its chips
+// at every width, and the chips are the shared TechChip (outlined = a technology, as on the project cards).
+// layout="columns" (/resume): the category name left of its chips from `sm:` up and above them on mobile, with
+// /resume's own larger chips. /resume passes `categories`, which adds its spoken-languages row.
 //
-// /resume reuses this section and passes `categories`, which adds its spoken-languages row.
+// Chips wrap, and a long item wraps inside its chip instead of overflowing ([overflow-wrap:anywhere]).
+// role="list" keeps list semantics in Safari/VoiceOver, which drops them for `list-style: none`. No accent in
+// this section; no motion (→ Task 3.4).
+import TechChip from './TechChip.astro';
 import { skillsContent, type SkillCategory } from '../lib/skills';
 import { getResume } from '../lib/resume';
 
 interface Props {
   categories?: SkillCategory[];
+  layout?: 'card' | 'columns';
 }
 
-const { categories = skillsContent(getResume()) } = Astro.props;
+const { categories = skillsContent(getResume()), layout = 'card' } = Astro.props;
 ---
 
 <section id="skills" aria-labelledby="skills-title" data-skills>
@@ -23,24 +28,46 @@ const { categories = skillsContent(getResume()) } = Astro.props;
       Skills
     </h2>
 
-    <div class="mt-8 space-y-6">
-      {categories.map(({ category, items }) => (
-        <div data-skill-category class="sm:grid sm:grid-cols-[13rem_1fr] sm:gap-6">
-          <h3 data-skill-category-name class="text-sm font-medium text-text-muted sm:pt-1">
-            {category}
-          </h3>
-          <ul role="list" class="mt-2 flex flex-wrap gap-2 sm:mt-0">
-            {items.map((item) => (
-              <li
-                data-skill
-                class="max-w-full rounded-md border border-border px-2.5 py-1 font-mono text-sm [overflow-wrap:anywhere]"
-              >
-                {item}
-              </li>
+    {layout === 'card' ? (
+      <div class="mt-8">
+        {/* The same classes as an Experience card; spacing and wrapping go on the inner div. */}
+        <div data-skills-card class="rounded-lg border border-border bg-surface p-4 sm:p-5">
+          <div class="space-y-5 [overflow-wrap:anywhere]">
+            {categories.map(({ category, items }) => (
+              <div data-skill-category>
+                <h3 data-skill-category-name class="text-sm font-medium text-text-muted">
+                  {category}
+                </h3>
+                <ul role="list" class="mt-2 flex flex-wrap gap-2">
+                  {items.map((item) => (
+                    <TechChip data-skill>{item}</TechChip>
+                  ))}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
-      ))}
-    </div>
+      </div>
+    ) : (
+      <div class="mt-8 space-y-6">
+        {categories.map(({ category, items }) => (
+          <div data-skill-category class="sm:grid sm:grid-cols-[13rem_1fr] sm:gap-6">
+            <h3 data-skill-category-name class="text-sm font-medium text-text-muted sm:pt-1">
+              {category}
+            </h3>
+            <ul role="list" class="mt-2 flex flex-wrap gap-2 sm:mt-0">
+              {items.map((item) => (
+                <li
+                  data-skill
+                  class="max-w-full rounded-md border border-border px-2.5 py-1 font-mono text-sm [overflow-wrap:anywhere]"
+                >
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    )}
   </div>
 </section>

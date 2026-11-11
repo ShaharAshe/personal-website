@@ -30,6 +30,23 @@ for (const width of WIDTHS) {
         await page.screenshot({ path: `${OUT_DIR}/${width}-${theme}-resume.png`, fullPage: true });
       });
 
+      // The homepage Skills card with the last project card above it, to compare the two; and /resume's Skills.
+      test('skills', async ({ page }) => {
+        await page.goto('/');
+        await page.evaluate(() => document.fonts.ready);
+        const lastCard = (await page.locator('[data-project-card]').last().boundingBox())!;
+        const skills = (await page.locator('#skills').boundingBox())!;
+        await page.screenshot({
+          path: `${OUT_DIR}/${width}-${theme}-skills.png`,
+          fullPage: true,
+          clip: { x: 0, y: lastCard.y - 16, width, height: skills.y + skills.height - lastCard.y + 32 },
+        });
+
+        await page.goto('/resume');
+        await page.evaluate(() => document.fonts.ready);
+        await page.locator('#skills').screenshot({ path: `${OUT_DIR}/${width}-${theme}-resume-skills.png` });
+      });
+
       test('404 page', async ({ page }) => {
         await page.goto('/no-such-page');
         await page.evaluate(() => document.fonts.ready);

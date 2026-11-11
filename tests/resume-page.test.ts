@@ -231,6 +231,25 @@ test('every skill and spoken language is on the page, spoken languages in the la
   ]);
 });
 
+test('Skills keeps its own /resume layout: no card, name beside chips from sm:, its larger chips', { skip }, () => {
+  const section = sectionById('skills');
+  assert.doesNotMatch(section, /\sdata-skills-card\b/, '/resume Skills must not use the homepage card');
+  const tags = (dataAttr: string) =>
+    [...section.matchAll(new RegExp(`<[a-z0-9]+\\b[^>]*\\s${dataAttr}(?=[\\s=>])[^>]*>`, 'g'))].map(([tag]) => tag);
+  const classes = (tag: string) => attr(tag, 'class') ?? '';
+  const categories = tags('data-skill-category');
+  assert.ok(categories.length > 0);
+  for (const tag of categories) assert.equal(classes(tag), 'sm:grid sm:grid-cols-[13rem_1fr] sm:gap-6');
+  const chips = tags('data-skill');
+  assert.ok(chips.length > 0);
+  for (const tag of chips) {
+    assert.equal(
+      classes(tag),
+      'max-w-full rounded-md border border-border px-2.5 py-1 font-mono text-sm [overflow-wrap:anywhere]',
+    );
+  }
+});
+
 test('every education entry and highlight is on the page, with PDF dates', { skip }, () => {
   const section = sectionById('education');
   const { education } = getResume();

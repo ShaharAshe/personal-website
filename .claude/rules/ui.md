@@ -28,9 +28,15 @@ paths:
   names LinkedIn and on icon-only LinkedIn links, without `ArrowUpRightIcon`. `mailto:` links get the shared
   `MailIcon` (`src/components/MailIcon.astro`) instead of `ArrowUpRightIcon` (they open a mail app, not a
   page).
+- Chips: outlined means "a technology" everywhere on the site (project languages, homepage skills), and every
+  one comes from the shared `TechChip` (`src/components/TechChip.astro`); don't copy its classes. Filled chips
+  (the `--border` fill) are only for repo topics. The one exception is /resume's Skills, which keeps its own
+  larger chips (`Skills layout="columns"`).
 - Content width: one 720px column for every section, the nav and the footer, so headings and edges align.
   Project cards are one column at every width, each spanning it: at half the column, descriptions wrap into
-  tall cards. Cards use a subtle 1px border, no heavy shadows.
+  tall cards. Cards use a subtle 1px border, no heavy shadows. Every homepage section after the Hero uses
+  cards (`rounded-lg border border-border bg-surface`): Skills is one card with each category's name above its
+  chips at every width.
 - Prefer an Astro component with a small script for simple interactions, such as the theme toggle
   (`src/components/ThemeToggle.astro`) and the copy-email button (`src/components/CopyEmail.astro`).
 - Use a React island only when the interaction is complex enough to need it, such as the contact

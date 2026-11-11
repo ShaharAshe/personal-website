@@ -151,6 +151,9 @@
 #### Skills
 - **נבנה מ-`resume.yaml`**.
 - מקובץ לפי קטגוריות, כמו בקורות החיים. **בלי** progress bars או אחוזים.
+- בדף הבית: כרטיס אחד לכל הסקשן, באותו עיצוב כמו כרטיסי Experience, כדי שייראה חלק מאותו אתר כמו Experience, Projects ו-Contact. בתוכו כל קטגוריה מוצגת בערימה: השם מעל ה-chips, בכל רוחב (בלי עמודת תוויות בצד).
+- ה-chips הם chip הטכנולוגיה המשותף (`TechChip`), זהה ל-chip השפה בכרטיסי הפרויקטים ([§9.4](#94-layout)).
+- בעמוד `/resume` הסקשן נשאר בפריסה שלו (בלי כרטיס, שם הקטגוריה משמאל ל-chips מרוחב `sm` ומעלה, chips גדולים יותר), עם שורת Spoken Languages בסוף.
 
 #### Contact
 - ראה [§8](#8-יצירת-קשר).
@@ -464,6 +467,7 @@ education:
 - עמודה אחת ברוחב 720px לכל הסקשנים, לניווט ול-Footer, כדי שהכותרות והקצוות יהיו מיושרים. כרטיסי הפרויקטים בעמודה אחת בכל רוחב, וכל כרטיס תופס את כל העמודה.
 - Mobile-first. כל סקשן נבדק ברוחב 375px.
 - כרטיסים עם border עדין, בלי צללים כבדים.
+- **Chips:** chip עם מסגרת (outlined) פירושו "טכנולוגיה" בכל האתר: שפות של פרויקט ו-Skills בדף הבית, כולם מקומפוננטה אחת (`src/components/TechChip.astro`). chip ממולא (רקע `--border`) הוא רק ל-topics של ריפו. אף chip לא משתמש ב-accent.
 
 ---
 
@@ -654,6 +658,7 @@ portfolio/
 │   │   ├── Projects.astro
 │   │   ├── ProjectCard.astro
 │   │   ├── Skills.astro
+│   │   ├── TechChip.astro
 │   │   ├── Contact.astro
 │   │   ├── ArchitectureDiagram.astro
 │   │   ├── ThemeToggle.astro        # רכיב Astro + סקריפט קטן, לא island

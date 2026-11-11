@@ -85,6 +85,51 @@ test('every category (as <h3>) and every item (as a list item) appears, in YAML 
   });
 });
 
+const classList = (tag: string) => (attr(tag, 'class') ?? '').split(/\s+/).filter(Boolean).sort();
+const openTags = (fragment: string, dataAttr: string) =>
+  // (?=[\s=>]): the whole attribute name, so data-skill doesn't also match data-skill-category.
+  [...fragment.matchAll(new RegExp(`<[a-z0-9]+\\b[^>]*\\s${dataAttr}(?=[\\s=>])[^>]*>`, 'g'))].map(([tag]) => tag);
+
+test('the homepage section is one card, with the same classes as an Experience card', { skip }, () => {
+  const cards = openTags(section, 'data-skills-card');
+  assert.equal(cards.length, 1, 'number of [data-skills-card]');
+  const experience = html.match(/<section\b[^>]*\sdata-experience\b[\s\S]*?<\/section>/)?.[0] ?? '';
+  const experienceCard = experience.match(/<article\b[^>]*>/)?.[0];
+  assert.ok(experienceCard, 'no Experience card <article> in dist/index.html');
+  assert.deepEqual(classList(cards[0]), classList(experienceCard));
+});
+
+test('the card holds every category in YAML order, each with all its items, stacked (no side column)', { skip }, () => {
+  const card = section.slice(section.indexOf(openTags(section, 'data-skills-card')[0] ?? '\0'));
+  const blocks = categoryBlocks(card);
+  const skills = getResume().skills;
+  assert.equal(blocks.length, skills.length, 'categories inside the card');
+  assert.equal(categoryBlocks(section).length, skills.length, 'no category outside the card');
+  skills.forEach(({ category, items }, i) => {
+    assert.equal(textOf(blocks[i].match(/<h3\b[^>]*>([\s\S]*?)<\/h3>/)?.[1] ?? ''), category);
+    const shown = [...blocks[i].matchAll(/<li\b[^>]*\sdata-skill\b[^>]*>([\s\S]*?)<\/li>/g)].map(([, t]) => textOf(t));
+    assert.deepEqual(shown, items, `${category}: items`);
+  });
+  // Stacked at every width: no grid or side-by-side class on a category block.
+  for (const tag of openTags(section, 'data-skill-category')) {
+    assert.doesNotMatch(attr(tag, 'class') ?? '', /\bgrid\b|grid-cols|flex-row/, tag);
+  }
+  // Long items wrap inside their chip: the card's content sets overflow-wrap.
+  assert.match(card, /class="[^"]*\[overflow-wrap:anywhere\]/);
+});
+
+test('every homepage skill chip has the same classes as every project language chip (one TechChip)', { skip }, () => {
+  const skillChips = openTags(section, 'data-skill');
+  const languageChips = openTags(html, 'data-project-language');
+  assert.ok(skillChips.length > 0, 'no skill chips');
+  assert.ok(languageChips.length > 0, 'no project language chips in dist/index.html');
+  const expected = classList(languageChips[0]);
+  for (const tag of [...skillChips, ...languageChips]) assert.deepEqual(classList(tag), expected, tag);
+  // Outlined, not the filled topic chip.
+  assert.ok(expected.includes('border'), 'chip is not outlined');
+  assert.ok(!expected.some((cls) => cls.startsWith('bg-')), 'chip has a fill');
+});
+
 test('no levels of any kind: no %, progress bars, meters, ratings or widths', { skip }, () => {
   assert.doesNotMatch(section, /<(progress|meter)\b/);
   assert.doesNotMatch(section, /role="(progressbar|meter|slider)"/);

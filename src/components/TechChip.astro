@@ -1,0 +1,19 @@
+---
+// The one "technology" chip (design-doc §9.4, .claude/rules/ui.md): outlined, mono, never accent. Used for a
+// project's languages (ProjectCard) and the homepage skills (Skills). Filled chips are only for repo topics.
+// A list item, so the parent is a <ul role="list">. Other attributes (e.g. data-skill) pass through.
+//
+// No overflow-wrap here: the container sets [overflow-wrap:anywhere] (the project card, the homepage Skills
+// card), so a long item wraps inside its chip. max-w-full keeps the chip within the row.
+import type { HTMLAttributes } from 'astro/types';
+
+type Props = Omit<HTMLAttributes<'li'>, 'class'>;
+
+// A bare flag (`<TechChip data-skill>`) arrives as `true`, which a spread renders as data-skill="true"; an empty
+// string renders it bare, as a plain <li data-skill> would.
+const attrs = Object.fromEntries(Object.entries(Astro.props).map(([key, value]) => [key, value === true ? '' : value]));
+---
+
+<li {...attrs} class="max-w-full rounded-md border border-border px-2 py-0.5 font-mono text-xs">
+  <slot />
+</li>

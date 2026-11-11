@@ -8,6 +8,7 @@
 // aria-hidden. No whole-card link, so no nested links. No accent fill, no motion (hover lift → Task 3.4).
 import ArrowUpRightIcon from './ArrowUpRightIcon.astro';
 import GitHubIcon from './GitHubIcon.astro';
+import TechChip from './TechChip.astro';
 import type { ProjectCardView } from '../lib/projects-section';
 
 interface Props {
@@ -42,9 +43,7 @@ const linkClass = 'inline-flex min-h-10 items-center gap-1.5 text-sm font-medium
   {card.languages.length > 0 && (
     <ul role="list" aria-label="Languages" class="mt-4 flex flex-wrap gap-2">
       {card.languages.map((language) => (
-        <li data-project-language class="max-w-full rounded-md border border-border px-2 py-0.5 font-mono text-xs">
-          {language}
-        </li>
+        <TechChip data-project-language>{language}</TechChip>
       ))}
     </ul>
   )}
