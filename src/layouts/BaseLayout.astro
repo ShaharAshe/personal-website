@@ -6,7 +6,7 @@ import { Font } from 'astro:assets';
 import Footer from '../components/Footer.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
 import { getResume } from '../lib/resume';
-import { OG_IMAGE, absoluteUrl, ogImageAlt } from '../lib/seo';
+import { OG_IMAGE, SITE_ICONS, absoluteUrl, iconSizesAttr, ogImageAlt } from '../lib/seo';
 import { themeInitScript } from '../lib/theme';
 import '../styles/global.css';
 
@@ -46,6 +46,13 @@ const ogImage = absoluteUrl(OG_IMAGE.path, Astro.site);
     <title>{title}</title>
     <meta name="description" content={description} />
     {noindex && <meta name="robots" content="noindex" />}
+    {/* Site icons (npm run og). Root-relative, so they work on any host. */}
+    <link rel="icon" href={SITE_ICONS.favicon.path} sizes={iconSizesAttr(SITE_ICONS.favicon.sizes)} />
+    <link
+      rel="apple-touch-icon"
+      href={SITE_ICONS.appleTouch.path}
+      sizes={iconSizesAttr([SITE_ICONS.appleTouch.size])}
+    />
     {canonical && <link rel="canonical" href={canonical} />}
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content={name} />

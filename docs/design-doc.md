@@ -528,6 +528,7 @@ education:
 - **בכל עמוד:** canonical, תגיות Open Graph (`og:title`, `og:description`, `og:url`, `og:image` עם מידות ו-alt, `og:type`) ו-`twitter:card` מסוג `summary_large_image`. לדף ה-404 יש `noindex`, ואין לו canonical ואין `og:url`.
 - **sitemap.xml ו-robots.txt** הם endpoints קטנים ב-`src/pages/`, לא `@astrojs/sitemap`. כך אין תלות חדשה, הקובץ נקרא `sitemap.xml` (ה-integration כותב `sitemap-index.xml`), ושורת ה-Sitemap ב-robots.txt נגזרת מ-`site`. ה-sitemap מכיל רק את `/` ואת `/resume`, בלי `/404`. ב-robots.txt אין אף Disallow, אחרת סורקים לא יראו את ה-noindex.
 - **תמונת OG:** `public/og-image.png` בגודל 1200×630, נשמרת ב-git. היא נוצרת ב-`npm run og`: תבנית HTML עם השם, התפקיד וה-tagline מ-`resume.yaml`, בצבעי ה-dark ובגופנים של האתר, שמרונדרת עם ה-Playwright שכבר מותקן. הטקסט ממורכז, כדי שחיתוך ריבועי (WhatsApp) עדיין יראה את השם והתפקיד. הקובץ חייב להיות קטן מ-300KB. hash של מקורות התמונה נשמר בתוך ה-PNG, ו-`npm test` נכשל כשהוא כבר לא תואם (למשל אחרי שינוי בתפקיד ב-YAML).
+- **אייקון האתר (Task 2.13a):** ראשי התיבות (נגזרים מ-`basics.name` ב-`resume.yaml`, אף פעם לא מוקלדים) ב-JetBrains Mono, בצבע ה-accent של ה-dark על רקע ה-dark, בריבוע מעוגל. גרסה אחת לשתי התמות: היא כהה, ולכן נקראת על דפדפן בהיר וכהה. `public/favicon.ico` מכיל PNG בגדלים 16, 32 ו-48 (Google דורש כפולה של 48), ו-`public/apple-touch-icon.png` הוא 180×180, ריבוע מלא ואטום (iOS מעגל אותו בעצמו וממלא פיקסלים שקופים בשחור). הם נוצרים באותו `npm run og` ובאותה בדיקת hash כמו תמונת ה-OG. כל גודל מרונדר בגודל האמיתי שלו, כדי שהגופן יקבל hinting לגודל הזה. **בלי SVG:** קובץ SVG לא יכול לטעון את הגופנים של האתר, וכדי להמיר את האותיות ל-paths היה צריך לפרסר woff2 (תלות חדשה או הרבה קוד). ב-16px יש ל-JetBrains Mono 400 קו דק, אז מתווסף לו קו מתאר (`text-stroke`) של 0.4px. ה-`<link>` לשני הקבצים נמצאים ב-`BaseLayout`, בכל עמוד. Cloudflare מגיש את ה-`.ico` כ-`image/vnd.microsoft.icon`, ולכן אין צורך בשינוי ב-`_headers`.
 - **JSON-LD** רק בדף הבית: `name`, `jobTitle`, `description`, `url`, `sameAs` (הפרופילים), `knowsAbout` (הכישורים), `alumniOf`. אף פעם לא אימייל, טלפון או כתובת.
 - **noindex:** ה-`X-Robots-Tag: noindex` בכל האתר נשאר עד המעבר לדומיין, כדי ש-Google לא יאנדקס את כתובת ה-workers.dev ככפילות.
 
@@ -615,8 +616,9 @@ portfolio/
 ├── wrangler.jsonc                   # הגדרות Cloudflare
 ├── public/
 │   ├── og-image.png
-│   ├── _headers                     # Security headers
-│   └── fonts/
+│   ├── favicon.ico                  # 16/32/48, נוצר ב-npm run og
+│   ├── apple-touch-icon.png         # 180×180, נוצר ב-npm run og
+│   └── _headers                     # Security headers
 ├── scripts/
 │   ├── cv/
 │   │   ├── validate-resume.ts       # אימות resume.yaml מול ה-schema
@@ -627,7 +629,7 @@ portfolio/
 │   │   ├── check-pdf.ts             # בדיקה שה-PDF הוא עמוד אחד (pdf-parse)
 │   │   └── publish-pdf.ts           # העתקת ה-PDF ל-dist/resume.pdf (סוף ה-build)
 │   ├── checks/                      # בדיקות אתר: טלפון ואימייל לא ב-dist/ וכו' (npm run check)
-│   ├── og/                          # יצירת og-image.png (npm run og) + בדיקת PNG לזיהוי תמונה לא מעודכנת
+│   ├── og/                          # יצירת og-image.png ואייקוני האתר (npm run og) + בדיקת PNG/ICO לזיהוי תמונה לא מעודכנת
 │   └── github/
 │       └── fetch-projects.ts        # משיכה מ-GitHub API → src/data/projects.json
 ├── src/

@@ -141,3 +141,68 @@ test('/og-image.png is served as a PNG', async ({ request }) => {
   expect(response.status()).toBe(200);
   expect(response.headers()['content-type']).toBe('image/png');
 });
+
+// The site icons (Task 2.13a).
+const ICON_PATHS = ['/favicon.ico', '/apple-touch-icon.png'];
+const isIcon = (url: string) => ICON_PATHS.includes(new URL(url).pathname);
+
+for (const iconPath of ICON_PATHS) {
+  test(`${iconPath} answers 200 with an image Content-Type`, async ({ request }) => {
+    const response = await request.get(iconPath);
+    expect(response.status()).toBe(200);
+    expect(response.headers()['content-type']).toMatch(/^image\//);
+  });
+}
+
+for (const path of PAGES) {
+  test(`${path} logs no failed icon request, and its icon links load`, async ({ page }) => {
+    const failed: string[] = [];
+    page.on('requestfailed', (request) => {
+      if (isIcon(request.url())) failed.push(`${request.url()}: ${request.failure()?.errorText}`);
+    });
+    page.on('response', (response) => {
+      if (isIcon(response.url()) && response.status() >= 400) failed.push(`${response.url()}: ${response.status()}`);
+    });
+    await page.goto(path);
+    const hrefs = await page
+      .locator('head link[rel="icon"], head link[rel="apple-touch-icon"]')
+      .evaluateAll((links) => links.map((link) => (link as HTMLLinkElement).href));
+    expect(hrefs.map((href) => new URL(href).pathname).sort()).toEqual([...ICON_PATHS].sort());
+    const results = await page.evaluate(
+      (urls) =>
+        Promise.all(
+          urls.map(async (url) => {
+            const response = await fetch(url);
+            return { status: response.status, type: response.headers.get('content-type') ?? '' };
+          }),
+        ),
+      hrefs,
+    );
+    for (const { status, type } of results) {
+      expect(status).toBe(200);
+      expect(type).toMatch(/^image\//);
+    }
+    await page.waitForLoadState('networkidle');
+    expect(failed).toEqual([]);
+  });
+}
+
+// iOS fills transparent pixels with black, so every pixel of the apple-touch-icon must be fully opaque.
+test('/apple-touch-icon.png has no transparent pixel', async ({ page }) => {
+  await page.goto('/');
+  const result = await page.evaluate(async () => {
+    const image = new Image();
+    image.src = '/apple-touch-icon.png';
+    await image.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    const context = canvas.getContext('2d')!;
+    context.drawImage(image, 0, 0);
+    const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
+    let notOpaque = 0;
+    for (let i = 3; i < data.length; i += 4) if (data[i] !== 255) notOpaque++;
+    return { width: canvas.width, height: canvas.height, notOpaque };
+  });
+  expect(result).toEqual({ width: 180, height: 180, notOpaque: 0 });
+});

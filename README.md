@@ -64,11 +64,13 @@ flowchart LR
    `src/pages/`). Every absolute URL (canonical, Open Graph, sitemap) comes from `site` in
    `astro.config.mjs`, so moving to another domain is a one-line change.
 
-**The Open Graph image** (`public/og-image.png`, 1200×630) is generated from `resume.yaml` (name, title,
-tagline) and the design tokens, and committed. It isn't rebuilt on every build. After changing one of those, run
-`npm run build`, then `npm run og` (it renders with the installed Edge, or Playwright's Chromium in CI, using the
-built fonts), then `npm run build` again, and commit the new image. `npm test` fails while the image is stale: a
-hash of its inputs is stored inside the PNG and compared with the current ones.
+**The Open Graph image and the site icons** are generated from `resume.yaml` and the design tokens, and committed:
+`public/og-image.png` (1200×630: name, title, tagline), `public/favicon.ico` (16, 32 and 48 px) and
+`public/apple-touch-icon.png` (180 px), both icons showing the initials of `basics.name`. They aren't rebuilt on
+every build. After changing one of those inputs, run `npm run build`, then `npm run og` (it renders with the
+installed Edge, or Playwright's Chromium in CI, using the built fonts), then `npm run build` again, and commit the
+new images. `npm test` fails while an image is stale: a hash of its inputs is stored inside each PNG and compared
+with the current ones.
 
 In CI, a pushed commit goes through build → `npm run check` → Playwright e2e → deploy to Cloudflare
 (`main` only).
@@ -116,7 +118,7 @@ nothing. To run the same check by hand: `npm run check:staged`.
 | `npm run preview` | Serve the production build from `dist/` |
 | `npm run cv` | Validate `resume.yaml`, generate the `.docx` and `.pdf` into `.generated/cv/`, check the PDF is one page |
 | `npm run projects` | Fetch the tagged GitHub repos into `src/data/projects.json` |
-| `npm run og` | Render `public/og-image.png` from `resume.yaml` and the design tokens (needs a build first, for the fonts) |
+| `npm run og` | Render `public/og-image.png`, `public/favicon.ico` and `public/apple-touch-icon.png` from `resume.yaml` and the design tokens (needs a build first, for the fonts) |
 | `npm test` | Unit and integration tests (`node:test`, `tests/**/*.test.ts`) |
 | `npm run test:update-golden` | Re-record the golden Word files that pin the resume design (only after an intended design change) |
 | `npm run test:e2e` | Playwright end-to-end tests against the existing build (`astro preview` on port 4322) |

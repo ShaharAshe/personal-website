@@ -30,8 +30,8 @@ These npm scripts must exist and keep working (create them during scaffolding):
 - `npm run dev`: local dev server
 - `npm run cv`: generate the resume `.docx` and `.pdf` from `resume.yaml`, then check the PDF is exactly one page
 - `npm run projects`: fetch public repos from GitHub into `src/data/projects.json`
-- `npm run og`: render the committed `public/og-image.png` from `resume.yaml` and the tokens (after a build;
-  `npm test` fails while it's stale)
+- `npm run og`: render the committed `public/og-image.png`, `public/favicon.ico` and `public/apple-touch-icon.png`
+  from `resume.yaml` and the tokens (after a build; `npm test` fails while one is stale)
 - `npm test`: unit + integration tests (`node:test`, `tests/**/*.test.ts`); LibreOffice tests skip if `soffice` isn't found
 - `npm run check`: `astro check` + lint + `npm test` + the site checks (see "Definition of done")
 - `npm run build`: `cv` + `projects` + `astro build`
@@ -57,8 +57,8 @@ scripts/cv/                 resume generator (create_cv.js) + PDF page check
 tests/                      node:test tests (npm test); fixtures/ holds test inputs and golden files
 tests/e2e/                  Playwright tests (npm run test:e2e) + review-screenshots.ts (npm run screenshots)
 scripts/github/             GitHub fetcher
-scripts/og/                 OG image generator (npm run og) + PNG helpers for its stale check
-src/lib/seo.ts              absolute URLs from `site`, sitemap/robots text, Person JSON-LD
+scripts/og/                 OG image + site icon generator (npm run og) + PNG/ICO helpers for their stale checks
+src/lib/seo.ts              absolute URLs from `site`, sitemap/robots text, Person JSON-LD, site icon paths/sizes
 scripts/checks/             site checks (npm run check:site) + the pre-commit phone check
 .githooks/                  pre-commit hook; npm ci points core.hooksPath here (scripts/git/install-hooks.ts)
 .github/workflows/          deploy.yml (push, daily schedule, manual)

@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "astro dev",
     "cv": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/cv/validate-resume.ts && node --env-file-if-exists=.env scripts/cv/create_cv.js && node --env-file-if-exists=.env scripts/cv/to-pdf.js && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/cv/check-pdf.ts",
-    "og": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/og/render-og-image.ts",
+    "og": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/og/render-og-image.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/og/render-icons.ts",
     "projects": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env scripts/github/fetch-projects.ts",
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"tests/**/*.test.ts\"",
     "test:update-golden": "node -e \"process.env.UPDATE_GOLDEN = '1'; const r = require('node:child_process').spawnSync('npm', ['test'], { stdio: 'inherit', shell: true }); process.exit(r.status ?? 1);\"",

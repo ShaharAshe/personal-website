@@ -9,7 +9,8 @@ import path from 'node:path';
 import { listSiteFiles } from '../scripts/checks/dist-files.ts';
 import { findPhone, phonePattern, readPhone } from '../scripts/checks/phone.ts';
 import { getEmailParts, getResume } from '../src/lib/resume.ts';
-import { OG_IMAGE } from '../src/lib/seo.ts';
+import { readIco } from '../scripts/og/ico.ts';
+import { OG_IMAGE, SITE_ICONS } from '../src/lib/seo.ts';
 
 const ROOT = path.join(import.meta.dirname, '..');
 const DIST = path.join(ROOT, 'dist');
@@ -175,4 +176,40 @@ test(
 test('dist/og-image.png is the committed public/og-image.png', { skip }, () => {
   const built = fs.readFileSync(path.join(DIST, 'og-image.png'));
   assert.ok(built.equals(fs.readFileSync(path.join(ROOT, 'public', 'og-image.png'))), 'rebuild after npm run og');
+});
+
+// The site icons (Task 2.13a).
+const linksOf = (html: string, rel: string) =>
+  [...headOf(html).matchAll(/<link ([^>]*)>/g)]
+    .map(([, attrs]) => Object.fromEntries([...attrs.matchAll(/([\w-]+)="([^"]*)"/g)].map(([, k, v]) => [k, v])))
+    .filter((attrs) => attrs.rel === rel);
+
+test('every page links favicon.ico, with sizes equal to the real ICO directory', { skip }, () => {
+  const sizes = readIco(fs.readFileSync(path.join(DIST, 'favicon.ico')))
+    .map(({ width, height }) => `${width}x${height}`)
+    .join(' ');
+  assert.equal(sizes, '16x16 32x32 48x48');
+  for (const { url, html } of PAGES) {
+    const links = linksOf(html, 'icon');
+    assert.equal(links.length, 1, `${url}: one rel="icon"`);
+    assert.equal(links[0].href, '/favicon.ico', url);
+    assert.equal(links[0].sizes, sizes, url);
+  }
+});
+
+test('every page links apple-touch-icon.png at 180x180', { skip }, () => {
+  for (const { url, html } of PAGES) {
+    const links = linksOf(html, 'apple-touch-icon');
+    assert.equal(links.length, 1, `${url}: one rel="apple-touch-icon"`);
+    assert.equal(links[0].href, SITE_ICONS.appleTouch.path, url);
+    assert.equal(links[0].href, '/apple-touch-icon.png', url);
+    assert.equal(links[0].sizes, '180x180', url);
+  }
+});
+
+test('the dist/ icons are the committed ones in public/', { skip }, () => {
+  for (const file of ['favicon.ico', 'apple-touch-icon.png']) {
+    const built = fs.readFileSync(path.join(DIST, file));
+    assert.ok(built.equals(fs.readFileSync(path.join(ROOT, 'public', file))), `${file}: rebuild after npm run og`);
+  }
 });

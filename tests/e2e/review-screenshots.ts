@@ -2,7 +2,10 @@
 // and Linux, so pixel comparisons would be noise. Writes screenshots/*.png (gitignored) to look at
 // before saying a UI task is done.
 
+import fs from 'node:fs';
 import { test } from '@playwright/test';
+import { readIco } from '../../scripts/og/ico.ts';
+import { SITE_ICONS } from '../../src/lib/seo.ts';
 import { THEMES } from '../../src/lib/theme.ts';
 import { themeToggle } from './helpers.ts';
 
@@ -117,5 +120,42 @@ test.describe('resume print', () => {
     await page.emulateMedia({ media: 'print' });
     await page.screenshot({ path: `${OUT_DIR}/resume-print.png`, fullPage: true });
     await page.pdf({ path: `${OUT_DIR}/print-preview-resume.pdf`, format: 'A4', preferCSSPageSize: true });
+  });
+});
+
+// The site icons (Task 2.13a): every favicon.ico entry and the apple-touch-icon at real size (1×) and scaled up 8×
+// (pixelated, so each pixel shows), on a light and a dark strip like browser chrome. The entries are read from the
+// files themselves, so this shows exactly what's committed.
+test.describe('site icons', () => {
+  test.use({ viewport: { width: 1600, height: 900 } });
+
+  test('icons', async ({ page }) => {
+    const ico = readIco(fs.readFileSync(`public${SITE_ICONS.favicon.path}`));
+    const icons = [
+      ...ico.map(({ width, png }) => ({ label: `favicon.ico ${width}px`, size: width, png })),
+      {
+        label: 'apple-touch-icon.png 180px',
+        size: SITE_ICONS.appleTouch.size,
+        png: fs.readFileSync(`public${SITE_ICONS.appleTouch.path}`),
+      },
+    ];
+    const cell = ({ size, png }: { size: number; png: Buffer }, scale: number) =>
+      `<img src="data:image/png;base64,${png.toString('base64')}" width="${size * scale}" height="${size * scale}">`;
+    const strip = (bg: string, fg: string) => `
+      <section style="background:${bg};color:${fg};padding:16px;display:flex;gap:32px;align-items:flex-end">
+        ${icons
+          .map(
+            (icon) =>
+              `<figure>${cell(icon, 1)}${icon.size < 180 ? cell(icon, 8) : cell(icon, 2)}` +
+              `<figcaption>${icon.label}</figcaption></figure>`,
+          )
+          .join('')}
+      </section>`;
+    await page.setContent(`<!doctype html><html><head><style>
+        body { margin: 0; font: 13px sans-serif; }
+        figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        img { image-rendering: pixelated; }
+      </style></head><body>${strip('#f1f3f4', '#202124')}${strip('#202124', '#e8eaed')}</body></html>`);
+    await page.screenshot({ path: `${OUT_DIR}/icons.png`, fullPage: true });
   });
 });

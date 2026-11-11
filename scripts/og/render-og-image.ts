@@ -16,6 +16,7 @@ import path from 'node:path';
 import { chromium } from '@playwright/test';
 import { heroContent } from '../../src/lib/hero.ts';
 import { getResume } from '../../src/lib/resume.ts';
+import { ORIGIN, ROOT, browserChannel, readFontCss, routeSite } from './fonts.ts';
 import {
   OG_HASH_KEY,
   OG_HEIGHT,
@@ -28,43 +29,17 @@ import {
 import { withPngText } from './png.ts';
 import { readDarkTokens } from './tokens.ts';
 
-const ROOT = path.join(import.meta.dirname, '..', '..');
-const DIST = path.join(ROOT, 'dist');
-const ORIGIN = 'https://og.invalid';
-
-const indexHtml = path.join(DIST, 'index.html');
-if (!fs.existsSync(indexHtml)) {
-  console.error('dist/index.html not found: run npm run build first (the OG image uses the built fonts).');
-  process.exit(1);
-}
-
 // The <Font /> styles: @font-face rules plus the :root --font-inter / --font-jetbrains-mono variables.
-const fontCss = [...fs.readFileSync(indexHtml, 'utf8').matchAll(/<style>([^<]*@font-face[^<]*)<\/style>/g)]
-  .map(([, css]) => css)
-  .join('\n');
-if (!fontCss.includes('--font-inter') || !fontCss.includes('--font-jetbrains-mono')) {
-  console.error('No <Font /> styles for Inter and JetBrains Mono in dist/index.html.');
-  process.exit(1);
-}
+const fontCss = readFontCss();
 
 const { name, title, tagline } = heroContent(getResume());
 const content = { name, title, tagline };
 const tokens = readDarkTokens();
 
-const browser = await chromium.launch({ channel: process.env.CI ? undefined : 'msedge' });
+const browser = await chromium.launch({ channel: browserChannel });
 try {
   const page = await browser.newPage({ viewport: { width: OG_WIDTH, height: OG_HEIGHT }, deviceScaleFactor: 1 });
-  await page.route(`${ORIGIN}/**`, async (route) => {
-    const { pathname } = new URL(route.request().url());
-    if (pathname === '/') {
-      return route.fulfill({ contentType: 'text/html', body: ogImageHtml(content, tokens, fontCss) });
-    }
-    const file = path.join(DIST, pathname);
-    if (pathname.startsWith('/_astro/fonts/') && fs.existsSync(file)) {
-      return route.fulfill({ contentType: 'font/woff2', body: fs.readFileSync(file) });
-    }
-    return route.fulfill({ status: 404 });
-  });
+  await routeSite(page, () => ogImageHtml(content, tokens, fontCss));
   await page.goto(`${ORIGIN}/`);
   await page.evaluate(() => document.fonts.ready);
 

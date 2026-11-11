@@ -12,6 +12,21 @@ export const SITEMAP_PATHS = ['/', '/resume'] as const;
 export const OG_IMAGE = { path: '/og-image.png', width: 1200, height: 630, type: 'image/png' } as const;
 
 /**
+ * The site icons (Task 2.13a), rendered by npm run og (scripts/og/render-icons.ts) into public/. The favicon.ico holds
+ * one PNG per size (Google's search results need a multiple of 48); the apple-touch-icon is opaque, since iOS fills
+ * transparent pixels with black.
+ */
+export const SITE_ICONS = {
+  favicon: { path: '/favicon.ico', sizes: [16, 32, 48] },
+  appleTouch: { path: '/apple-touch-icon.png', size: 180 },
+} as const;
+
+/** A <link sizes> value: "16x16 32x32 48x48". */
+export function iconSizesAttr(sizes: readonly number[]): string {
+  return sizes.map((s) => `${s}x${s}`).join(' ');
+}
+
+/**
  * An absolute URL on the site. The root keeps its "/" (`https://host/`); every other path loses its trailing
  * slashes, to match trailingSlash: 'never' and Cloudflare's drop-trailing-slash (design-doc §13.1).
  */

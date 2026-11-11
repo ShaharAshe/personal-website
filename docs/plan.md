@@ -965,6 +965,40 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       image at full size, 500px and as a square. `npm test`: 364. `npm run test:e2e`: 185.
     - JS unchanged: homepage 1.24 KB gzipped, /resume 1.24 KB, 404 0.56 KB.
 
+- [x] **2.13a Site icon (favicon)**: the initials in JetBrains Mono, in the dark accent on the dark background, in a
+  rounded square. Added before 2.14 (user request): without it every browser asked for `/favicon.ico` and got the
+  404 page.
+  - Files: `public/favicon.ico`, `public/apple-touch-icon.png`, `scripts/og/` (new `icon-html.ts`, `ico.ts`,
+    `render-icons.ts`, `fonts.ts`), `src/lib/seo.ts` (`SITE_ICONS`, `iconSizesAttr`), `src/layouts/BaseLayout.astro`,
+    `package.json`.
+  - Depends on: 2.13 (the OG flow).
+  - Done (2026-11-11). Notes / deviations:
+    - **The initials come from `basics.name`** (`initialsOf`: the first letters of the first and last words), never
+      typed. One version for both themes (`--accent` on `--bg` from the dark block).
+    - **PNG/ICO only, no SVG** (approved in the plan). An SVG can't load the site's fonts, and outlining the glyphs
+      would need a woff2 parser (a new dependency or a lot of code). The ICO holds the PNGs directly (no
+      dependency): 16, 32 and 48 px, rounded with transparent corners. `apple-touch-icon.png` is 180×180, a full
+      opaque square (iOS rounds it itself). It stays Playwright's PNG as it is: what iOS needs is no transparent
+      pixels, not a missing alpha channel (user correction), and an e2e test draws it on a canvas and checks every
+      alpha is 255.
+    - **`npm run og` extended, not renamed**: it now runs `render-og-image.ts` and then `render-icons.ts`. A rename
+      would have moved `scripts/og/`. The refresh is the same: `npm run build` → `npm run og` → `npm run build`. The
+      shared font loading moved to `scripts/og/fonts.ts`, and `og-image.png` came out byte-identical.
+    - Each size is rendered at its real pixel size (glyphs hinted for it), with `--disable-lcd-text` (LCD
+      antialiasing left colored fringes). At 16px, JetBrains Mono 400 was thin and dim in the 8× review, so that
+      size gets `-webkit-text-stroke: 0.4px` in the accent. The script refuses to write if JetBrains Mono didn't load
+      or the initials leave the padding.
+    - **Stale check:** every PNG (each ICO entry and the apple icon) carries `icon-source-sha256`, the hash of all
+      the size templates (LF-normalized), checked by `tests/site-icons.test.ts`.
+    - `<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48">` and
+      `<link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180">` on every page (BaseLayout).
+    - `wrangler dev`: `/favicon.ico` 200 `image/vnd.microsoft.icon`, `/apple-touch-icon.png` 200 `image/png`, so no
+      `_headers` change. Sizes: `favicon.ico` 3,755 bytes, `apple-touch-icon.png` 4,260 bytes.
+    - Tests: new `tests/site-icons.test.ts` (12). `tests/seo-dist.test.ts` +3 (the links and sizes on every page, and
+      dist equals public). `tests/e2e/seo.spec.ts` +6 (200 with an image type, no failed icon request on `/`,
+      `/resume` and `/no-such-page`, the apple icon is opaque). `review-screenshots.ts` writes `screenshots/icons.png`
+      (1× and 8× on light and dark strips). `npm test`: 380. `npm run test:e2e`: 191.
+
 - [ ] **2.14 Security headers** — Real CSP, `X-Content-Type-Options`, `Referrer-Policy` in `public/_headers`.
   - Files: `public/_headers`.
   - Verify: Headers present in a deployed response; CSP doesn't break islands or fonts.
@@ -985,6 +1019,8 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
   - Note (from 2.13): the homepage's JSON-LD (`<script type="application/ld+json">`) needs nothing in the CSP: it's a
     data block the browser never runs, so `script-src` doesn't apply to it. No hash and no `'unsafe-inline'` for it.
     `sitemap.xml`, `robots.txt` and `og-image.png` are plain static files.
+  - Note (from 2.13a): `favicon.ico` and `apple-touch-icon.png` are plain same-origin static files too:
+    `img-src 'self'` covers them.
 
 - [ ] **2.15 Cloudflare Web Analytics** — Beacon script in `BaseLayout`.
   - Files: `src/layouts/BaseLayout.astro`.
