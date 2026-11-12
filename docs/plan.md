@@ -1198,6 +1198,13 @@ one is its own task (one at a time, plan first, tests + e2e + screenshots as usu
 - [ ] **F.5 curl easter egg** — `curl` on the site gets a plain-text resume (User-Agent / `Accept`
   negotiation).
   - Reads `resume.yaml` at build time. Never includes the phone or the email.
+  - `wget` on the site root gets a minimal HTML page: the plain-text resume inside `<pre>`, with a first
+    line `Full PDF: wget https://<site>/resume.pdf`. Reason: by default wget names the saved file after
+    the requested URL (`index.html`), not after `Content-Disposition` or a redirect, so serving the PDF
+    itself would save a PDF named `index.html`. The HTML version opens cleanly in a browser.
+  - Notes: User-Agent detection (`Wget/…`) needs the Worker, like curl. Only the root path behaves
+    differently; `wget -r` mirroring of the site won't work past the root (accepted for an easter egg).
+    The PDF itself is never changed, and the text never includes the phone or the email.
   - Depends on: the Worker phase (3.3).
 
 - [ ] **F.6 `/.well-known/security.txt`**
