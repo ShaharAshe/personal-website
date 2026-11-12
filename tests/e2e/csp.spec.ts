@@ -21,10 +21,11 @@ const PAGES = [
   { path: '/no-such-page', status: 404, copy: false },
 ];
 
-// Console text the browser prints for a CSP or Permissions-Policy problem (blocked script/style/font, or a feature
-// name it doesn't recognize). Older Chromium starts CSP errors with "Refused to"; current Chromium says "...violates
-// the following Content Security Policy directive".
-const SECURITY_CONSOLE = /Refused to|Content[- ]Security[- ]Policy|Permissions[- ]Policy|Unrecognized feature/i;
+// Console text the browser prints for any response-header problem: a CSP block (older Chromium starts it with
+// "Refused to"; current Chromium says "...violates the following Content Security Policy directive"), or a header it
+// can't parse or a feature name it doesn't know ("Error with Permissions-Policy header: Unrecognized feature: ...").
+const SECURITY_CONSOLE =
+  /Refused to|Content[- ]Security[- ]Policy|Permissions[- ]Policy|Unrecognized feature|Error with .* header/i;
 
 declare global {
   interface Window {
@@ -35,13 +36,21 @@ declare global {
 
 /**
  * Records every securitypolicyviolation event (from before the first inline script runs) and every console message
- * about CSP or Permissions-Policy. Returns the console list; the events are read with cspViolations().
+ * about a response header (CSP, Permissions-Policy, ...). Returns the console list; the events are read with
+ * cspViolations().
+ *
+ * Header-parse errors are logged by the browser itself when the response arrives (a DevTools Log entry), not by page
+ * code, so page.on('console') may not see them. The CDP Log domain does; both browsers used here are Chromium.
  */
 async function watchSecurityErrors(page: Page): Promise<string[]> {
   const consoleErrors: string[] = [];
-  page.on('console', (message) => {
-    if (SECURITY_CONSOLE.test(message.text())) consoleErrors.push(message.text());
-  });
+  const record = (text: string) => {
+    if (SECURITY_CONSOLE.test(text) && !consoleErrors.includes(text)) consoleErrors.push(text);
+  };
+  page.on('console', (message) => record(message.text()));
+  const cdp = await page.context().newCDPSession(page);
+  cdp.on('Log.entryAdded', ({ entry }) => record(entry.text));
+  await cdp.send('Log.enable');
   await page.addInitScript(() => {
     window.__cspViolations = [];
     document.addEventListener('securitypolicyviolation', (event) => {
@@ -138,6 +147,22 @@ for (const { path, status, copy } of PAGES) {
     });
   }
 }
+
+test('the watcher catches a Permissions-Policy feature name the browser does not know', async ({ page }) => {
+  const consoleErrors = await watchSecurityErrors(page);
+  // Only this header changes; the others, CSP included, stay as served.
+  await page.route('/', async (route) => {
+    const response = await route.fetch();
+    const headers = { ...response.headers(), 'permissions-policy': 'not-a-real-feature=(), camera=()' };
+    await route.fulfill({ response, headers });
+  });
+
+  await page.goto('/');
+  await expect(themeToggle(page)).toBeVisible();
+  await expect
+    .poll(() => consoleErrors.some((text) => /Unrecognized feature.*not-a-real-feature/.test(text)))
+    .toBe(true);
+});
 
 test('an inline script and a style attribute added to the HTML are blocked', async ({ page }) => {
   const consoleErrors = await watchSecurityErrors(page);

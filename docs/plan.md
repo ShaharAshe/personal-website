@@ -1080,7 +1080,11 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       - `upgrade-insecure-requests` is dropped: every URL is relative, and it would break testing on `http://127.0.0.1`.
       - No `report-to`: the site is static and has nowhere to receive reports.
     - **Other headers on `/*`:**
-      - `Permissions-Policy` denies 12 unused features; the clipboard stays allowed.
+      - `Permissions-Policy` denies 11 unused features; the clipboard stays allowed.
+        - Follow-up fix: `browsing-topics` was removed. The Topics API was retired and current Chrome/Edge logged
+          "Unrecognized feature: 'browsing-topics'" on every live page. The local Edge (157) still knew the name, so
+          the e2e suite never saw it. The csp.spec.ts watcher now also reads the browser's own log entries (CDP `Log`)
+          and fails on any header error. A new test proves it catches an unknown feature name.
       - `Cross-Origin-Opener-Policy: same-origin`.
       - `X-Frame-Options: DENY`, for old browsers.
       - `Strict-Transport-Security: max-age=31536000`, without `includeSubDomains` or `preload` (see 4.2).
