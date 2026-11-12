@@ -1133,6 +1133,80 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
     will flag it; that's expected.
   - Depends on: everything above in Milestone 2.
 
+## Fun (after MVP)
+
+Small extras for curious visitors, added after the MVP is live (2.16) and before Milestone 3. None of them
+is part of the recruiter path: the homepage, `/resume` and the PDF work exactly the same without them. Each
+one is its own task (one at a time, plan first, tests + e2e + screenshots as usual). Decided on 2026-11-12.
+
+- [ ] **F.1 Console greeting** — A friendly message for people who open DevTools: an ASCII "SA", one line of
+  text, and a link to the site's code.
+  - Decided: no red "self-XSS" warning. The site has no accounts or sessions to steal, and the audience is
+    engineers, so a warning would only be noise.
+  - It doubles as CTF clue 1 (F.2): the message includes the clue's base64 string.
+  - Depends on: 2.16.
+
+- [ ] **F.2 CTF chain** — A chain of clues that lead from one to the next, ending in a final answer.
+  - Static steps (this task):
+    - 0: an HTML comment (found with View Source).
+    - 1: the console greeting from F.1, with a base64 string (DevTools).
+    - 2: an `X-Clue` header on `/favicon.ico` (`curl -I` or the Network tab).
+    - 3: a `tEXt` chunk in `og-image.png` (`exiftool` or `strings`).
+    - 4: a file under `/.well-known/` holding ROT13 or hex (`curl`).
+  - Later steps (separate tasks, once their phase exists):
+    - 5: a DNS TXT record (`dig`), after the custom domain (4.1–4.2).
+    - 6: a special `Accept` header answered by a Worker (`curl -H`), with the Worker phase (3.3).
+  - Ending: no prize. A final message: "If you'd like to get in touch, mention the final answer."
+  - Decided:
+    - The CTF lives in git, in the open. The site is static, so every clue is public anyway, and reading the
+      source is a valid way to solve it. Light obfuscation only: the final answer isn't written out in any
+      file; the build assembles it from the clues' parts.
+    - The resume is never touched: not `resume.yaml`, not `create_cv.js`, not the PDF file, not the
+      `/resume.pdf` headers, not the `/resume` page.
+    - No clues in hidden text on the page (that's SEO cloaking). Clues live only in HTML comments, HTTP
+      headers, separate files and image metadata.
+    - No fake vulnerabilities or fake admin paths. A welcoming tone ("nice, you found one", not "caught you").
+    - A test per clue, so a build change or the CSP can't break the chain silently.
+  - Notes for planning: the `tEXt` chunk must come from the `npm run og` generator, so the committed PNG and
+    its stale check stay in sync. Check that Cloudflare static assets serve `/.well-known/` and that the HTML
+    comment survives the build (Astro may strip comments).
+  - Depends on: F.1.
+
+- [ ] **F.3 404 game** — A small original character that runs and jumps (the Chrome dino is a reference for
+  the feel, not for the art).
+  - One button (Space or tap), instant start, gradually faster, short rounds, a high score in `localStorage`
+    (try/catch, like the theme).
+  - For every audience: no developer jargon.
+  - Loaded only on the 404 page, small, works with keyboard and touch. Respects `prefers-reduced-motion`
+    (no autostart).
+  - Depends on: 2.16.
+
+- [ ] **F.4 Doodles** — On a few special days, a small doodle drawn with the Hero's dots.
+  - Chosen by the daily CI build, so there is no JS on other days. Shown from a day before to a day after
+    the date (time zones).
+  - Days: Jan 1 New Year; Mar 14 Pi Day; Jun 23 Alan Turing's birthday; Programmers' Day (the 256th day of
+    the year); Oct 31 Halloween; the site's launch date; Hanukkah (optional).
+  - Never: the owner's birthday (privacy, it reveals age) or national days.
+  - Interaction: a real `<button>`. Hover/focus (desktop) or the first tap (mobile) shows a speech bubble
+    explaining the day; a click plays a 2–3 s animation (`transform`/`opacity` only). No sound in v1 (if
+    added later: on click only, short, quiet, `media-src 'self'`). `prefers-reduced-motion` shows the
+    bubble only. The doodle never covers the Hero's name, buttons or links.
+  - Includes: a note in design-doc §10 that this user-triggered animation is a deliberate exception to the
+    no-particles rule.
+  - Depends on: 2.16 (and the launch date, 4.x, for that day).
+
+- [ ] **F.5 curl easter egg** — `curl` on the site gets a plain-text resume (User-Agent / `Accept`
+  negotiation).
+  - Reads `resume.yaml` at build time. Never includes the phone or the email.
+  - Depends on: the Worker phase (3.3).
+
+- [ ] **F.6 `/.well-known/security.txt`**
+  - Note for planning: `Contact:` can't be the email in plain text (hard rule 8; `no-email-in-dist` scans
+    `.txt` files in `dist/`). Options: a URL (e.g. the Contact section), or a `contact@<domain>` address if
+    action item #14 happens and the rule is updated. `Expires:` is required; the daily build can keep it
+    current.
+  - Depends on: 2.16.
+
 ## Milestone 3 — Depth (design-doc §16 Phase 2)
 
 - [ ] **3.1 Log Analytics Platform project page + architecture diagram** — User drafts TL;DR/problem/decisions/trade-offs text and architecture description; Claude Code builds `ArchitectureDiagram.astro` (SVG) and the MDX/page wiring around it.
