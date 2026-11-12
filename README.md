@@ -63,6 +63,12 @@ flowchart LR
    served from the site itself. It also writes `sitemap.xml` and `robots.txt` (small endpoints in
    `src/pages/`). Every absolute URL (canonical, Open Graph, sitemap) comes from `site` in
    `astro.config.mjs`, so moving to another domain is a one-line change.
+4. **Security headers:** `public/_headers` holds the response headers Cloudflare sends with every page and file.
+   The Content-Security-Policy line in it is a placeholder that blocks everything. At the end of `astro build`, a small
+   integration (`scripts/csp/csp.mts`) hashes every inline `<script>` and `<style>` in `dist/` and writes the real
+   policy into `dist/_headers` (no `'unsafe-inline'`). It fails the build on anything a hash can't allow (a
+   `style="..."` attribute, an `onclick=` handler, a `javascript:` URL), or if the file would break Cloudflare's limits
+   (2,000 characters per line, 100 rules). Hashes are never edited by hand.
 
 **The Open Graph image and the site icons** are generated from `resume.yaml` and the design tokens, and committed:
 `public/og-image.png` (1200×630: name, title, tagline), `public/favicon.ico` (16, 32 and 48 px) and
@@ -101,6 +107,9 @@ npm run preview
 
 During development, `npm run dev` starts the dev server with hot reload.
 
+`npm run preview` doesn't send the headers from `_headers` (no CSP). To see the site exactly as Cloudflare serves it,
+headers and the 404 page included, run `npx wrangler dev` after a build (local only, no login). The e2e tests use it.
+
 **Pre-commit hook.** `npm ci` (or `npm install`) runs `npm run prepare`, which points git at the
 committed `.githooks/` folder (`git config core.hooksPath .githooks`). The hook checks the staged
 content of every added or modified file (the index, not the files on disk; binary files are skipped)
@@ -114,14 +123,14 @@ nothing. To run the same check by hand: `npm run check:staged`.
 | Command | What it does |
 |---|---|
 | `npm run dev` | Astro dev server |
-| `npm run build` | Full build: `cv` → `projects` → `astro build` → copy the PDF to `dist/resume.pdf` |
-| `npm run preview` | Serve the production build from `dist/` |
+| `npm run build` | Full build: `cv` → `projects` → `astro build` (which writes the CSP into `dist/_headers`) → copy the PDF to `dist/resume.pdf` |
+| `npm run preview` | Serve the production build from `dist/` (without the `_headers` headers; `npx wrangler dev` sends them) |
 | `npm run cv` | Validate `resume.yaml`, generate the `.docx` and `.pdf` into `.generated/cv/`, check the PDF is one page |
 | `npm run projects` | Fetch the tagged GitHub repos into `src/data/projects.json` |
 | `npm run og` | Render `public/og-image.png`, `public/favicon.ico` and `public/apple-touch-icon.png` from `resume.yaml` and the design tokens (needs a build first, for the fonts) |
 | `npm test` | Unit and integration tests (`node:test`, `tests/**/*.test.ts`) |
 | `npm run test:update-golden` | Re-record the golden Word files that pin the resume design (only after an intended design change) |
-| `npm run test:e2e` | Playwright end-to-end tests against the existing build (`astro preview` on port 4322) |
+| `npm run test:e2e` | Playwright end-to-end tests against the existing build (`wrangler dev` on port 4322, with the real headers) |
 | `npm run screenshots` | Review screenshots (375px and 1280px, dark and light, plus header clips at 640px and the OG image) into `screenshots/` |
 | `npm run check` | On an existing build: `astro check` → lint → `npm test` → site checks → format check |
 | `npm run check:site` | Site checks: no phone in `dist/` or tracked files, phone present in the published PDF, no email in `dist/` |
@@ -141,7 +150,8 @@ nothing. To run the same check by hand: `npm run check:staged`.
   skip if there's no build.
 - **`npm run test:e2e`** (Playwright): behavior that needs a real browser, such as the theme toggle,
   saving the chosen theme, no flash on reload, keyboard navigation and focus states, reduced motion,
-  layout at 375px and 1280px, and the self-hosted fonts.
+  layout at 375px and 1280px, and the self-hosted fonts. They run against `wrangler dev`, so every page gets the real
+  CSP: a test fails on any CSP violation, and one checks that an injected inline script is blocked.
 - **Site checks** (part of `npm run check`): see `check:site` above. The resume being one page and every
   shown repo having a description are checked during the build itself.
 
@@ -158,5 +168,5 @@ only runs on `main`, so pull requests are built and checked but never deployed.
 
 ## Roadmap
 
-Next: security headers. After that: project deep-dive pages, a contact form, and a custom domain. Details
+Next: analytics and the MVP deploy check. After that: project deep-dive pages, a contact form, and a custom domain. Details
 and status are in [`docs/plan.md`](docs/plan.md).

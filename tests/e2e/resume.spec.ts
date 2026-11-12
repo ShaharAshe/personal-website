@@ -195,7 +195,14 @@ test.describe('with a wider fallback mono font', () => {
   test('the revealed email still fits its reserved width, on one line with the profile links', async ({ page }) => {
     await page.goto('/resume');
     await expect(emailLink(page)).toBeVisible();
-    await page.addStyleTag({ content: '[data-email-address] { letter-spacing: 0.5px; }' });
+    // A constructed stylesheet, not page.addStyleTag: the site's CSP blocks an injected inline <style>, while CSSOM
+    // stylesheets aren't governed by style-src.
+    await page.evaluate(() => {
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync('[data-email-address] { letter-spacing: 0.5px; }');
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+    });
+    await expect(resume(page).locator('[data-email-address]')).toHaveCSS('letter-spacing', '0.5px');
     const row = await page.locator('[data-resume-email]').evaluate((slot) => ({
       width: slot.querySelector('[data-email-reveal]')!.getBoundingClientRect().width,
       minWidth: parseFloat(getComputedStyle(slot).minWidth),

@@ -37,7 +37,8 @@ These npm scripts must exist and keep working (create them during scaffolding):
 - `npm run build`: `cv` + `projects` + `astro build`
 - `npm run preview`: serve the production build locally
 - `npm run test:e2e`: Playwright end-to-end tests (`tests/e2e/*.spec.ts`) against the existing build
-  (`astro preview` on port 4322); locally uses the installed Edge, CI uses Playwright's Chromium
+  (`wrangler dev` on port 4322, so the real `_headers` and CSP apply; `astro preview` sends no headers); locally
+  uses the installed Edge, CI uses Playwright's Chromium
 - `npm run screenshots`: review screenshots (375px/1280px, dark/light) into `screenshots/` (gitignored)
 
 ## Directory map
@@ -59,6 +60,8 @@ tests/e2e/                  Playwright tests (npm run test:e2e) + review-screens
 scripts/github/             GitHub fetcher
 scripts/og/                 OG image + site icon generator (npm run og) + PNG/ICO helpers for their stale checks
 src/lib/seo.ts              absolute URLs from `site`, sitemap/robots text, Person JSON-LD, site icon paths/sizes
+scripts/csp/                CSP: cspHeaders() integration (astro.config.mjs) hashes inline scripts/styles in dist/
+                            into dist/_headers after every build; public/_headers holds the fail-closed template
 scripts/checks/             site checks (npm run check:site) + the pre-commit phone check
 .githooks/                  pre-commit hook; npm ci points core.hooksPath here (scripts/git/install-hooks.ts)
 .github/workflows/          deploy.yml (push, daily schedule, manual)

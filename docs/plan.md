@@ -1024,7 +1024,7 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       themes, plus the long-item wrap. `review-screenshots.ts` writes `*-skills.png` and `*-resume-skills.png`.
       `npm test`: 384. `npm run test:e2e`: 200.
 
-- [ ] **2.14 Security headers** — Real CSP, `X-Content-Type-Options`, `Referrer-Policy` in `public/_headers`.
+- [x] **2.14 Security headers** — Real CSP, `X-Content-Type-Options`, `Referrer-Policy` in `public/_headers`.
   - Files: `public/_headers`.
   - Verify: Headers present in a deployed response; CSP doesn't break islands or fonts.
   - Depends on: 1.5.
@@ -1046,10 +1046,81 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
     `sitemap.xml`, `robots.txt` and `og-image.png` are plain static files.
   - Note (from 2.13a): `favicon.ico` and `apple-touch-icon.png` are plain same-origin static files too:
     `img-src 'self'` covers them.
+  - **Done.** Design-doc §12 (new CSP and headers subsections) has the policy and the reasoning.
+    - **Approach: hash `dist/` after the build** (option b). A small Astro integration, `cspHeaders()` in
+      `scripts/csp/csp.mts` (registered in `astro.config.mjs`), runs in `astro:build:done`. It hashes every inline
+      `<script>` (except JSON-LD) and `<style>` on every built page, and writes one site-wide policy under `/*` into
+      `dist/_headers`. Rejected alternatives:
+      - Astro's own `security.csp` only writes a `<meta>` tag on a static site. A meta tag can't carry
+        `frame-ancestors`, doesn't apply to the no-flash script above it, and doesn't hash `is:inline`.
+      - External scripts (`assetsInlineLimit: 0`) cost render-path requests and still leave the theme script and
+        `<Font />` CSS inline.
+    - `.mts`, not `.ts`, because the config loads it without the npm scripts' `--disable-warning` flag (package.json
+      has no `"type"`). As a `.mts` file it builds with no warning.
+    - **Fail-closed template:** `public/_headers` has `Content-Security-Policy: default-src 'none'`, which the
+      integration replaces. If the step doesn't run, the site breaks visibly instead of shipping without a CSP.
+    - **The build fails** on any of these:
+      - the template line is missing or repeated;
+      - a `style=` attribute, an `on*=` handler, or a `javascript:` value in `href`/`src`/`action`/`formaction`;
+      - a `dist/_headers` line over 2,000 characters (it names the line and its length);
+      - more than 100 rules.
+    - **Found in the built HTML:**
+      - Inline scripts:
+        - on every page, the theme script and the ThemeToggle module;
+        - on `/` and `/resume`, also the CopyEmail module.
+      - Inline styles:
+        - on every page, two `<Font />` blocks;
+        - on `/` and `/resume`, also CopyEmail's `<style>`.
+      - Totals: 3 script hashes and 4 style hashes.
+      - No `style=`, inline handlers or `javascript:` URLs, so nothing needed an exception.
+      - The CSP line is 593 of 2,000 characters.
+    - **Policy:** `default-src 'self'; script-src 'self' <3 hashes>; style-src 'self' <4 hashes>; img-src 'self';
+      font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';
+      frame-ancestors 'none'`.
+      - `upgrade-insecure-requests` is dropped: every URL is relative, and it would break testing on `http://127.0.0.1`.
+      - No `report-to`: the site is static and has nowhere to receive reports.
+    - **Other headers on `/*`:**
+      - `Permissions-Policy` denies 12 unused features; the clipboard stays allowed.
+      - `Cross-Origin-Opener-Policy: same-origin`.
+      - `X-Frame-Options: DENY`, for old browsers.
+      - `Strict-Transport-Security: max-age=31536000`, without `includeSubDomains` or `preload` (see 4.2).
+      - `nosniff`, `Referrer-Policy` and `X-Robots-Tag` are kept.
+    - **Cloudflare injection:** none on the live workers.dev site (checked with curl): no Web Analytics beacon, no
+      email-decode, no Rocket Loader.
+    - **E2E now runs on `wrangler dev`** (playwright.config.ts, `127.0.0.1:4322`), not `astro preview`, which ignores
+      `_headers`. So every e2e test and every screenshot runs with the real headers, `not_found_handling` and
+      `html_handling`. I chose it over injecting headers with page.route, which would only test my own copy of
+      Cloudflare's rules. The real CSP immediately caught two existing tests doing things the policy blocks, which
+      `astro preview` had hidden. Both are fixed in the tests, not the policy:
+      - `homepage.spec.ts` decoded a screenshot from a `data:` image, which `img-src 'self'` blocks. It now uses
+        `createImageBitmap(blob)`, which fetches nothing.
+      - `resume.spec.ts` used `page.addStyleTag` (an inline style). It now uses a constructed stylesheet
+        (`adoptedStyleSheets`), and asserts that it applied.
+      - Lesson for later tests: on site pages, don't inject inline `<style>`/`<script>` or load `data:` images.
+    - Manual check with `wrangler dev` in Chrome: `/`, `/resume`, the 404, the theme toggle and Copy all showed no CSP
+      console messages. `/resume.pdf` opens in the built-in PDF viewer with the CSP on it, so it needs no exception.
+    - Tests:
+      - `tests/csp.test.ts` (26):
+        - unit tests on fixtures (hashing against the CSP spec's own example, extraction, finding unhashable markup,
+          applying the template, parsing `_headers`, both limits, the build failing);
+        - over `dist/`: every inline block on every page (404 included) is hashed in the CSP, the theme hash is
+          recomputed from `themeInitScript`, every security header is on `/*` and no other rule overrides or removes
+          one, and the file is within the limits.
+      - `tests/e2e/csp.spec.ts` (7): on `/`, `/resume` and `/no-such-page` with both saved themes:
+        - the CSP header is present, with no violation events and no CSP console messages;
+        - the saved theme is applied before `<body>`; the toggle, Copy and every font file work.
+      - The same spec has one test with an inline script and a `style=` attribute injected into the HTML: both are
+        blocked.
+      - Removing one hash from `dist/_headers` by hand failed 3 node tests and all 7 e2e tests.
+      - `npm test`: 410 (was 384). `npm run test:e2e`: 207 (was 200). `npm run screenshots`: 45.
 
 - [ ] **2.15 Cloudflare Web Analytics** — Beacon script in `BaseLayout`.
   - Files: `src/layouts/BaseLayout.astro`.
   - Depends on: action item #5.
+  - Note (from 2.14): the CSP blocks the beacon until `buildPolicy()` in `scripts/csp/csp.mts` adds
+    `https://static.cloudflareinsights.com` to `script-src` and `https://cloudflareinsights.com` to `connect-src`. Prefer
+    the manual snippet over dashboard auto-injection, so it's in the built HTML and the tests see it. If the snippet
+    has inline JSON config (`data-cf-beacon` is an attribute, fine), check `tests/e2e/csp.spec.ts` still passes.
 
 - [ ] **2.16 MVP deploy + visual verification** — Full homepage + `/resume` live on the Cloudflare free URL.
   - Verify: Playwright screenshots at 375px/1280px, dark/light, reviewed; Lighthouse spot-check; `npm run check` and `npm run build` both green.
@@ -1083,6 +1154,11 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
 
 - [ ] **3.3 Contact form (server-rendered)** — Switch to `output: 'server'` on that route via `@astrojs/cloudflare` (rest of site stays prerendered), `ContactForm.tsx` island, server validation, honeypot, Turnstile, basic rate limiting, email delivery.
   - Files: `src/pages/api/contact.ts`, `src/components/islands/ContactForm.tsx`, `astro.config.mjs`, `wrangler.jsonc`.
+  - Note (from 2.14): the CSP (`buildPolicy()` in `scripts/csp/csp.mts`) has `form-action 'none'`. Change it to
+    `'self'`, and add `https://challenges.cloudflare.com` to `script-src` and a `frame-src` for Turnstile. A server route
+    responds through the Worker, which doesn't apply `_headers`, so the function must set its own headers (or the
+    page must stay static). Check that the React island's inline bits, if any, are still covered by the build-time
+    hashes.
   - Verify: Submitting works end-to-end to a real inbox; spam paths rejected correctly.
   - Depends on: 1.5, 2.9; needs action item #8.
 
@@ -1104,6 +1180,11 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
     image doesn't show the URL, so it needs no regenerating). Then remove `X-Robots-Tag: noindex` from
     `public/_headers` (keep robots.txt without any Disallow), and submit `https://<domain>/sitemap.xml` in Google
     Search Console. Consider a redirect from the workers.dev URL to the domain.
+  - Note (from 2.14): a zone can inject scripts the CSP blocks. On the new domain, recheck that Web Analytics
+    auto-injection, Email Address Obfuscation and Rocket Loader are off, or allowed by the policy. Check with
+    `curl -s https://<domain>/ | grep -iE "cloudflareinsights|email-decode|rocket"` and the browser console. Decide
+    HSTS: on a `.com`, consider `includeSubDomains` (and `preload` only on purpose, since it's hard to undo). On a
+    `.dev`, the TLD is preloaded already. Run securityheaders.com on the domain.
 
 - [ ] **4.3 Final QA** — Lighthouse 95+ all categories, every section at 375px, WCAG AA contrast both themes, every link resolves, full keyboard pass.
   - Check the `X-Robots-Tag: noindex` is gone from live responses (removed in 4.2, see its note).

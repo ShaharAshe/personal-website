@@ -554,7 +554,33 @@ education:
 ### אבטחה
 - **טופס:** ולידציה בשרת, rate limiting, honeypot, Turnstile.
 - **Secrets:** רק כ-secrets של Cloudflare ו-GitHub Actions.
-- **Security headers** בסיסיים (CSP, X-Content-Type-Options, Referrer-Policy) דרך קובץ `_headers`.
+- **Security headers** דרך קובץ `_headers` (Cloudflare מחיל אותו על כל תגובה, כולל דף ה-404), ראה למטה.
+
+#### Content-Security-Policy
+**המדיניות** (אחת לכל האתר, תחת `/*`):
+`default-src 'self'; script-src 'self' <hashes>; style-src 'self' <hashes>; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`.
+אין `'unsafe-inline'` ואין `'unsafe-eval'`, לא לסקריפטים ולא לסגנונות.
+
+**איך ה-hashes נוצרים:** Astro מטמיע בתוך ה-HTML כמה סקריפטים וסגנונות: הסקריפט נגד הבהוב (חייב להישאר inline ראשון ב-`<head>`), הסקריפטים של כפתור ה-theme ושל כפתור ההעתקה (קטנים ממגבלת ה-inline של Vite), ה-`<style>` של רכיבים, וה-`@font-face` של `<Font />`. התוכן שלהם משתנה בכל שינוי קוד, ולכן ה-hashes לא נכתבים ביד: integration קטן (`scripts/csp/csp.mts`, רשום ב-`astro.config.mjs`) רץ בסוף כל `astro build`, מחשב SHA-256 לכל `<script>` ו-`<style>` inline בכל דף ב-`dist/`, וכותב את המדיניות ל-`dist/_headers` במקום שורת placeholder. ה-placeholder ב-`public/_headers` הוא `default-src 'none'`: אם השלב לא רץ, האתר נשבר באופן גלוי במקום לעלות בלי CSP. ה-build נכשל אם יש ב-HTML משהו ש-hash לא יכול לאשר (`style="..."`, `onclick=` וכדומה, `javascript:`), או אם `_headers` חורג מהמגבלות של Cloudflare (2,000 תווים לשורה, 100 rules).
+
+**חלופות שנשקלו:**
+- **ה-CSP המובנה של Astro (`security.csp`):** באתר סטטי בלי adapter הוא כותב רק `<meta>`. meta לא תומך ב-`frame-ancestors`, לא חל על מה שמופיע לפניו ב-`<head>` (הסקריפט נגד הבהוב חייב להיות ראשון), ולא מחשב hash לסקריפטים `is:inline`. בנוסף, header ו-meta ביחד הם שתי מדיניות שהדפדפן אוכף את שתיהן. נדחה.
+- **להוציא את הסקריפטים לקבצים** (`assetsInlineLimit: 0`) כדי ש-`'self'` יכסה אותם: מוסיף בקשות בנתיב הרינדור (פוגע ב-LCP), והסקריפט נגד הבהוב ו-CSS הפונטים עדיין inline, כך שעדיין צריך hashes. נדחה.
+
+**`upgrade-insecure-requests` לא נכלל:** כל הכתובות באתר יחסיות ומאותו origin, ו-`'self'` בדף HTTPS מתאים רק ל-HTTPS. הוא גם היה שובר את הבדיקות מול `http://127.0.0.1`. אין endpoint לדיווחים (`report-to`), כי האתר סטטי.
+
+#### Headers נוספים
+- **Permissions-Policy:** חוסם יכולות שהאתר לא משתמש בהן (מצלמה, מיקרופון, מיקום, תשלומים, USB וכו'). ה-clipboard לא חסום (כפתור ההעתקה).
+- **Cross-Origin-Opener-Policy: same-origin.**
+- **X-Frame-Options: DENY:** כפול ל-`frame-ancestors 'none'`, בשביל דפדפנים ישנים. לא עולה כלום.
+- **Strict-Transport-Security: max-age=31536000:** ב-workers.dev לא מוסיף (הסיומת `.dev` כולה ב-HSTS preload), אבל חשוב אם הדומיין יהיה `.com`. בלי `includeSubDomains` ו-`preload` עד שהדומיין נקבע (Task 4.2).
+- נשארים: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, ו-`X-Robots-Tag: noindex` עד המעבר לדומיין.
+
+#### בדיקה
+- `tests/csp.test.ts` בודק על `dist/` שלכל סקריפט וסגנון inline בכל דף (כולל 404) יש hash במדיניות, ושה-hash של הסקריפט נגד הבהוב מחושב מחדש מ-`themeInitScript`.
+- בדיקות ה-e2e רצות מול `wrangler dev` ולא מול `astro preview`, שלא שולח את `_headers`. כך כל הבדיקות רצות עם ה-CSP האמיתי, ובדיקה אחת מוודאת שסקריפט inline שהוזרק נחסם.
+- **Cloudflare לא מזריק כלום** כרגע (Web Analytics אוטומטי, email obfuscation, Rocket Loader): נבדק באתר החי. אם אחד מהם יופעל, המדיניות צריכה לאשר אותו או שהוא צריך להיות כבוי. לבדוק שוב במעבר לדומיין (Task 4.2), כי zone יכול להפעיל אותם.
+- **בהמשך:** ה-beacon של Web Analytics (Task 2.15) ידרוש `script-src https://static.cloudflareinsights.com` ו-`connect-src https://cloudflareinsights.com`. טופס הקשר (Task 3.3) ידרוש `form-action 'self'`, ו-Turnstile ידרוש `https://challenges.cloudflare.com` ב-`script-src` וב-`frame-src`.
 
 ---
 
@@ -599,11 +625,11 @@ education:
 3. יצירת Word מה-YAML (`create_cv.js`)
 4. המרת Word ל-PDF (LibreOffice) + בדיקה שהוא עמוד אחד
 5. משיכת נתוני הפרויקטים מ-GitHub API (עם `GITHUB_TOKEN`) + בדיקת תיאורים
-6. Build של Astro, והעתקת ה-PDF ל-`dist/resume.pdf` (`publish-pdf.ts`). `_headers` מגיש אותו
+6. Build של Astro, שבסופו נכתב ה-CSP ל-`dist/_headers` ([§12](#12-פרטיות-אבטחה-וסודיות)), והעתקת ה-PDF ל-`dist/resume.pdf` (`publish-pdf.ts`). `_headers` מגיש אותו
    `inline` עם שם הקובץ `Shahar_Asher_CV.pdf`
 7. בדיקות: lint, type-check, שהטלפון לא מופיע בקבצי האתר
 8. בדיקות end-to-end בדפדפן אמיתי (Playwright, `npm run test:e2e`, Chromium headless) מול ה-build
-   עצמו. אם הן נכשלות אין deploy, וה-report נשמר כ-artifact ל-7 ימים
+   עצמו, מוגש ב-`wrangler dev` עם ה-headers האמיתיים. אם הן נכשלות אין deploy, וה-report נשמר כ-artifact ל-7 ימים
 9. **רק על `main`** (push, schedule, הרצה ידנית): Deploy ל-Cloudflare
 
 **Pull Requests:** מריצים build ו-checks בלבד (כולל `fc-match`), בלי deploy ובלי preview deployment,

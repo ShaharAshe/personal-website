@@ -32,9 +32,10 @@ async function dotLayerColors(page: Page, x: number, width: number): Promise<num
   const { y, height } = await boxOf(hero);
   const png = await page.screenshot({ clip: { x, y, width, height } });
   return page.evaluate(async (base64) => {
-    const image = new Image();
-    image.src = `data:image/png;base64,${base64}`;
-    await image.decode();
+    // Decoded from a Blob, not a data: URL: the site's CSP (img-src 'self') blocks data: images, and
+    // createImageBitmap fetches nothing, so img-src doesn't apply.
+    const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
+    const image = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
     const canvas = document.createElement('canvas');
     canvas.width = image.width;
     canvas.height = image.height;

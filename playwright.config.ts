@@ -1,6 +1,8 @@
 // Playwright end-to-end tests (npm run test:e2e) and review screenshots (npm run screenshots), run
-// against the production build served by `astro preview`. Only checks that need a real browser live
-// here; checks on the built HTML are node:test tests (npm test).
+// against the production build served by `wrangler dev`: Cloudflare's own static-assets server, run locally (no
+// login). Unlike `astro preview` it applies dist/_headers (the CSP and the other security headers, Task 2.14),
+// not_found_handling and html_handling exactly as production does, so a CSP that breaks the site fails these tests.
+// Only checks that need a real browser live here; checks on the built HTML are node:test tests (npm test).
 //
 // Locally the installed Microsoft Edge is used (no browser download); CI installs Playwright's Chromium.
 
@@ -9,9 +11,11 @@ import { defineConfig } from '@playwright/test';
 const isCI = !!process.env.CI;
 
 // Not Astro's default 4321: `npm run dev` uses that too, and reusing a dev server would test dev output
-// instead of the build. To reuse a running server locally: npm run preview -- --port 4322
+// instead of the build. To reuse a running server locally: npx wrangler dev --port 4322 --ip 127.0.0.1
+// (not `npm run preview`: astro preview sends none of the headers in dist/_headers).
 const port = 4322;
-const baseURL = `http://localhost:${port}`;
+// 127.0.0.1, not localhost: wrangler dev listens on IPv4 only, and localhost can resolve to ::1 first.
+const baseURL = `http://127.0.0.1:${port}`;
 const channel = isCI ? undefined : 'msedge';
 
 export default defineConfig({
@@ -30,9 +34,11 @@ export default defineConfig({
   ],
   webServer: {
     // require-build.ts fails with "run npm run build first" when dist/ is missing.
-    // --ignore-lock keeps astro preview in the foreground; run by an AI agent on Linux/macOS it would background itself and exit.
-    command: `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/checks/require-build.ts && npx astro preview --ignore-lock --port ${port}`,
+    // wrangler.jsonc serves ./dist. --show-interactive-dev-session=false: no keyboard-shortcut prompt (no TTY here).
+    command: `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/checks/require-build.ts && npx wrangler dev --port ${port} --ip 127.0.0.1 --show-interactive-dev-session=false`,
     url: baseURL,
     reuseExistingServer: !isCI,
+    // No usage metrics from test runs.
+    env: { WRANGLER_SEND_METRICS: 'false' },
   },
 });
