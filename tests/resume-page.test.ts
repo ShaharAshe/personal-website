@@ -87,13 +87,13 @@ test('a project link says GitHub only for a GitHub URL, and a project without a 
       name: 'A',
       status: 'In Progress',
       description: 'First',
-      link: { url: 'https://github.com/x/a', text: 'GitHub', icon: 'github' },
+      link: { url: 'https://github.com/x/a', text: 'GitHub', label: 'A on GitHub', icon: 'github' },
     },
     {
       name: 'B',
       status: null,
       description: 'Second',
-      link: { url: 'https://www.example.com/b/', text: 'example.com/b', icon: 'external' },
+      link: { url: 'https://www.example.com/b/', text: 'example.com/b', label: 'B at example.com/b', icon: 'external' },
     },
     { name: 'C', status: null, description: 'Third', link: null },
   ]);
@@ -212,6 +212,12 @@ test('every project is on the page, with its status, description and a GitHub li
   assert.deepEqual(
     links.map(textOf),
     urls.map(() => 'GitHub'),
+  );
+  // The accessible name names the project, so it differs from the profile's "GitHub" link (Task 2.16, Lighthouse
+  // "Identical links have the same purpose"); the visible text stays "GitHub".
+  assert.deepEqual(
+    links.map((a) => attr(a, 'aria-label')),
+    projects.flatMap(({ name, url }) => (url ? [`${name} on GitHub`] : [])),
   );
   for (const link of links) assert.match(link, /data-icon="github"/);
   for (const url of urls) assert.equal(new URL(url).hostname, 'github.com');

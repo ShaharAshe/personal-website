@@ -103,6 +103,7 @@ const linkClass = 'inline-flex min-h-10 items-center gap-2 font-medium text-acce
               {link && (
                 <a
                   href={link.url}
+                  aria-label={link.label}
                   data-project-link
                   class="-my-1.5 inline-flex min-h-10 shrink-0 items-center gap-1.5 self-start font-medium text-accent hover:underline sm:self-auto"
                 >

@@ -4,9 +4,21 @@ Source code for my portfolio site. I'm a backend engineer (Java, Spring Boot, Ka
 
 **Live:** https://personal-website.shaharasher.workers.dev
 
-> **Work in progress.** The site has the homepage, the resume page at `/resume`, and the PDF at
-> [`/resume.pdf`](https://personal-website.shaharasher.workers.dev/resume.pdf). The other pages are
-> being built (see [Roadmap](#roadmap)).
+> **Work in progress.** The MVP is live; project deep-dive pages, a contact form and a custom domain are next
+> (see [Roadmap](#roadmap)).
+
+What the MVP contains:
+
+- **Homepage** (`/`): Hero with the resume download, Experience (featured highlights), Projects (fetched from GitHub
+  at build time), Skills, Contact (the email assembled in the browser, with a Copy button) and a footer.
+- **Resume page** (`/resume`): the full resume in the site's styling, a Download PDF button and a print stylesheet.
+- **Resume PDF** ([`/resume.pdf`](https://personal-website.shaharasher.workers.dev/resume.pdf)), generated from the
+  same `resume.yaml` in CI.
+- A styled **404 page**, dark and light themes (OS setting by default, saved toggle), an Open Graph image and site
+  icons, `sitemap.xml`, `robots.txt` and `Person` JSON-LD.
+- A hash-based **Content-Security-Policy** and security headers, and **Cloudflare Web Analytics** (no cookies).
+- The workers.dev URL sends `X-Robots-Tag: noindex` until the site moves to its own domain, so it isn't indexed as a
+  duplicate.
 
 ## Notable decisions
 
@@ -137,7 +149,9 @@ nothing. To run the same check by hand: `npm run check:staged`.
 | `npm test` | Unit and integration tests (`node:test`, `tests/**/*.test.ts`) |
 | `npm run test:update-golden` | Re-record the golden Word files that pin the resume design (only after an intended design change) |
 | `npm run test:e2e` | Playwright end-to-end tests against the existing build (`wrangler dev` on port 4322, with the real headers) |
-| `npm run screenshots` | Review screenshots (375px and 1280px, dark and light, plus header clips at 640px and the OG image) into `screenshots/` |
+| `npm run screenshots` | Review screenshots (375px, 640px and 1280px, dark and light, plus header clips, the `/resume` print preview, the OG image and the icons) into `screenshots/` |
+| `npm run test:live` | Live smoke run: a read-only subset of the e2e specs against the deployed site (`playwright.live.config.ts`) |
+| `npm run screenshots:live` | The same review screenshots, taken from the deployed site |
 | `npm run check` | On an existing build: `astro check` → lint → `npm test` → site checks → format check |
 | `npm run check:site` | Site checks: no phone in `dist/` or tracked files, phone present in the published PDF, no email in `dist/` |
 | `npm run check:staged` | The pre-commit check: no `CV_PHONE` number in staged changes (fails if `CV_PHONE` isn't set) |
@@ -159,6 +173,12 @@ nothing. To run the same check by hand: `npm run check:staged`.
   layout at 375px and 1280px, and the self-hosted fonts. They run against `wrangler dev`, so every page gets the real
   CSP: a test fails on any CSP violation, and one checks that an injected inline script is blocked. Every spec takes
   `test` from `tests/e2e/fixtures.ts`, which blocks Cloudflare Web Analytics requests, so test runs send no visits.
+- **`npm run test:live`** (Playwright, run by hand after a deploy): reuses the CSP and headers, analytics, SEO, 404,
+  Hero and resume specs against the live URL (`site` in `astro.config.mjs`, so it follows a domain change). It
+  checks status codes, every header from `public/_headers`, that the console has no CSP or header errors, the theme
+  toggle, Copy, the PDF download, the OG image and icons, `sitemap.xml` and `robots.txt`. Nothing is started
+  locally and no build is needed. Analytics requests are blocked as in every e2e run, so it sends no Web Analytics
+  visits. Results go to `test-results/live/` and `playwright-report/live/`.
 - **Site checks** (part of `npm run check`): see `check:site` above. The resume being one page and every
   shown repo having a description are checked during the build itself.
 
@@ -175,5 +195,5 @@ only runs on `main`, so pull requests are built and checked but never deployed.
 
 ## Roadmap
 
-Next: the MVP deploy check. After that: project deep-dive pages, a contact form, and a custom domain. Details
+The MVP is live and verified. Next: project deep-dive pages, a contact form, and a custom domain. Details
 and status are in [`docs/plan.md`](docs/plan.md).

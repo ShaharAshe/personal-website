@@ -7,8 +7,10 @@
 // inline script added to the HTML is blocked, which proves the policy is enforced (not report-only, not ignored).
 // The real email address is never printed: comparisons with it report only true/false.
 
+import fs from 'node:fs';
 import { type Page } from '@playwright/test';
 import { expect, test } from './fixtures.ts';
+import { parseHeaders } from '../../scripts/csp/csp.mts';
 import { joinEmail } from '../../src/lib/email-client.ts';
 import { getEmailParts } from '../../src/lib/resume.ts';
 import { THEMES, THEME_STORAGE_KEY, nextTheme, type Theme } from '../../src/lib/theme.ts';
@@ -22,6 +24,16 @@ import {
 } from './helpers.ts';
 
 const ADDRESS = joinEmail(getEmailParts());
+
+// The headers public/_headers sets, as served (Task 2.16: the live run checks them on the deployed site). The CSP line
+// there is the fail-closed template the build replaces, so it's checked by its own regex below instead.
+const HEADER_RULES = parseHeaders(fs.readFileSync('public/_headers', 'utf8'));
+const ruleHeaders = (rulePath: string) => {
+  const rule = HEADER_RULES.find((r) => r.path === rulePath);
+  if (!rule) throw new Error(`public/_headers has no ${rulePath} rule`);
+  return rule.headers;
+};
+const SITE_HEADERS = ruleHeaders('/*').filter(({ name }) => name.toLowerCase() !== 'content-security-policy');
 
 const PAGES = [
   { path: '/', status: 200, copy: true },
@@ -122,6 +134,24 @@ for (const { path, status, copy } of PAGES) {
     });
   }
 }
+
+for (const { path, status } of PAGES) {
+  test(`${path} sends every header from public/_headers with its exact value`, async ({ request }) => {
+    const response = await request.get(path);
+    expect(response.status()).toBe(status);
+    const headers = response.headers();
+    expect(SITE_HEADERS.length).toBeGreaterThan(5);
+    for (const { name, value } of SITE_HEADERS) expect(headers[name.toLowerCase()], name).toBe(value);
+  });
+}
+
+test('/resume.pdf is a PDF with the headers of its _headers rule', async ({ request }) => {
+  const response = await request.get('/resume.pdf');
+  expect(response.status()).toBe(200);
+  const headers = response.headers();
+  expect(headers['content-type']).toBe('application/pdf');
+  for (const { name, value } of ruleHeaders('/resume.pdf')) expect(headers[name.toLowerCase()], name).toBe(value);
+});
 
 test('the watcher catches a Permissions-Policy feature name the browser does not know', async ({ page }) => {
   const consoleErrors = await watchSecurityErrors(page);

@@ -9,7 +9,8 @@ import { SITE_ICONS } from '../../src/lib/seo.ts';
 import { THEMES } from '../../src/lib/theme.ts';
 import { themeToggle } from './helpers.ts';
 
-const WIDTHS = [375, 1280];
+// 640px is sm, where the nav first shows the home link and the layout changes most (Task 2.16).
+const WIDTHS = [375, 640, 1280];
 const OUT_DIR = 'screenshots';
 
 for (const width of WIDTHS) {

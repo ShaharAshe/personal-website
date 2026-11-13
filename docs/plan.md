@@ -93,10 +93,10 @@ Reality check performed before this plan:
 | 8 | Decide contact-form email provider: Cloudflare Email Routing vs Resend; provide its secret/API key as a Cloudflare secret | Milestone 3, Task 3.3 |
 | 9 | Choose and purchase the domain via Cloudflare Registrar | Milestone 4, Task 4.1 |
 | 10 | Create a local `.env` (from `.env.example`) with your real `CV_PHONE`; add `CV_PHONE` as a GitHub Actions secret | Before Milestone 1, Task 1.2 (local), and Task 1.5 (CI secret) |
-| 11 | Before making the repo public: delete the stale remote branch `ci/deploy`; then change the repo visibility to public | Task 2.16 (user decision in 2.5: make it public once the MVP is live; the pre-commit hook from 2.4c is already in place) |
+| 11 | Before making the repo public: delete the stale remote branch `ci/deploy`; then change the repo visibility to public | Task 2.16 (user decision in 2.5: make it public once the MVP is live; the pre-commit hook from 2.4c is already in place). `ci/deploy` is already gone (checked in 2.16); going public waits for #13 |
 | 12 | Right after making it public: enable secret scanning + push protection and Dependabot alerts; add branch protection on `main` (block force pushes and deletion; no required PRs, and no required status checks, since those would block direct pushes too); check that PRs from forks need approval before they run Actions (Settings → Actions → General) | Task 2.16 (right after #11) |
-| 13 | Email privacy: git now uses the GitHub noreply address for new commits (set on 2026-11-02; GitHub Settings → Emails: keep email private and block command-line pushes that expose it are on). Decide whether to rewrite the existing commits' author email, and whether to switch `resume.yaml` to a `contact@<domain>` address first (see #14), before the repo goes public | Task 2.16 (before making the repo public, #11) |
-| 14 | Consider a `contact@<domain>` address via Cloudflare Email Routing for `resume.yaml` and the PDF, so the personal Gmail isn't public anywhere. If wanted before the repo goes public, buy the domain (#9) before Task 2.16 | Milestone 4, Task 4.2 |
+| 13 | Email privacy: git now uses the GitHub noreply address for new commits (set on 2026-11-02; GitHub Settings → Emails: keep email private and block command-line pushes that expose it are on). Decide whether to rewrite the existing commits' author email, and whether to switch `resume.yaml` to a `contact@<domain>` address first (see #14), before the repo goes public | Task 2.16 (before making the repo public, #11). Audit in 2.16: 23 of 37 commits (2026-10-17 to 2026-11-01) carry the personal address; it's also in `resume.yaml`'s history by design. No phone, no secrets |
+| 14 | Consider a `contact@<domain>` address via Cloudflare Email Routing for `resume.yaml` and the PDF, so the personal Gmail isn't public anywhere. If wanted before the repo goes public, buy the domain (#9) before going public (#11) | Milestone 4, Task 4.2 |
 
 ## New dependencies introduced by this plan
 
@@ -1184,12 +1184,80 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       - `npm test`: 436 (was 410). `npm run test:e2e`: 213 (was 207). `npm run screenshots`: 45, unchanged (the
         beacon has no visible part).
 
-- [ ] **2.16 MVP deploy + visual verification** — Full homepage + `/resume` live on the Cloudflare free URL.
+- [x] **2.16 MVP deploy + visual verification** — Full homepage + `/resume` live on the Cloudflare free URL.
   - Verify: Playwright screenshots at 375px/1280px, dark/light, reviewed; Lighthouse spot-check; `npm run check` and `npm run build` both green.
   - Note (from 2.13): the site-wide `X-Robots-Tag: noindex` stays on the workers.dev URL, so Google doesn't index it
     as a duplicate of the future domain. It's removed at the domain switch (4.2), not here. Lighthouse's SEO score
     will flag it; that's expected.
   - Depends on: everything above in Milestone 2.
+  - Done (2026-11-13). A closing task: nothing new was built except the live smoke run. Notes / deviations:
+    - **Live smoke run** (`npm run test:live`; `npm run screenshots:live` for screenshots):
+      - New `playwright.live.config.ts`. It is `playwright.config.ts` with the base URL set to astro's `site`, and no
+        local server. Its own output folders are `test-results/live` and `playwright-report/live`.
+      - It reuses 6 specs unchanged: `csp`, `analytics`, `seo`, `not-found`, `hero` and `resume`. All are read-only,
+        and the fixture blocks analytics as in every run.
+      - No env vars, so it works in cmd. `tests/e2e-fixtures.test.ts` (+1) checks the config: no webServer, the base
+        URL equals `site`, and every spec it runs is a guarded file.
+    - **New header checks in `csp.spec.ts`** (+4). They run locally under `wrangler dev` and live:
+      - On `/`, `/resume` and the 404, every header of the `/*` rule in `public/_headers` is sent with its exact value
+        (CSP excepted, which keeps its own regex). The rule is parsed with `parseHeaders()`.
+      - `/resume.pdf` is `application/pdf` with its rule's `Content-Disposition`.
+      - Before this, the headers were checked only in `dist/_headers` and under `wrangler dev`. A deployed response
+        is now checked too, which closes 2.14's "headers present in a deployed response".
+    - **Live result:** 120/120 passed against the workers.dev URL on 2026-11-13, at commit b2a8aff (deploy run
+      43402181154: every step green, including Playwright e2e, which closes 2.3a's "verify after push").
+    - **Screenshots:** `review-screenshots.ts` now takes full-page shots at 375, 640 and 1280px (was 375 and 1280).
+      - Count: 57 (was 45).
+      - Live vs local: all 77 PNGs from `npm run screenshots:live` are byte-identical to the local build's, so the live
+        site is this build.
+      - Reviewed `/`, `/resume` and the 404 at all three widths in both themes, plus the print preview. Nothing wrong
+        found. The print preview is 2 A4 pages, breaking cleanly before Projects, with the link URLs printed.
+      - One local screenshot run had one failure (`375px light › page`, the first test). Two reruns passed 57/57. The
+        error wasn't captured; most likely a cold `wrangler dev` start. Recheck if it happens again.
+    - **Open Milestone 2 items, all assigned:**
+      - Closed:
+        - 2.3a: the CI e2e step was verified, as above.
+        - 2.14: headers in a deployed response, as above.
+        - 2.11: Ctrl+P (print preview reviewed; a real Ctrl+P is on the user's list below).
+        - 2.6→2.11: `resume.spec.ts` follows "View full resume".
+        - 2.12→2.13: `/404` is not in the sitemap (`SITEMAP_PATHS`).
+        - 2.10: the design-doc §4/§6 mismatch (fixed in 2.11).
+        - Action #11's first half: `ci/deploy` no longer exists on the remote.
+      - Moved:
+        - 2.13 "new pages join `SITEMAP_PATHS`" → a note in 3.1 and 3.2.
+        - LinkedIn card → 4.2 (Post Inspector can't reach workers.dev).
+        - Zone Analytics next to Web Analytics → 4.2.
+        - Lighthouse CI → the new optional 4.2a.
+        - Action #14 → stays at 4.2 (its "before 2.16" clause reworded).
+      - User checks by hand, now; anything found goes to 4.3:
+        - Lighthouse (PageSpeed Insights) on the three pages.
+        - Real-phone arrows, Copy, Download and theme.
+        - `#top` focus in Safari/Firefox (from 2.10).
+        - A real Ctrl+P.
+        - The Web Analytics dashboard: whether a `127.0.0.1` visit was ever counted (2.15's "unverified").
+      - Unchanged, already in later tasks: HSTS, noindex, zone injection, the workers.dev redirect (4.2/4.3); mdx,
+        case studies, `form-action`/Turnstile (3.1–3.3); actions #12 and #13 (user, before/after going public).
+    - **Pre-public audit (read-only):** run once from a scratchpad script, using the existing matchers. Nothing was
+      changed, and no value was printed.
+      - Of 37 commits, 23 (2026-10-17 to 2026-11-01) have the personal address as author/committer. That's from
+        before the noreply switch; one of them is also committed by GitHub's own web-flow address.
+      - The address is also in the history of `src/data/resume.yaml` (by design: it's the PDF's source) and in an
+        old version of `docs/design-doc.md` (not in the current one).
+      - The phone is in no commit.
+      - No secret was found: no token patterns or private keys, and `.env` was never committed.
+      - Decision for action #13: the user's.
+    - **README:** what the MVP contains, `test:live`/`screenshots:live` (Scripts and Testing), screenshot widths.
+    - **Fix from the user's Lighthouse run:** /resume failed "Identical links have the same purpose". The
+      project's "GitHub" link went to the repo, and the profile's "GitHub" links went to the profile.
+      - The fix: the project link now has `aria-label="<project> on GitHub"`, the same as the homepage cards
+        (`ResumeProjectLink.label` in `src/lib/resume-page.ts`). The visible text and icon are unchanged, and the
+        screenshots are byte-identical.
+      - New `tests/link-names.test.ts` (5): on `/`, `/resume` and the 404 in `dist/`, no two links share an accessible
+        name while pointing to different URLs (aria-label, else text without aria-hidden icons). Run on the old build,
+        it failed /resume with exactly the Lighthouse finding.
+      - `CLAUDE.md`'s Commands list adds `test:live` and `screenshots:live`.
+    - Tests: `npm test` 442 (was 436). `npm run test:e2e` 217 (was 213). `npm run test:live` 120.
+      `npm run screenshots` 57.
 
 ## Fun (after MVP)
 
@@ -1285,6 +1353,7 @@ one is its own task (one at a time, plan first, tests + e2e + screenshots as usu
     case; the route must use the same entry id), and its frontmatter title/description/status/team override
     the GitHub data (`src/lib/projects-section.ts`). `Projects.astro` calls `getCollection('projects')` only
     when a page file exists; if the glob wrapper goes, that guard can go too. No test edit is needed.
+  - Note (from 2.13, re-homed in 2.16): add the new page to `SITEMAP_PATHS` (`src/lib/seo.ts`).
   - Depends on: 2.4; needs action item #7.
 
 - [ ] **3.2 Table-migration case study** — User drafts the narrative; Claude Code handles layout/MDX wiring.
@@ -1293,6 +1362,7 @@ one is its own task (one at a time, plan first, tests + e2e + screenshots as usu
   - Note (from 2.6): add the "Read the migration case study →" link (design-doc §5.1) to the homepage
     Experience section (`src/components/Experience.astro`), with a test for its href.
   - Verify: Content reviewed against §12 — no internal names/numbers/screenshots.
+  - Note (from 2.13, re-homed in 2.16): add the new page to `SITEMAP_PATHS` (`src/lib/seo.ts`).
   - Depends on: 2.4; needs action item #7.
 
 - [ ] **3.3 Contact form (server-rendered)** — Switch to `output: 'server'` on that route via `@astrojs/cloudflare` (rest of site stays prerendered), `ContactForm.tsx` island, server validation, honeypot, Turnstile, basic rate limiting, email delivery.
@@ -1328,6 +1398,18 @@ one is its own task (one at a time, plan first, tests + e2e + screenshots as usu
     `curl -s https://<domain>/ | grep -iE "cloudflareinsights|email-decode|rocket"` and the browser console. Decide
     HSTS: on a `.com`, consider `includeSubDomains` (and `preload` only on purpose, since it's hard to undo). On a
     `.dev`, the TLD is preloaded already. Run securityheaders.com on the domain.
+  - Note (from 2.16): after the domain switch, check the zone's Analytics alongside Web Analytics: the beacon misses
+    visitors with blockers (e.g. Brave), and server-side counts include bots. Read them together.
+  - Note (from 2.16): recheck the LinkedIn share card with Post Inspector (https://www.linkedin.com/post-inspector/)
+    on the domain. It couldn't connect to workers.dev.
+  - Note (from 2.16): `npm run test:live` follows `site` automatically; run it after the switch.
+
+- [ ] **4.2a (optional) Lighthouse CI** — `@lhci/cli` in GitHub Actions with score thresholds, so a regression fails
+  the build.
+  - Not now: it's a heavy new dependency, scores vary between runs on shared CI machines, and SEO fails on workers.dev
+    because of the noindex (gone after 4.2).
+  - Needs the user's approval of the dependency (CLAUDE.md rule 5) when we get there.
+  - Depends on: 4.2.
 
 - [ ] **4.3 Final QA** — Lighthouse 95+ all categories, every section at 375px, WCAG AA contrast both themes, every link resolves, full keyboard pass.
   - Check the `X-Robots-Tag: noindex` is gone from live responses (removed in 4.2, see its note).

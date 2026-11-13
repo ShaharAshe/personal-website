@@ -39,7 +39,10 @@ These npm scripts must exist and keep working (create them during scaffolding):
 - `npm run test:e2e`: Playwright end-to-end tests (`tests/e2e/*.spec.ts`) against the existing build
   (`wrangler dev` on port 4322, so the real `_headers` and CSP apply; `astro preview` sends no headers); locally
   uses the installed Edge, CI uses Playwright's Chromium
-- `npm run screenshots`: review screenshots (375px/1280px, dark/light) into `screenshots/` (gitignored)
+- `npm run screenshots`: review screenshots (375px/640px/1280px, dark/light) into `screenshots/` (gitignored)
+- `npm run test:live`: live smoke run, a read-only subset of the e2e specs against the deployed site
+  (`playwright.live.config.ts`, base URL = astro's `site`; analytics blocked by `tests/e2e/fixtures.ts`)
+- `npm run screenshots:live`: the same review screenshots, taken from the deployed site
 
 ## Directory map
 

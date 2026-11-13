@@ -60,3 +60,21 @@ test('the blocked patterns cover the beacon script and the report endpoint, and 
     assert.ok(!blocked(url), url);
   }
 });
+
+// The live smoke run (npm run test:live, Task 2.16) reuses specs from tests/e2e/ against the deployed site. It must
+// start no local server, point at astro's `site`, and run only files the import guard above covers.
+test('playwright.live.config.ts targets the site URL with no local server, and runs only guarded files', async () => {
+  const { default: live, LIVE_SPECS } = await import('../playwright.live.config.ts');
+  const { default: astroConfig } = await import('../astro.config.mjs');
+  assert.equal(live.webServer, undefined);
+  assert.ok(astroConfig.site?.startsWith('https://'));
+  assert.equal(live.use?.baseURL, astroConfig.site);
+  assert.deepEqual(
+    live.projects?.map((project) => project.name),
+    ['live', 'live-screenshots'],
+  );
+  assert.deepEqual(live.projects?.[0]?.testMatch, LIVE_SPECS);
+  assert.ok(LIVE_SPECS.length > 0);
+  for (const spec of LIVE_SPECS) assert.ok(files.includes(spec), `${spec} is not a guarded file in tests/e2e/`);
+  assert.ok(files.includes(live.projects?.[1]?.testMatch as string));
+});
