@@ -2,7 +2,8 @@
 // unknown path, as Cloudflare does with not_found_handling. What the built HTML contains is checked by
 // tests/not-found-page.test.ts (npm test).
 
-import { expect, test, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from './fixtures.ts';
 import { THEMES } from '../../src/lib/theme.ts';
 import { expectTheme } from './helpers.ts';
 

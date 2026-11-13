@@ -2,7 +2,8 @@
 // keyboard with a focus ring, and the layout at 375px and 1280px in both themes. What the built HTML contains
 // is checked by tests/experience.test.ts (npm test).
 
-import { expect, test, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from './fixtures.ts';
 import { THEMES } from '../../src/lib/theme.ts';
 import { expectFocusRing, expectTheme } from './helpers.ts';
 

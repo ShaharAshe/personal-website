@@ -10,6 +10,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {
+  CF_BEACON_SCRIPT,
+  CF_INSIGHTS_CONNECT,
   CSP_TEMPLATE,
   MAX_HEADERS_LINE_LENGTH,
   MAX_HEADERS_RULES,
@@ -94,8 +96,9 @@ test('buildPolicy writes the expected directives, with hashes deduplicated and s
   const policy = buildPolicy({ scriptHashes: ['sha256-b', 'sha256-a', 'sha256-b'], styleHashes: ['sha256-c'] });
   assert.equal(
     policy,
-    "default-src 'self'; script-src 'self' 'sha256-a' 'sha256-b'; style-src 'self' 'sha256-c'; img-src 'self'; " +
-      "font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; " +
+    "default-src 'self'; script-src 'self' https://static.cloudflareinsights.com/beacon.min.js 'sha256-a' " +
+      "'sha256-b'; style-src 'self' 'sha256-c'; img-src 'self'; font-src 'self'; " +
+      "connect-src 'self' https://cloudflareinsights.com; object-src 'none'; base-uri 'none'; form-action 'none'; " +
       "frame-ancestors 'none'",
   );
   assert.doesNotMatch(policy, /unsafe-inline|unsafe-eval/);
@@ -202,7 +205,10 @@ test(
     assert.ok(allPaths, 'no /* rule in dist/_headers');
     assert.doesNotMatch(headersText, new RegExp(CSP_TEMPLATE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     assert.equal(allPaths.headers.filter(({ name }) => name === 'Content-Security-Policy').length, 1);
-    assert.match(policy, /^default-src 'self'; script-src 'self' 'sha256-/);
+    assert.match(
+      policy,
+      /^default-src 'self'; script-src 'self' https:\/\/static\.cloudflareinsights\.com\/beacon\.min\.js 'sha256-/,
+    );
     for (const [name, value] of Object.entries(OTHER_HEADERS)) {
       const sent: HeadersRule['headers'] = allPaths.headers.filter((header) => header.name === name);
       assert.equal(sent.length, 1, `${name} missing or repeated in the /* rule`);
@@ -245,6 +251,37 @@ test('the CSP has the expected directives and never unsafe-inline or unsafe-eval
   assert.deepEqual(directive('frame-ancestors'), ["'none'"]);
   assert.deepEqual(directive('object-src'), ["'none'"]);
 });
+
+test(
+  'the only third-party sources are the Web Analytics beacon (script-src) and its endpoint (connect-src)',
+  { skip },
+  () => {
+    const [self, beacon, ...hashes] = directive('script-src');
+    assert.deepEqual([self, beacon], ["'self'", 'https://static.cloudflareinsights.com/beacon.min.js']);
+    assert.equal(beacon, CF_BEACON_SCRIPT);
+    assert.ok(hashes.length > 0);
+    for (const hash of hashes) assert.match(hash, /^'sha256-[A-Za-z0-9+/]+=*'$/);
+    assert.ok(
+      directive('style-src')
+        .slice(1)
+        .every((source) => /^'sha256-/.test(source)),
+    );
+    assert.deepEqual(directive('connect-src'), ["'self'", 'https://cloudflareinsights.com']);
+    assert.equal(directive('connect-src')[1], CF_INSIGHTS_CONNECT);
+    // Every other directive is exactly as in Task 2.14.
+    const unchanged: Record<string, string[]> = {
+      'default-src': ["'self'"],
+      'img-src': ["'self'"],
+      'font-src': ["'self'"],
+      'object-src': ["'none'"],
+      'base-uri': ["'none'"],
+      'form-action': ["'none'"],
+      'frame-ancestors': ["'none'"],
+    };
+    for (const [name, sources] of Object.entries(unchanged)) assert.deepEqual(directive(name), sources, name);
+    assert.equal(directive('style-src')[0], "'self'");
+  },
+);
 
 for (const { file, html } of pages) {
   test(`${file}: every inline script and style has its hash in the CSP`, { skip }, () => {

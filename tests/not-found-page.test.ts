@@ -7,7 +7,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import zlib from 'node:zlib';
+import { CF_BEACON_SRC } from '../src/lib/analytics.ts';
+import { pageJsGzipBytes, pageScripts } from './helpers/page-js.ts';
 import { listSiteFiles } from '../scripts/checks/dist-files.ts';
 
 const ROOT = path.join(import.meta.dirname, '..');
@@ -76,17 +77,13 @@ test('<main> has one accent-filled element at most', { skip }, () => {
   assert.ok([...main.matchAll(/\bbg-accent\b/g)].length <= 1);
 });
 
-test('the 404 page ships only the theme scripts: no email or clipboard code', { skip }, () => {
+test('the 404 page ships only the theme scripts and the analytics beacon: no email or clipboard code', { skip }, () => {
   assert.doesNotMatch(html, /data-email-/);
-  // JSON-LD (type="application/ld+json") is data the browser never runs, so it isn't JS.
-  const scripts = [...html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)]
-    .filter(([, attrs]) => !attrs.includes('application/ld+json'))
-    .map(([, attrs, text]) => {
-      const src = attrs.match(/\bsrc="([^"]+)"/)?.[1];
-      return src ? fs.readFileSync(path.join(DIST, src)).toString() : text;
-    });
+  // The site's own scripts; the beacon is the one external script (it counts in the size below).
+  const { local: scripts, external } = pageScripts(html, DIST);
   assert.ok(scripts.length > 0);
+  assert.deepEqual(external, [CF_BEACON_SRC]);
   for (const code of scripts) assert.doesNotMatch(code, /clipboard/i);
-  const bytes = scripts.reduce((sum, code) => sum + zlib.gzipSync(code).length, 0);
-  console.log(`404 JS: ${(bytes / 1024).toFixed(2)} KB gzipped, ${scripts.length} scripts`);
+  const bytes = pageJsGzipBytes(html, DIST);
+  console.log(`404 JS: ${(bytes / 1024).toFixed(2)} KB gzipped (beacon included), ${scripts.length + 1} scripts`);
 });

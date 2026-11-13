@@ -5,6 +5,9 @@
 // (registered in astro.config.mjs) hashes every inline <script> and <style> in dist/ and writes one site-wide policy
 // into dist/_headers, in place of the fail-closed template line from public/_headers.
 //
+// The only third party is Cloudflare Web Analytics (Task 2.15): the beacon's URL in script-src and its reporting
+// origin in connect-src. Its config is a data-cf-beacon attribute on a src script, so it needs no hash.
+//
 // One policy on `/*` for every page: Cloudflare applies `/*` to the 404 response too, and a page allowing the hash of
 // a script it doesn't contain is harmless (the script is the site's own code).
 //
@@ -94,16 +97,24 @@ export function findUnhashable(html: string): string[] {
   return findings;
 }
 
+/**
+ * Cloudflare Web Analytics (Task 2.15): the beacon script (the exact file, not the whole host) and the origin it
+ * reports to (https://cloudflareinsights.com/cdn-cgi/rum). The same URL is CF_BEACON_SRC in src/lib/analytics.ts;
+ * repeated here because this file imports no project .ts (see the top), and tests/analytics.test.ts keeps them equal.
+ */
+export const CF_BEACON_SCRIPT = 'https://static.cloudflareinsights.com/beacon.min.js';
+export const CF_INSIGHTS_CONNECT = 'https://cloudflareinsights.com';
+
 /** The site's policy. Hashes are deduplicated and sorted, so the same build always writes the same header. */
 export function buildPolicy({ scriptHashes, styleHashes }: { scriptHashes: string[]; styleHashes: string[] }): string {
   const quoted = (hashes: string[]) => [...new Set(hashes)].sort().map((hash) => `'${hash}'`);
   return [
     "default-src 'self'",
-    ['script-src', "'self'", ...quoted(scriptHashes)].join(' '),
+    ['script-src', "'self'", CF_BEACON_SCRIPT, ...quoted(scriptHashes)].join(' '),
     ['style-src', "'self'", ...quoted(styleHashes)].join(' '),
     "img-src 'self'",
     "font-src 'self'",
-    "connect-src 'self'",
+    `connect-src 'self' ${CF_INSIGHTS_CONNECT}`,
     "object-src 'none'",
     "base-uri 'none'",
     // No form posts anywhere until the contact form (plan.md Task 3.3), which changes this to 'self'.

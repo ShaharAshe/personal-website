@@ -5,6 +5,7 @@
 import { Font } from 'astro:assets';
 import Footer from '../components/Footer.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
+import { analyticsBeacon } from '../lib/analytics';
 import { getResume } from '../lib/resume';
 import { OG_IMAGE, SITE_ICONS, absoluteUrl, iconSizesAttr, ogImageAlt } from '../lib/seo';
 import { themeInitScript } from '../lib/theme';
@@ -35,6 +36,8 @@ const { name, label } = getResume().basics;
 // A noindex page (the 404 page) has no canonical and no og:url: it isn't a page to index or share.
 const canonical = noindex ? undefined : absoluteUrl(Astro.url.pathname, Astro.site);
 const ogImage = absoluteUrl(OG_IMAGE.path, Astro.site);
+// Cloudflare Web Analytics: production builds only, never the dev server (src/lib/analytics.ts).
+const beacon = analyticsBeacon(import.meta.env.PROD);
 ---
 
 <html lang="en">
@@ -119,5 +122,9 @@ const ogImage = absoluteUrl(OG_IMAGE.path, Astro.site);
     </main>
 
     <Footer backToTop={backToTop} />
+
+    {/* Cloudflare Web Analytics, as the dashboard's snippet: last in <body>, a module script (deferred).
+        is:inline keeps Astro from bundling it; the CSP allows its URL (scripts/csp/csp.mts). */}
+    {beacon && <script is:inline type="module" src={beacon.src} data-cf-beacon={beacon.config}></script>}
   </body>
 </html>

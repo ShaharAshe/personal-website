@@ -104,3 +104,43 @@ export async function expectInstantCopySwap(button: Locator): Promise<void> {
 
 /** The nav link labels, in Tab order after the skip link. */
 export const NAV_LINKS = ['Experience', 'Projects', 'Resume', 'Contact'];
+
+// Console text the browser prints for any response-header problem: a CSP block (older Chromium starts it with
+// "Refused to"; current Chromium says "...violates the following Content Security Policy directive"), or a header it
+// can't parse or a feature name it doesn't know ("Error with Permissions-Policy header: Unrecognized feature: ...").
+const SECURITY_CONSOLE =
+  /Refused to|Content[- ]Security[- ]Policy|Permissions[- ]Policy|Unrecognized feature|Error with .* header/i;
+
+declare global {
+  interface Window {
+    __cspViolations?: string[];
+  }
+}
+
+/**
+ * Records every securitypolicyviolation event (from before the first inline script runs) and every console message
+ * about a response header (CSP, Permissions-Policy, ...). Returns the console list; the events are read with
+ * cspViolations().
+ *
+ * Header-parse errors are logged by the browser itself when the response arrives (a DevTools Log entry), not by page
+ * code, so page.on('console') may not see them. The CDP Log domain does; both browsers used here are Chromium.
+ */
+export async function watchSecurityErrors(page: Page): Promise<string[]> {
+  const consoleErrors: string[] = [];
+  const record = (text: string) => {
+    if (SECURITY_CONSOLE.test(text) && !consoleErrors.includes(text)) consoleErrors.push(text);
+  };
+  page.on('console', (message) => record(message.text()));
+  const cdp = await page.context().newCDPSession(page);
+  cdp.on('Log.entryAdded', ({ entry }) => record(entry.text));
+  await cdp.send('Log.enable');
+  await page.addInitScript(() => {
+    window.__cspViolations = [];
+    document.addEventListener('securitypolicyviolation', (event) => {
+      window.__cspViolations?.push(`${event.effectiveDirective} blocked ${event.blockedURI || 'inline'}`);
+    });
+  });
+  return consoleErrors;
+}
+
+export const cspViolations = (page: Page) => page.evaluate(() => window.__cspViolations ?? []);

@@ -4,7 +4,7 @@
 // card. What the built HTML contains is checked by tests/skills.test.ts and tests/resume-page.test.ts (npm test).
 // The expected item count comes from the resume, never a fixed number.
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.ts';
 import { THEMES } from '../../src/lib/theme.ts';
 import { getResume } from '../../src/lib/resume.ts';
 import { expectTheme } from './helpers.ts';

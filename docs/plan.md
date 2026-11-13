@@ -87,7 +87,7 @@ Reality check performed before this plan:
 | 2 | Add descriptions to `log-analytics-platform`, `NeetCode`, `project_euler`; add `portfolio-*` topics per §6.5; fix "About As"→"About Us" typo in `scam-reporting-app` README | Before Milestone 2, Task 2.8. **Done**: descriptions and `portfolio-*` topics verified from `projects.json` in Task 2.8; README typo fixed (user) |
 | 3 | Create a free Cloudflare account | Milestone 1, Task 1.5 |
 | 4 | Create a Cloudflare API token (Workers deploy scope) and the account ID; add both as GitHub Actions secrets (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`) | Milestone 1, Task 1.5 |
-| 5 | Enable Cloudflare Web Analytics on the site once it has a URL, grab the beacon token | Milestone 2, Task 2.15 |
+| 5 | Enable Cloudflare Web Analytics on the site once it has a URL, grab the beacon token | Milestone 2, Task 2.15. **Done**: site added for the workers.dev URL (manual JS snippet); token in `src/lib/analytics.ts` |
 | 6 | Decide/approve the OG image design (or approve a simple generated placeholder) | Milestone 2, Task 2.13. **Done**: name + title + tagline, generated from `resume.yaml` (approved in 2.13's plan) |
 | 7 | Draft the real content: Log Analytics Platform architecture + narrative, and the table-migration case study narrative (checked against §12 confidentiality) | Milestone 3, Tasks 3.1–3.2 |
 | 8 | Decide contact-form email provider: Cloudflare Email Routing vs Resend; provide its secret/API key as a Cloudflare secret | Milestone 3, Task 3.3 |
@@ -1118,13 +1118,71 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       - Removing one hash from `dist/_headers` by hand failed 3 node tests and all 7 e2e tests.
       - `npm test`: 410 (was 384). `npm run test:e2e`: 207 (was 200). `npm run screenshots`: 45.
 
-- [ ] **2.15 Cloudflare Web Analytics** — Beacon script in `BaseLayout`.
+- [x] **2.15 Cloudflare Web Analytics** — Beacon script in `BaseLayout`.
   - Files: `src/layouts/BaseLayout.astro`.
   - Depends on: action item #5.
   - Note (from 2.14): the CSP blocks the beacon until `buildPolicy()` in `scripts/csp/csp.mts` adds
     `https://static.cloudflareinsights.com` to `script-src` and `https://cloudflareinsights.com` to `connect-src`. Prefer
     the manual snippet over dashboard auto-injection, so it's in the built HTML and the tests see it. If the snippet
     has inline JSON config (`data-cf-beacon` is an attribute, fine), check `tests/e2e/csp.spec.ts` still passes.
+  - **Done.** Design-doc §15 (wiring, no consent banner, budget) and §12 (the policy) have the reasoning.
+    - **The tag:** the dashboard's manual snippet, last before `</body>` in `BaseLayout`, so it's on every page,
+      the 404 included: `<script is:inline type="module" src="https://static.cloudflareinsights.com/beacon.min.js"
+      data-cf-beacon='{"token":"…"}'>`.
+      - `type="module"`, not `defer` (user decision): it's the dashboard's current form, and module scripts are
+        deferred anyway.
+      - The beacon reads its config from `document.currentScript`, falling back to `[data-cf-beacon]`. The CDN sends
+        `Access-Control-Allow-Origin: *`, so the module's CORS fetch works.
+    - **Gate:** `analyticsBeacon(import.meta.env.PROD)` in `src/lib/analytics.ts` returns `null` in the dev server.
+      The token is a constant there: it's public, in every page's source.
+    - **CSP:** `buildPolicy()` adds two sources and nothing else.
+      - `script-src` gets the beacon's full path, `https://static.cloudflareinsights.com/beacon.min.js`. That is
+        Cloudflare's FAQ form and stricter than the bare host (user decision). It returns 200 with no redirect, so
+        the path matches.
+      - `connect-src` gets `https://cloudflareinsights.com` (reports go to `/cdn-cgi/rum`).
+      - `data-cf-beacon` is an attribute on a `src` script: no hash.
+      - The CSP line is 676 of 2,000 characters (was 593).
+      - The URL is repeated in `csp.mts`, which can't import project `.ts`; a test keeps the two equal.
+    - **No analytics from tests:**
+      - Every e2e spec and `review-screenshots.ts` take `test` from `tests/e2e/fixtures.ts`. Its `page` stops every
+        request to `*.cloudflareinsights.com` with CDP request interception limited to those URL patterns.
+      - `tests/e2e-fixtures.test.ts` fails on a spec that imports Playwright's own `test` or opens another
+        page or context.
+      - Two other approaches were tried and dropped:
+        - `context.route`: any Playwright route made Chromium fail the page's own `fetch('/favicon.ico')`, which
+          broke 3 tests in `seo.spec.ts`.
+        - `Network.setBlockedURLs`: it blocks before the CSP check, so it couldn't show the CSP allowed the beacon.
+          Found by removing the beacon from `dist/_headers` by hand: the tests still passed.
+      - Interception runs after the CSP check. So `analyticsRequests` listing the beacon proves the CSP allowed it.
+        A control test serves `/` with the beacon removed from the CSP and expects a violation and no request.
+      - One e2e run during development, with the block switched off to isolate the favicon problem, let the real
+        beacon load once from `127.0.0.1`. That run most likely wasn't counted (hostname mismatch).
+    - **JS budget: the beacon counts.** It's JS every visitor downloads.
+      - Measured 10,274 bytes gzipped (31,853 raw) on 2026-11-13. The tests count it as 11KB
+        (`tests/helpers/page-js.ts`), since Cloudflare doesn't version-pin it.
+      - Any other external script fails the budget tests until it's budgeted.
+      - Homepage: 12.24KB (1.24KB site + 11KB beacon); `/resume` 12.24KB; 404 11.56KB.
+      - The three budget tests now share the helper (before, they'd have crashed reading an `https://` src from
+        `dist/`).
+    - **Local runs:** `npm run dev` has no beacon. `npm run preview` / `npx wrangler dev` serve the production build,
+      so a manual browser visit loads it. Its report from `127.0.0.1` most likely fails Cloudflare's hostname check
+      (FAQ: suffix match, CORS error) and isn't counted. Unverified.
+    - **Privacy:** no cookies, no localStorage and no fingerprinting (Cloudflare's docs, and a grep of
+      `beacon.min.js`), so no consent banner (design-doc §15).
+    - Tests:
+      - `tests/analytics.test.ts` (9): the gate, the token format, BaseLayout using the gate, and the URL matching
+        the CSP's. On every built page: one beacon tag (module type, URL, decoded token), last before `</body>`.
+      - `tests/csp.test.ts` (+1): `script-src` is `'self'`, the beacon path and hashes only; `connect-src` is
+        exactly `'self' https://cloudflareinsights.com`; every other directive is unchanged.
+      - `tests/e2e-fixtures.test.ts` (16): the import guard per spec, and the blocked patterns.
+      - `tests/e2e/analytics.spec.ts` (5):
+        - on `/`, `/resume` and `/no-such-page`: the tag, the request stopped by the test after the CSP allowed it,
+          no violations, no header console errors;
+        - a POST to `/cdn-cgi/rum` allowed by `connect-src` and stopped by the test;
+        - the control.
+      - Removing the beacon from `dist/_headers` by hand failed all 5.
+      - `npm test`: 436 (was 410). `npm run test:e2e`: 213 (was 207). `npm run screenshots`: 45, unchanged (the
+        beacon has no visible part).
 
 - [ ] **2.16 MVP deploy + visual verification** — Full homepage + `/resume` live on the Cloudflare free URL.
   - Verify: Playwright screenshots at 375px/1280px, dark/light, reviewed; Lighthouse spot-check; `npm run check` and `npm run build` both green.

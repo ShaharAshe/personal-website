@@ -5,7 +5,8 @@
 // adding a page in Task 3.1 (a "Read more" link) needs no test change.
 
 import path from 'node:path';
-import { expect, test, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from './fixtures.ts';
 import { THEMES } from '../../src/lib/theme.ts';
 import { getProjects } from '../../src/lib/projects.ts';
 import { listProjectPageFiles } from '../../src/lib/project-pages-loader.ts';

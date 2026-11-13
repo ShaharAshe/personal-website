@@ -1,7 +1,8 @@
 // Theme toggle (Task 2.3) in a real browser: OS default, click + save, reload, keyboard, reduced motion,
 // layout. The pure logic and the built markup are covered by tests/theme-toggle.test.ts (node:test).
 
-import { expect, test, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from './fixtures.ts';
 import { getResume } from '../../src/lib/resume.ts';
 import { nextTheme, THEME_STORAGE_KEY, THEMES } from '../../src/lib/theme.ts';
 import { changeOsTheme, expectFocusRing, expectTheme, expectToggleFor, NAV_LINKS, themeToggle } from './helpers.ts';

@@ -558,8 +558,10 @@ education:
 
 #### Content-Security-Policy
 **המדיניות** (אחת לכל האתר, תחת `/*`):
-`default-src 'self'; script-src 'self' <hashes>; style-src 'self' <hashes>; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`.
+`default-src 'self'; script-src 'self' https://static.cloudflareinsights.com/beacon.min.js <hashes>; style-src 'self' <hashes>; img-src 'self'; font-src 'self'; connect-src 'self' https://cloudflareinsights.com; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`.
 אין `'unsafe-inline'` ואין `'unsafe-eval'`, לא לסקריפטים ולא לסגנונות.
+
+**צד שלישי יחיד: Cloudflare Web Analytics** ([§15](#15-analytics)). ב-`script-src` הנתיב המלא של קובץ ה-beacon ולא כל ה-host (הצורה שב-FAQ של Cloudflare; עובד כי הכתובת מחזירה 200 בלי redirect), וב-`connect-src` ה-origin שאליו הוא שולח (`https://cloudflareinsights.com/cdn-cgi/rum`). ה-token נמצא ב-attribute (`data-cf-beacon`) של סקריפט עם `src`, לא בסקריפט inline, ולכן לא צריך hash. השורה של ה-CSP היא 676 מתוך 2,000 תווים.
 
 **איך ה-hashes נוצרים:** Astro מטמיע בתוך ה-HTML כמה סקריפטים וסגנונות: הסקריפט נגד הבהוב (חייב להישאר inline ראשון ב-`<head>`), הסקריפטים של כפתור ה-theme ושל כפתור ההעתקה (קטנים ממגבלת ה-inline של Vite), ה-`<style>` של רכיבים, וה-`@font-face` של `<Font />`. התוכן שלהם משתנה בכל שינוי קוד, ולכן ה-hashes לא נכתבים ביד: integration קטן (`scripts/csp/csp.mts`, רשום ב-`astro.config.mjs`) רץ בסוף כל `astro build`, מחשב SHA-256 לכל `<script>` ו-`<style>` inline בכל דף ב-`dist/`, וכותב את המדיניות ל-`dist/_headers` במקום שורת placeholder. ה-placeholder ב-`public/_headers` הוא `default-src 'none'`: אם השלב לא רץ, האתר נשבר באופן גלוי במקום לעלות בלי CSP. ה-build נכשל אם יש ב-HTML משהו ש-hash לא יכול לאשר (`style="..."`, `onclick=` וכדומה, `javascript:`), או אם `_headers` חורג מהמגבלות של Cloudflare (2,000 תווים לשורה, 100 rules).
 
@@ -580,7 +582,8 @@ education:
 - `tests/csp.test.ts` בודק על `dist/` שלכל סקריפט וסגנון inline בכל דף (כולל 404) יש hash במדיניות, ושה-hash של הסקריפט נגד הבהוב מחושב מחדש מ-`themeInitScript`.
 - בדיקות ה-e2e רצות מול `wrangler dev` ולא מול `astro preview`, שלא שולח את `_headers`. כך כל הבדיקות רצות עם ה-CSP האמיתי, ובדיקה אחת מוודאת שסקריפט inline שהוזרק נחסם.
 - **Cloudflare לא מזריק כלום** כרגע (Web Analytics אוטומטי, email obfuscation, Rocket Loader): נבדק באתר החי. אם אחד מהם יופעל, המדיניות צריכה לאשר אותו או שהוא צריך להיות כבוי. לבדוק שוב במעבר לדומיין (Task 4.2), כי zone יכול להפעיל אותם.
-- **בהמשך:** ה-beacon של Web Analytics (Task 2.15) ידרוש `script-src https://static.cloudflareinsights.com` ו-`connect-src https://cloudflareinsights.com`. טופס הקשר (Task 3.3) ידרוש `form-action 'self'`, ו-Turnstile ידרוש `https://challenges.cloudflare.com` ב-`script-src` וב-`frame-src`.
+- **Web Analytics (Task 2.15):** ה-beacon מוטמע ידנית (לא הזרקה של Cloudflare), ולכן הוא ב-HTML והבדיקות רואות אותו. `tests/e2e/analytics.spec.ts` מוודא בדפדפן שה-CSP מאשר אותו, ובדיקת ביקורת מוודאת שבלי הכתובת במדיניות הוא נחסם.
+- **בהמשך:** טופס הקשר (Task 3.3) ידרוש `form-action 'self'`, ו-Turnstile ידרוש `https://challenges.cloudflare.com` ב-`script-src` וב-`frame-src`.
 
 ---
 
@@ -716,6 +719,18 @@ portfolio/
 ## 15. Analytics
 
 **הבחירה: Cloudflare Web Analytics.** חינמי, privacy-friendly, ולא דורש באנר עוגיות.
+
+**למה אין באנר עוגיות:** Cloudflare Web Analytics לא שומר כלום בדפדפן ולא מזהה מבקרים. בלשון של Cloudflare: "does not use any client-side state, such as cookies or localStorage, to collect usage metrics" ו-"We also don't 'fingerprint' individuals via their IP address, User Agent string, or any other data" ([cloudflare.com/web-analytics](https://www.cloudflare.com/web-analytics/)), וגם "does not collect or use your visitors' personal data" ([developers.cloudflare.com/web-analytics/about](https://developers.cloudflare.com/web-analytics/about/)). נבדק גם בקוד של `beacon.min.js` עצמו (2026-11-13): אין בו `document.cookie` ואין `localStorage`. האתר עצמו שומר רק את בחירת ה-theme ב-`localStorage`, שזו העדפה שהמשתמש ביקש ולא מעקב. לכן אין מה לבקש עליו הסכמה.
+
+**איך זה מחובר (Task 2.15):**
+- האתר ב-workers.dev ולא ב-zone של Cloudflare, ולכן Cloudflare לא יכול להזריק את ה-beacon. משתמשים ב-snippet הידני מהדשבורד: `<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "…"}'>`, אחרון לפני `</body>` ב-`BaseLayout`, כלומר בכל הדפים כולל ה-404 (כניסות ל-404 מראות לאילו קישורים שבורים אנשים מגיעים).
+- `type="module"` כמו ב-snippet של הדשבורד: סקריפט module נטען בלי לחסום את הרינדור ורץ אחרי ה-parsing, כמו `defer`.
+- ה-token הוא קבוע ב-`src/lib/analytics.ts`. הוא לא סוד: הוא מופיע במקור של כל דף.
+- **רק ב-build של production** (`import.meta.env.PROD`): `npm run dev` לא טוען אותו. build מקומי (`wrangler dev`, `npm run preview`) כן טוען אותו, אבל דיווח מ-`127.0.0.1` כנראה לא נספר, כי Cloudflare משווה את ה-hostname לאתר שהוגדר בדשבורד (FAQ). זה לא נבדק בבקשה אמיתית.
+- **הבדיקות לא שולחות כניסות:** כל ה-e2e וצילומי המסך עוברים דרך `tests/e2e/fixtures.ts`, שעוצר כל בקשה ל-`*.cloudflareinsights.com` לפני הרשת. בדיקה ב-`npm test` נכשלת אם spec לא משתמש בו.
+- **אין SRI:** Cloudflare לא מקבע גרסאות של ה-beacon, אז אין hash יציב.
+- **תקציב ה-JS:** ה-beacon נספר בתקציב של 30KB gzipped. זה JS אמיתי שכל מבקר מוריד. 10,274 bytes gzipped (31,853 בלי דחיסה) כשנמדד ב-2026-11-13, ובבדיקות נספר כ-11KB, כי הקובץ לא מקובע ויכול לגדול. בדף הבית: 1.24KB של האתר + 11KB = 12.24KB.
+- הנתונים מופיעים בדשבורד אחרי כמה דקות.
 
 **מה מודדים:**
 - כמה נכנסים, ומאיפה (LinkedIn? חיפוש? ישיר?)

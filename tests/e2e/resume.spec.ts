@@ -5,7 +5,8 @@
 // The real address is never printed: every comparison with it is `expect(a === b).toBe(true)`, so a failure shows
 // only true/false.
 
-import { expect, test, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from './fixtures.ts';
 import { THEMES, THEME_STORAGE_KEY } from '../../src/lib/theme.ts';
 import { COPY_FEEDBACK_MS, joinEmail, mailtoHref } from '../../src/lib/email-client.ts';
 import { getEmailParts, getResume } from '../../src/lib/resume.ts';

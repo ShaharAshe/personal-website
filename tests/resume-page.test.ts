@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import zlib from 'node:zlib';
+import { pageJsGzipBytes, pageScripts } from './helpers/page-js.ts';
 import * as pdfFormat from '../scripts/cv/format.js';
 import { getEmailParts, getResume, type PublicResume } from '../src/lib/resume.ts';
 import { dateRange } from '../src/lib/resume-dates.ts';
@@ -404,18 +404,16 @@ test('the nav Resume link has aria-current="page" on /resume and no link has it 
 
 // --- JS ---
 
-// JSON-LD (type="application/ld+json", homepage only) is data the browser never runs, so it isn't JS.
-const scriptsOf = (page: string) =>
-  [...page.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)]
-    .filter(([, attrs]) => !attrs.includes('application/ld+json'))
-    .map(([, attrs, text]) => {
-      const src = attrs.match(/\bsrc="([^"]+)"/)?.[1];
-      return src ? fs.readFileSync(path.join(DIST, src)).toString() : text;
-    });
+// The code of every local script plus the src of every external one (the analytics beacon), so the comparison below
+// covers both. JSON-LD (homepage only) is data the browser never runs, so it isn't JS (tests/helpers/page-js.ts).
+const scriptsOf = (page: string) => {
+  const { local, external } = pageScripts(page, DIST);
+  return [...local, ...external];
+};
 
-test('/resume JS stays under 30KB gzipped', { skip }, () => {
-  const bytes = scriptsOf(html).reduce((sum, code) => sum + zlib.gzipSync(code).length, 0);
-  console.log(`/resume JS: ${(bytes / 1024).toFixed(2)} KB gzipped`);
+test('/resume JS stays under 30KB gzipped, the analytics beacon included', { skip }, () => {
+  const bytes = pageJsGzipBytes(html, DIST);
+  console.log(`/resume JS: ${(bytes / 1024).toFixed(2)} KB gzipped (beacon included)`);
   assert.ok(bytes < 30 * 1024, `/resume JS is ${bytes} bytes gzipped`);
 });
 

@@ -2,7 +2,8 @@
 // ring, the nav fitting on one row at 640px (where the link first appears), no horizontal scroll, sitemap.xml
 // parsing as XML, and the OG image being served. The built head tags are checked in tests/seo-dist.test.ts.
 
-import { expect, test, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from './fixtures.ts';
 import { getResume } from '../../src/lib/resume.ts';
 import { THEMES } from '../../src/lib/theme.ts';
 import { expectFocusRing, themeToggle } from './helpers.ts';

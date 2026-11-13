@@ -7,11 +7,19 @@
 // inline script added to the HTML is blocked, which proves the policy is enforced (not report-only, not ignored).
 // The real email address is never printed: comparisons with it report only true/false.
 
-import { expect, test, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from './fixtures.ts';
 import { joinEmail } from '../../src/lib/email-client.ts';
 import { getEmailParts } from '../../src/lib/resume.ts';
 import { THEMES, THEME_STORAGE_KEY, nextTheme, type Theme } from '../../src/lib/theme.ts';
-import { expectCopyIconSwap, expectTheme, expectToggleFor, themeToggle } from './helpers.ts';
+import {
+  cspViolations,
+  expectCopyIconSwap,
+  expectTheme,
+  expectToggleFor,
+  themeToggle,
+  watchSecurityErrors,
+} from './helpers.ts';
 
 const ADDRESS = joinEmail(getEmailParts());
 
@@ -21,46 +29,11 @@ const PAGES = [
   { path: '/no-such-page', status: 404, copy: false },
 ];
 
-// Console text the browser prints for any response-header problem: a CSP block (older Chromium starts it with
-// "Refused to"; current Chromium says "...violates the following Content Security Policy directive"), or a header it
-// can't parse or a feature name it doesn't know ("Error with Permissions-Policy header: Unrecognized feature: ...").
-const SECURITY_CONSOLE =
-  /Refused to|Content[- ]Security[- ]Policy|Permissions[- ]Policy|Unrecognized feature|Error with .* header/i;
-
 declare global {
   interface Window {
-    __cspViolations?: string[];
     __injected?: boolean;
   }
 }
-
-/**
- * Records every securitypolicyviolation event (from before the first inline script runs) and every console message
- * about a response header (CSP, Permissions-Policy, ...). Returns the console list; the events are read with
- * cspViolations().
- *
- * Header-parse errors are logged by the browser itself when the response arrives (a DevTools Log entry), not by page
- * code, so page.on('console') may not see them. The CDP Log domain does; both browsers used here are Chromium.
- */
-async function watchSecurityErrors(page: Page): Promise<string[]> {
-  const consoleErrors: string[] = [];
-  const record = (text: string) => {
-    if (SECURITY_CONSOLE.test(text) && !consoleErrors.includes(text)) consoleErrors.push(text);
-  };
-  page.on('console', (message) => record(message.text()));
-  const cdp = await page.context().newCDPSession(page);
-  cdp.on('Log.entryAdded', ({ entry }) => record(entry.text));
-  await cdp.send('Log.enable');
-  await page.addInitScript(() => {
-    window.__cspViolations = [];
-    document.addEventListener('securitypolicyviolation', (event) => {
-      window.__cspViolations?.push(`${event.effectiveDirective} blocked ${event.blockedURI || 'inline'}`);
-    });
-  });
-  return consoleErrors;
-}
-
-const cspViolations = (page: Page) => page.evaluate(() => window.__cspViolations ?? []);
 
 /** Saves a theme before the page loads, and records <html data-theme> the moment <body> is inserted. */
 async function saveThemeBeforeLoad(page: Page, theme: Theme): Promise<void> {
@@ -120,7 +93,9 @@ for (const { path, status, copy } of PAGES) {
         const response = await page.goto(path);
         expect(response?.status()).toBe(status);
         const headers = response?.headers() ?? {};
-        expect(headers['content-security-policy']).toMatch(/^default-src 'self'; script-src 'self' 'sha256-/);
+        expect(headers['content-security-policy']).toMatch(
+          /^default-src 'self'; script-src 'self' https:\/\/static\.cloudflareinsights\.com\/beacon\.min\.js 'sha256-/,
+        );
         expect(headers['content-security-policy-report-only']).toBeUndefined();
 
         // The no-flash script ran before first paint.

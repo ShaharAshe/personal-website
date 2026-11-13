@@ -3,7 +3,7 @@
 // before saying a UI task is done.
 
 import fs from 'node:fs';
-import { test } from '@playwright/test';
+import { test } from './fixtures.ts';
 import { readIco } from '../../scripts/og/ico.ts';
 import { SITE_ICONS } from '../../src/lib/seo.ts';
 import { THEMES } from '../../src/lib/theme.ts';

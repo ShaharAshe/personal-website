@@ -107,6 +107,12 @@ npm run preview
 
 During development, `npm run dev` starts the dev server with hot reload.
 
+**Analytics.** Production builds load the Cloudflare Web Analytics beacon on every page (`src/lib/analytics.ts`).
+`npm run dev` never does. A local production build served by `npm run preview` or `npx wrangler dev` does load it.
+Its reports from `127.0.0.1` most likely aren't counted, since the dashboard site matches the workers.dev hostname.
+The e2e tests and screenshots block every request to `*.cloudflareinsights.com` (`tests/e2e/fixtures.ts`), so test
+runs send nothing.
+
 `npm run preview` doesn't send the headers from `_headers` (no CSP). To see the site exactly as Cloudflare serves it,
 headers and the 404 page included, run `npx wrangler dev` after a build (local only, no login). The e2e tests use it.
 
@@ -151,7 +157,8 @@ nothing. To run the same check by hand: `npm run check:staged`.
 - **`npm run test:e2e`** (Playwright): behavior that needs a real browser, such as the theme toggle,
   saving the chosen theme, no flash on reload, keyboard navigation and focus states, reduced motion,
   layout at 375px and 1280px, and the self-hosted fonts. They run against `wrangler dev`, so every page gets the real
-  CSP: a test fails on any CSP violation, and one checks that an injected inline script is blocked.
+  CSP: a test fails on any CSP violation, and one checks that an injected inline script is blocked. Every spec takes
+  `test` from `tests/e2e/fixtures.ts`, which blocks Cloudflare Web Analytics requests, so test runs send no visits.
 - **Site checks** (part of `npm run check`): see `check:site` above. The resume being one page and every
   shown repo having a description are checked during the build itself.
 
@@ -168,5 +175,5 @@ only runs on `main`, so pull requests are built and checked but never deployed.
 
 ## Roadmap
 
-Next: analytics and the MVP deploy check. After that: project deep-dive pages, a contact form, and a custom domain. Details
+Next: the MVP deploy check. After that: project deep-dive pages, a contact form, and a custom domain. Details
 and status are in [`docs/plan.md`](docs/plan.md).

@@ -6,7 +6,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import zlib from 'node:zlib';
+import { CF_BEACON_SRC } from '../src/lib/analytics.ts';
+import { BEACON_GZIP_BYTES, pageJsGzipBytes, pageScripts } from './helpers/page-js.ts';
 import { THEME_STORAGE_KEY, THEMES, currentTheme, nextTheme, saveTheme, toggleLabel } from '../src/lib/theme.ts';
 
 // --- Pure logic ---
@@ -115,15 +116,13 @@ test('the icon animation only exists without reduced motion', { skip }, () => {
   }
 });
 
-test('homepage JS stays under 30KB gzipped (CLAUDE.md quality target)', { skip }, () => {
-  let bytes = 0;
-  for (const [, attrs, text] of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)) {
-    // JSON-LD (type="application/ld+json") is data the browser never runs, so it isn't JS.
-    if (attrs.includes('application/ld+json')) continue;
-    const src = attrs.match(/\bsrc="([^"]+)"/)?.[1];
-    const code = src ? fs.readFileSync(path.join(DIST, src)) : Buffer.from(text);
-    bytes += zlib.gzipSync(code).length;
-  }
-  console.log(`homepage JS: ${(bytes / 1024).toFixed(2)} KB gzipped`);
+test('homepage JS stays under 30KB gzipped (CLAUDE.md quality target), the analytics beacon included', { skip }, () => {
+  // The Cloudflare Web Analytics beacon counts (Task 2.15): it's JS every visitor downloads.
+  assert.deepEqual(pageScripts(html, DIST).external, [CF_BEACON_SRC]);
+  const bytes = pageJsGzipBytes(html, DIST);
+  const kb = (n: number) => (n / 1024).toFixed(2);
+  console.log(
+    `homepage JS: ${kb(bytes)} KB gzipped (site ${kb(bytes - BEACON_GZIP_BYTES)} KB + beacon ${kb(BEACON_GZIP_BYTES)} KB)`,
+  );
   assert.ok(bytes < 30 * 1024, `homepage JS is ${bytes} bytes gzipped`);
 });

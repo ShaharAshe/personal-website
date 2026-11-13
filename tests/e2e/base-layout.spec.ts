@@ -2,7 +2,7 @@
 // self-hosted fonts actually loading, and the published resume PDF. The built markup itself is covered
 // by tests/base-layout.test.ts (node:test).
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.ts';
 import { getResume } from '../../src/lib/resume.ts';
 import { expectFocusRing, NAV_LINKS } from './helpers.ts';
 
