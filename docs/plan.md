@@ -94,7 +94,7 @@ Reality check performed before this plan:
 | 9 | Choose and purchase the domain via Cloudflare Registrar | Milestone 4, Task 4.1 |
 | 10 | Create a local `.env` (from `.env.example`) with your real `CV_PHONE`; add `CV_PHONE` as a GitHub Actions secret | Before Milestone 1, Task 1.2 (local), and Task 1.5 (CI secret) |
 | 11 | Before making the repo public: delete the stale remote branch `ci/deploy`; then change the repo visibility to public | Task 2.16 (user decision in 2.5: make it public once the MVP is live; the pre-commit hook from 2.4c is already in place). `ci/deploy` is already gone (checked in 2.16); going public waits for #13 |
-| 12 | Right after making it public: enable secret scanning + push protection and Dependabot alerts; add branch protection on `main` (block force pushes and deletion; no required PRs, and no required status checks, since those would block direct pushes too); check that PRs from forks need approval before they run Actions (Settings → Actions → General) | Task 2.16 (right after #11) |
+| 12 | Right after making it public: enable secret scanning + push protection and Dependabot alerts; add branch protection on `main` (block force pushes and deletion; no required PRs, and no required status checks, since those would block direct pushes too — superseded by Task 2.17, which requires PRs, passing checks and an up-to-date branch); check that PRs from forks need approval before they run Actions (Settings → Actions → General) | Task 2.16 (right after #11) |
 | 13 | Email privacy: git now uses the GitHub noreply address for new commits (set on 2026-11-02; GitHub Settings → Emails: keep email private and block command-line pushes that expose it are on). Decide whether to rewrite the existing commits' author email, and whether to switch `resume.yaml` to a `contact@<domain>` address first (see #14), before the repo goes public | Task 2.16 (before making the repo public, #11). Audit in 2.16: 23 of 37 commits (2026-10-17 to 2026-11-01) carry the personal address; it's also in `resume.yaml`'s history by design. No phone, no secrets |
 | 14 | Consider a `contact@<domain>` address via Cloudflare Email Routing for `resume.yaml` and the PDF, so the personal Gmail isn't public anywhere. If wanted before the repo goes public, buy the domain (#9) before going public (#11) | Milestone 4, Task 4.2 |
 
@@ -1259,6 +1259,33 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
     - Tests: `npm test` 442 (was 436). `npm run test:e2e` 217 (was 213). `npm run test:live` 120.
       `npm run screenshots` 57.
 
+- [ ] **2.17 PR workflow and protected main** — Goal: no change reaches `main` or the live site without passing
+  every check.
+  - CI on every pull request: `npm run build`, `npm run check` and `npm run test:e2e`, with no deploy.
+    (`deploy.yml` already has a `pull_request` trigger, runs e2e, and gates the deploy step on `main` and a
+    non-PR event; confirm it covers all three and that the job is usable as a required check.)
+  - `main` protected:
+    - no direct pushes
+    - changes only through a PR
+    - the PR's checks must pass
+    - the branch must be up to date with `main` before merging, so what was tested is exactly what lands
+  - Deploy stays as today: only from `main`, and only if CI passes again after the merge.
+  - The daily scheduled build and deploy on `main` must keep working (a scheduled run isn't a push, so
+    protection must not block it).
+  - Optional: a Cloudflare preview URL per PR (Workers preview versions), so the change can be seen live
+    before merging. Note: design-doc §13 currently says "no preview deployment at this stage"; if this part
+    is done, update §13 in the same task. A PR preview must not run for fork PRs (secrets).
+  - Update `CLAUDE.md`'s git rules so Claude Code proposes branch + PR commands (cmd-compatible, e.g.
+    `git switch -c <branch>`, `git push -u origin <branch>`, `gh pr create ...`), never a push to `main`.
+    README's contributing/deploy notes too, if they describe pushing to `main`.
+  - Note for planning: check whether branch protection / rulesets work on a private repo on the GitHub Free
+    plan. If they need a public repo or Pro, the workflow is prepared now and the enforcement is switched on
+    when the repo goes public (action item #12).
+  - Linked to action item #12, which already lists branch protection. Its current wording ("no required PRs,
+    and no required status checks, since those would block direct pushes too") was written for a direct-push
+    workflow; this task reverses that on purpose, and #12's wording is updated to match.
+  - Depends on: 2.16. Enforcement may wait on action items #11–#12.
+
 ## Fun (after MVP)
 
 Small extras for curious visitors, added after the MVP is live (2.16) and before Milestone 3. None of them
@@ -1338,6 +1365,29 @@ one is its own task (one at a time, plan first, tests + e2e + screenshots as usu
     `.txt` files in `dist/`). Options: a URL (e.g. the Contact section), or a `contact@<domain>` address if
     action item #14 happens and the rule is updated. `Expires:` is required; the daily build can keep it
     current.
+  - Depends on: 2.16.
+
+- [ ] **F.7 Terminal view** — A second visual style for the whole site, switched by a click and remembered,
+  like light/dark. Same pages, same content, same layout; only the look changes.
+  - A separate switch from the light/dark toggle: style = `regular` | `terminal`. Terminal is always dark.
+  - CSS and design tokens only, with no component or layout changes:
+    - monospace everywhere
+    - green or amber on black, with a subtle text glow
+    - links shown like `[Resume]`
+    - dashed borders instead of cards
+  - Saved in `localStorage` (try/catch; key and values next to the theme's in `src/lib/theme.ts` or a sibling)
+    and applied before first paint by the inline head script, like the theme (no flash). The CSP hash updates
+    automatically on build.
+  - Placement: decide when planning. Recommended: a footer link (e.g. `>_ Terminal view`), which works at every
+    width; the header has about 6px to spare at 375px.
+  - Must meet the same rules as the regular style:
+    - WCAG AA contrast and visible focus
+    - `prefers-reduced-motion`
+    - print still uses the print stylesheet (never prints terminal style)
+  - Tests and review screenshots run in terminal style too.
+  - Inspired by adventofcode.com's look; nothing copied.
+  - Note for planning: design-doc §9 describes one look (one accent color); add a short note there that
+    terminal view is an opt-in alternate style.
   - Depends on: 2.16.
 
 ## Milestone 3 — Depth (design-doc §16 Phase 2)
