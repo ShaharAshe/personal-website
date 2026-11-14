@@ -21,9 +21,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The job id is the required status check `build` in the main ruleset (README "Contributing and deploy
+  # flow"). Renaming it, or adding a `name:`, changes the check name and breaks the ruleset.
   build:
     runs-on: ubuntu-24.04
-    # A normal run takes about a minute; cap a stuck run (default is 6 hours) to save CI minutes.
+    # A normal run takes 3–5 minutes; cap a stuck run (default is 6 hours) to save CI minutes.
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7

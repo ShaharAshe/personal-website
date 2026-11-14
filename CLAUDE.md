@@ -66,8 +66,10 @@ src/lib/seo.ts              absolute URLs from `site`, sitemap/robots text, Pers
 scripts/csp/                CSP: cspHeaders() integration (astro.config.mjs) hashes inline scripts/styles in dist/
                             into dist/_headers after every build; public/_headers holds the fail-closed template
 scripts/checks/             site checks (npm run check:site) + the pre-commit phone check
-.githooks/                  pre-commit hook; npm ci points core.hooksPath here (scripts/git/install-hooks.ts)
-.github/workflows/          deploy.yml (push, daily schedule, manual)
+.githooks/                  pre-commit (phone check) + pre-push (refuses pushes to main); npm ci points
+                            core.hooksPath here (scripts/git/install-hooks.ts)
+scripts/git/                hook installer + the pre-push logic (push-policy.ts)
+.github/workflows/          deploy.yml (PRs, push to main, daily schedule, manual; deploys only from main)
 ```
 
 ## Hard rules
@@ -128,8 +130,27 @@ scripts/checks/             site checks (npm run check:site) + the pre-commit ph
   task is done, run `npm run screenshots` (375px and 1280px, both themes, into `screenshots/`) and
   look at them.
 - Never run `git commit`, `git push`, or `git add` — the user makes all commits themselves. At the end
-  of each task, propose a Conventional Commits message (`feat:`, `fix:`, `chore:`, `docs:`) and the
-  exact git commands to run, then stop. Read-only git commands (`status`, `diff`, `log`) are fine.
+  of each task, propose a Conventional Commits message (`feat:`, `fix:`, `chore:`, `docs:`, `test:`) and
+  the exact git commands to run, then stop. Read-only git commands (`status`, `diff`, `log`) are fine.
+- **Changes reach `main` only through a branch and a pull request.** Never propose a push to `main`
+  (the `.githooks/pre-push` hook refuses it; the GitHub ruleset enforces it once the repo is public).
+  Branch names: `task/<milestone>-<n>-<slug>` for a plan task (e.g. `task/2-17-pr-workflow`),
+  `fix/<slug>` for a fix outside a task. The proposed commands, in order:
+  1. `git switch -c <branch>`
+  2. `git add <explicit list of files>` (never `git add .` or `-A`; a new hook script also gets
+     `git add --chmod=+x <file>`)
+  3. `git commit -m "<type>: subject" -m "Body paragraph." ...`
+  4. `git push -u origin <branch>`
+  5. `gh pr create --fill --base main`, or open the link `git push` prints
+  6. Wait for the `build` check to pass, then squash merge on GitHub
+  7. Only after the PR shows "Merged": `git switch main`, `git pull`, `git fetch --prune`, then
+     `git branch -D <branch>`. It's `-D`, not `-d`: a squash merge never puts the branch's own commits
+     on `main`, so `-d` refuses with "not fully merged". `--prune` removes the remote branch GitHub
+     deleted after the merge.
+- **The PR title becomes the commit on `main`** (squash merge, "Default to pull request title and
+  description"). So the PR title must be a Conventional Commit (`feat:`, `fix:`, `docs:`, `test:`,
+  `chore:`), and the PR body has no `Co-Authored-By` line or other AI trailer. `gh pr create --fill`
+  takes both from the commit: tell the user to check the title and body before creating the PR.
 - The user runs commands in Windows Command Prompt (cmd), not bash. Proposed git commands must be
   cmd-compatible: use a separate `-m` flag per paragraph for multi-line commit messages (e.g.
   `git commit -m "feat: subject" -m "Body line one." -m "Body line two."`), never a bash heredoc or
@@ -153,7 +174,8 @@ A task is done only when all of these pass:
   every featured/portfolio repo has a description
 - Screenshots reviewed (for UI changes)
 - You've summarized what changed and anything left open
-- A proposed commit message (and the git commands to run) has been given, with nothing staged or committed
+- A proposed commit message and the branch + PR commands to run have been given, with nothing staged or
+  committed
 
 ## Updating the resume
 
