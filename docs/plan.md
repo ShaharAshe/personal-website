@@ -94,7 +94,7 @@ Reality check performed before this plan:
 | 9 | Choose and purchase the domain via Cloudflare Registrar | Milestone 4, Task 4.1 |
 | 10 | Create a local `.env` (from `.env.example`) with your real `CV_PHONE`; add `CV_PHONE` as a GitHub Actions secret | Before Milestone 1, Task 1.2 (local), and Task 1.5 (CI secret) |
 | 11 | Before making the repo public: delete the stale remote branch `ci/deploy`; then change the repo visibility to public | Task 2.16 (user decision in 2.5: make it public once the MVP is live; the pre-commit hook from 2.4c is already in place). `ci/deploy` is already gone (checked in 2.16); going public waits for #13 |
-| 12 | Right after making it public: enable secret scanning + push protection and Dependabot alerts; add branch protection on `main` (block force pushes and deletion; no required PRs, and no required status checks, since those would block direct pushes too — superseded by Task 2.17, which requires PRs, passing checks and an up-to-date branch); check that PRs from forks need approval before they run Actions (Settings → Actions → General) | Task 2.16 (right after #11) |
+| 12 | Right after making it public: enable secret scanning + push protection and Dependabot alerts; confirm the `main` ruleset from Task 2.17 now shows as enforced (created by the user in 2.17: a PR is required, the `build` check must pass, the branch must be up to date, and force pushes and deletion are blocked; this deliberately reverses the earlier "no required PRs, no required status checks" wording, since direct pushes to `main` are no longer the workflow); check that PRs from forks need approval before they run Actions (Settings → Actions → General) | Task 2.16 (right after #11) |
 | 13 | Email privacy: git now uses the GitHub noreply address for new commits (set on 2026-11-02; GitHub Settings → Emails: keep email private and block command-line pushes that expose it are on). Decide whether to rewrite the existing commits' author email, and whether to switch `resume.yaml` to a `contact@<domain>` address first (see #14), before the repo goes public | Task 2.16 (before making the repo public, #11). Audit in 2.16: 23 of 37 commits (2026-10-17 to 2026-11-01) carry the personal address; it's also in `resume.yaml`'s history by design. No phone, no secrets |
 | 14 | Consider a `contact@<domain>` address via Cloudflare Email Routing for `resume.yaml` and the PDF, so the personal Gmail isn't public anywhere. If wanted before the repo goes public, buy the domain (#9) before going public (#11) | Milestone 4, Task 4.2 |
 
@@ -1259,7 +1259,7 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
     - Tests: `npm test` 442 (was 436). `npm run test:e2e` 217 (was 213). `npm run test:live` 120.
       `npm run screenshots` 57.
 
-- [ ] **2.17 PR workflow and protected main** — Goal: no change reaches `main` or the live site without passing
+- [x] **2.17 PR workflow and protected main** — Goal: no change reaches `main` or the live site without passing
   every check.
   - CI on every pull request: `npm run build`, `npm run check` and `npm run test:e2e`, with no deploy.
     (`deploy.yml` already has a `pull_request` trigger, runs e2e, and gates the deploy step on `main` and a
@@ -1285,6 +1285,69 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
     and no required status checks, since those would block direct pushes too") was written for a direct-push
     workflow; this task reverses that on purpose, and #12's wording is updated to match.
   - Depends on: 2.16. Enforcement may wait on action items #11–#12.
+  - **Done (2026-11-13).** Delivered through the first branch + PR (`task/2-17-pr-workflow`), not a push
+    to `main`.
+    - **Free-plan finding (checked by the user):** rulesets on a private Free-plan repo are created but not
+      enforced. So the ruleset is created now by the user, and enforced automatically when the repo goes
+      public (#12). Until then a local pre-push hook stands in. Claude Code changes no GitHub settings.
+    - **Pre-push hook:**
+      - `.githooks/pre-push` (sh; blocks if node is missing) runs `scripts/git/pre-push.ts`; the pure
+        logic is in `scripts/git/push-policy.ts`.
+      - It refuses any update or deletion of `refs/heads/main` on any remote (also `HEAD:main`) and prints
+        the branch + PR steps and the squash-merge cleanup.
+      - It allows other branches, tags, deletions of other branches, and an empty push.
+      - It resolves its script from its own folder, so the test runs the real hook from a temp repo.
+      - It's installed by the existing `prepare` script (the whole `.githooks/` folder). The warning in
+        `scripts/git/hooks.ts` now names both hooks.
+    - **CI findings:**
+      - `deploy.yml` already did everything needed, so there's no behavior change.
+      - One job, id `build`, no `name:`, so the status check is **`build`** (confirmed on a commit's
+        check-runs).
+      - On `pull_request` it runs `npm run build`, `npm run check` and `npm run test:e2e` unconditionally.
+      - The only deploy step is gated `github.ref == 'refs/heads/main' && github.event_name !=
+        'pull_request'`.
+      - Schedule and manual runs are unchanged (they aren't pushes, so neither the hook nor the ruleset
+        applies).
+      - Edits: a comment that the job id is the required check name, and the timeout comment's run time
+        (3–5 minutes, not "about a minute").
+      - Recent main/schedule runs took 3m18s to 4m51s.
+    - **Ruleset (`protect-main`, created by the user):**
+      - Target: the default branch.
+      - Restrict deletions; block force pushes.
+      - Require a PR: 0 approvals, squash only.
+      - Require status check `build` (GitHub Actions), with "up to date before merging".
+      - Bypass: Repository admin, "For pull requests only".
+    - **Merge method: squash.** One Conventional Commit per task on `main`, as before, so the PR title
+      must be a Conventional Commit. Repo settings:
+      - Squash only, with the PR title and description as the default message.
+      - "Always suggest updating pull request branches".
+      - "Automatically delete head branches".
+      - After a merge locally: `git switch main`, `git pull`, `git fetch --prune`, `git branch -D <branch>`.
+        It's `-D`, since a squash merge leaves the branch's commits off `main`.
+    - **Docs:**
+      - `CLAUDE.md` git rules: the branch + PR flow, branch naming, the PR title rule, and the after-merge
+        steps. Claude Code still never runs `git add`/`commit`/`push`.
+      - README: Git hooks, and the new "Contributing and deploy flow".
+      - design-doc §13.3: one line on the flow.
+      - Action #12 reworded.
+    - **New `tests/git-workflow.test.ts` (18):**
+      - Push policy and CLI.
+      - The real hook run by git against a temp bare remote: main and `HEAD:main` refused, a branch pushed
+        and deleted.
+      - Hook file format.
+      - Every `.githooks/` file is mode 100755 in the index. It skips for a file not staged yet; strict
+        in CI.
+      - `prepare` installs the folder.
+      - deploy.yml (js-yaml): triggers, job name, the three check steps with no `if`, and every deploy step
+        gated and after e2e.
+    - Tests: `npm test` 460 (was 442; 1 skipped until `.githooks/pre-push` is staged). `npm run test:e2e`
+      217.
+
+- [ ] **2.17a (optional, later) Per-PR Cloudflare preview** — a Workers preview version per PR, so a change can
+  be seen live before merging.
+  - Must not run for fork PRs (no secrets there).
+  - Needs design-doc §13.3 updated in the same task, since it currently says "no preview deployments".
+  - Depends on: 2.17.
 
 ## Fun (after MVP)
 

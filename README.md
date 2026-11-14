@@ -90,8 +90,8 @@ installed Edge, or Playwright's Chromium in CI, using the built fonts), then `np
 new images. `npm test` fails while an image is stale: a hash of its inputs is stored inside each PNG and compared
 with the current ones.
 
-In CI, a pushed commit goes through build → `npm run check` → Playwright e2e → deploy to Cloudflare
-(`main` only).
+In CI, every pull request goes through build → `npm run check` → Playwright e2e. After it's merged, the
+same run on `main` repeats them and then deploys to Cloudflare (see [Contributing and deploy flow](#contributing-and-deploy-flow)).
 
 ## Running locally
 
@@ -128,8 +128,14 @@ runs send nothing.
 `npm run preview` doesn't send the headers from `_headers` (no CSP). To see the site exactly as Cloudflare serves it,
 headers and the 404 page included, run `npx wrangler dev` after a build (local only, no login). The e2e tests use it.
 
-**Pre-commit hook.** `npm ci` (or `npm install`) runs `npm run prepare`, which points git at the
-committed `.githooks/` folder (`git config core.hooksPath .githooks`). The hook checks the staged
+**Git hooks.** `npm ci` (or `npm install`) runs `npm run prepare`, which points git at the
+committed `.githooks/` folder (`git config core.hooksPath .githooks`). It holds two hooks.
+
+The **pre-push** hook refuses any push that would update or delete `main` and prints the branch + PR steps
+instead (see [Contributing and deploy flow](#contributing-and-deploy-flow)). Pushes of any other branch,
+tag or branch deletion go through. Its logic is `scripts/git/push-policy.ts`.
+
+The **pre-commit** hook checks the staged
 content of every added or modified file (the index, not the files on disk; binary files are skipped)
 for the `CV_PHONE` number and blocks the commit if it's there, printing only `file:line`. It needs
 `.env` with `CV_PHONE` set: without it, every commit is blocked until you create `.env` from
@@ -186,6 +192,48 @@ The workflow (`.github/workflows/deploy.yml`) runs on pull requests, on pushes t
 (so GitHub project changes appear without a commit), and manually. **Any failing step blocks the
 deploy:** the Liberation Sans font check, the build, `npm run check` or the e2e tests. The deploy step
 only runs on `main`, so pull requests are built and checked but never deployed.
+
+## Contributing and deploy flow
+
+Nothing reaches `main`, or the live site, without passing every check. Every change goes through a branch
+and a pull request (commands for Windows cmd):
+
+```
+git switch -c task/2-17-pr-workflow
+git add <the changed files, listed one by one>
+git commit -m "feat: short subject" -m "Body paragraph."
+git push -u origin task/2-17-pr-workflow
+gh pr create --fill --base main
+```
+
+Without the GitHub CLI (`gh`), open the "Create a pull request" link that `git push` prints.
+
+1. **Name the PR as a commit.** PRs are squash merged, and the PR title becomes the one commit on `main`. So the
+   title is a Conventional Commit (`feat:`, `fix:`, `docs:`, `test:`, `chore:`). `--fill` copies the
+   commit's subject and body; check them before creating the PR.
+2. **CI checks the PR.** The workflow's `build` job runs the build, `npm run check` and the e2e tests. It
+   never deploys from a PR.
+3. **Merge.** Once `build` is green and the branch is up to date with `main`, squash merge it on GitHub. GitHub
+   then deletes the branch.
+4. **Deploy.** The merge is a push to `main`. CI runs every check again on it and deploys only if they all pass.
+   The daily scheduled run rebuilds and deploys `main` as before.
+5. **Clean up locally.** Run these only after the PR shows "Merged". It's `-D`, because a squash merge
+   leaves the branch's own commits off `main`:
+
+   ```
+   git switch main
+   git pull
+   git fetch --prune
+   git branch -D task/2-17-pr-workflow
+   ```
+
+**Enforcement.**
+
+- **On GitHub:** a ruleset on `main` requires a pull request, a passing `build` check and an up-to-date branch,
+  and blocks force pushes and deletion. GitHub enforces rulesets on a private repo only on a paid plan, so it
+  takes effect when the repo goes public.
+- **Locally, always:** the pre-push hook (see [Git hooks](#running-locally)) refuses a push to `main`.
+- **Not affected:** CI and the scheduled run never push, so neither the hook nor the ruleset touches them.
 
 ## Project docs
 

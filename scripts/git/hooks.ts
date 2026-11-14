@@ -26,7 +26,8 @@ export function decideHookInstall(state: HookInstallState): HookInstallDecision 
     return {
       action: 'warn',
       message:
-        `Warning: core.hooksPath is already set to another folder, so the pre-commit phone check is NOT active. ` +
+        `Warning: core.hooksPath is already set to another folder, so the git hooks (pre-commit phone check, ` +
+        `pre-push main guard) are NOT active. ` +
         `Run: git config core.hooksPath ${HOOKS_PATH}`,
     };
   }

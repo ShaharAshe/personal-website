@@ -1,0 +1,13 @@
+#!/bin/sh
+# Refuses a push that would update or delete main, so changes reach main only through a pull request
+# (README "Contributing and deploy flow"). Pushes of any other branch or tag go through.
+# Installed by `npm ci` / `npm install` (the "prepare" script sets core.hooksPath to .githooks).
+# Local only: CI and the scheduled run never push, so they're unaffected.
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "pre-push: node not found, so the main-branch guard cannot run and the push is blocked." >&2
+  echo "Install Node 22 (see .nvmrc) and push again." >&2
+  exit 1
+fi
+
+exec node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON "$(dirname "$0")/../scripts/git/pre-push.ts" "$@"

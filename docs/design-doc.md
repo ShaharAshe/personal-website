@@ -638,6 +638,8 @@ education:
 **Pull Requests:** מריצים build ו-checks בלבד (כולל `fc-match`), בלי deploy ובלי preview deployment,
 בשלב הזה. push ל-branch אחר לא מריץ את ה-workflow בעצמו (כדי ש-PR לא ירוץ פעמיים); ה-PR מריץ אותו.
 
+**זרימת עבודה:** שינוי מגיע ל-`main` רק דרך branch ו-PR שה-check `build` שלו עבר (squash merge), והוא up to date מול `main`. ruleset על `main` אוכף את זה כשה-repo ציבורי; עד אז hook מקומי (`.githooks/pre-push`) חוסם push ל-`main`.
+
 ---
 
 ## 14. מבנה הפרויקט
