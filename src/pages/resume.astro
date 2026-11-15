@@ -19,7 +19,7 @@ const { meta, name, title, summary, socials, experience, projects, skills, educa
 const linkClass = 'inline-flex min-h-10 items-center gap-2 font-medium text-accent hover:underline';
 ---
 
-<BaseLayout title={meta.title} description={meta.description}>
+<BaseLayout title={meta.title} description={meta.description} consoleGreeting={false}>
   {/* --section-gap: tighter than the homepage, since this page reads as one document. */}
   <div data-resume class="pb-(--section-gap) [--section-gap:3rem]">
     <header class="mx-auto max-w-[720px] px-4 pt-8 sm:pt-12">

@@ -6,3 +6,10 @@
  * (cloudflareinsights.com/cdn-cgi/rum). CDP Fetch.enable URL patterns: * matches any run of characters.
  */
 export const BLOCKED_URL_PATTERNS = ['*://cloudflareinsights.com/*', '*://*.cloudflareinsights.com/*'];
+
+// CDP Fetch URL patterns: * matches any run of characters.
+const wildcard = (pattern: string) =>
+  new RegExp(`^${pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`);
+
+/** Whether the fixture stops a request to this URL (it matches one of BLOCKED_URL_PATTERNS). */
+export const isBlockedUrl = (url: string) => BLOCKED_URL_PATTERNS.some((pattern) => wildcard(pattern).test(url));

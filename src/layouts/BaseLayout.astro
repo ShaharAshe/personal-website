@@ -6,7 +6,9 @@ import { Font } from 'astro:assets';
 import Footer from '../components/Footer.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
 import { analyticsBeacon } from '../lib/analytics';
+import { consoleGreeting, consoleGreetingScript } from '../lib/console-greeting';
 import { getResume } from '../lib/resume';
+import { OPEN_TO_WORK } from '../lib/site';
 import { OG_IMAGE, SITE_ICONS, absoluteUrl, iconSizesAttr, ogImageAlt } from '../lib/seo';
 import { themeInitScript } from '../lib/theme';
 import '../styles/global.css';
@@ -18,9 +20,11 @@ interface Props {
   noindex?: boolean;
   /** The footer's Back to top link. Pages too short to scroll turn it off (the 404 page). */
   backToTop?: boolean;
+  /** The DevTools console greeting (src/lib/console-greeting.ts). /resume turns it off: no Fun features there. */
+  consoleGreeting?: boolean;
 }
 
-const { title, description, noindex = false, backToTop = true } = Astro.props;
+const { title, description, noindex = false, backToTop = true, consoleGreeting: greet = true } = Astro.props;
 
 const navLinks = [
   { label: 'Experience', href: '/#experience' },
@@ -32,12 +36,14 @@ const navLinks = [
 // The built path can end in a slash (/resume/). The homepage's section links (/#...) never match a path.
 const currentPath = Astro.url.pathname.replace(/\/+$/, '');
 
-const { name, label } = getResume().basics;
+const { name, label, profiles } = getResume().basics;
 // A noindex page (the 404 page) has no canonical and no og:url: it isn't a page to index or share.
 const canonical = noindex ? undefined : absoluteUrl(Astro.url.pathname, Astro.site);
 const ogImage = absoluteUrl(OG_IMAGE.path, Astro.site);
 // Cloudflare Web Analytics: production builds only, never the dev server (src/lib/analytics.ts).
 const beacon = analyticsBeacon(import.meta.env.PROD);
+// Dev and production alike (unlike the beacon). Inline, so the CSP build step hashes it (scripts/csp/csp.mts).
+const greetingScript = greet ? consoleGreetingScript(consoleGreeting({ profiles, openToWork: OPEN_TO_WORK })) : null;
 ---
 
 <html lang="en">
@@ -122,6 +128,9 @@ const beacon = analyticsBeacon(import.meta.env.PROD);
     </main>
 
     <Footer backToTop={backToTop} />
+
+    {/* The DevTools console greeting: one console.log, once per page load. */}
+    {greetingScript && <script is:inline set:html={greetingScript} />}
 
     {/* Cloudflare Web Analytics, as the dashboard's snippet: last in <body>, a module script (deferred).
         is:inline keeps Astro from bundling it; the CSP allows its URL (scripts/csp/csp.mts). */}
