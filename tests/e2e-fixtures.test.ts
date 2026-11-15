@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { BLOCKED_URL_PATTERNS } from './e2e/blocked-hosts.ts';
+import { isBlockedUrl } from './e2e/blocked-hosts.ts';
 
 const E2E = path.join(import.meta.dirname, 'e2e');
 const files = fs
@@ -40,10 +40,7 @@ for (const file of files) {
   });
 }
 
-// CDP Fetch URL patterns: * matches any run of characters.
-const wildcard = (pattern: string) =>
-  new RegExp(`^${pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`);
-const blocked = (url: string) => BLOCKED_URL_PATTERNS.some((pattern) => wildcard(pattern).test(url));
+const blocked = isBlockedUrl;
 
 test('the blocked patterns cover the beacon script and the report endpoint, and nothing else', () => {
   for (const url of [

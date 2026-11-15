@@ -26,6 +26,8 @@ export const LIVE_SPECS = [
   // The Download Resume and Download PDF links, Copy, the print stylesheet, the no-JavaScript fallback.
   'hero.spec.ts',
   'resume.spec.ts',
+  // The console greeting (F.1): logged once on / and the 404 with no unexpected console problem, absent on /resume.
+  'console-greeting.spec.ts',
 ];
 
 const channel = base.projects?.[0]?.use?.channel;

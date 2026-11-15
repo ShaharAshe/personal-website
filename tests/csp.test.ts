@@ -26,6 +26,9 @@ import {
   writeCspHeaders,
   type HeadersRule,
 } from '../scripts/csp/csp.mts';
+import { consoleGreeting, consoleGreetingScript } from '../src/lib/console-greeting.ts';
+import { getResume } from '../src/lib/resume.ts';
+import { OPEN_TO_WORK } from '../src/lib/site.ts';
 import { themeInitScript } from '../src/lib/theme.ts';
 
 const ROOT = path.join(import.meta.dirname, '..');
@@ -310,6 +313,17 @@ for (const { file, html } of pages) {
     },
   );
 }
+
+test(
+  'the console greeting (Task F.1) is an inline script whose hash, recomputed from its source, is in the CSP',
+  { skip },
+  () => {
+    const greeting = consoleGreetingScript(
+      consoleGreeting({ profiles: getResume().basics.profiles, openToWork: OPEN_TO_WORK }),
+    );
+    assert.ok(directive('script-src').includes(`'${sha256Source(greeting)}'`));
+  },
+);
 
 test('dist/_headers stays within Cloudflare limits (2,000 characters per line, 100 rules)', { skip }, (t) => {
   assert.deepEqual(checkHeadersLimits(headersText, 'dist/_headers'), []);

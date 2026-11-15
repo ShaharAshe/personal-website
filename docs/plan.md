@@ -95,7 +95,7 @@ Reality check performed before this plan:
 | 10 | Create a local `.env` (from `.env.example`) with your real `CV_PHONE`; add `CV_PHONE` as a GitHub Actions secret | Before Milestone 1, Task 1.2 (local), and Task 1.5 (CI secret) |
 | 11 | Before making the repo public: delete the stale remote branch `ci/deploy`; then change the repo visibility to public | Task 2.16 (user decision in 2.5: make it public once the MVP is live; the pre-commit hook from 2.4c is already in place). `ci/deploy` is already gone (checked in 2.16); going public waits for #13 |
 | 12 | Right after making it public: enable secret scanning + push protection and Dependabot alerts; confirm the `main` ruleset from Task 2.17 now shows as enforced (created by the user in 2.17: a PR is required, the `build` check must pass, the branch must be up to date, and force pushes and deletion are blocked; this deliberately reverses the earlier "no required PRs, no required status checks" wording, since direct pushes to `main` are no longer the workflow); check that PRs from forks need approval before they run Actions (Settings → Actions → General) | Task 2.16 (right after #11) |
-| 13 | Email privacy: git now uses the GitHub noreply address for new commits (set on 2026-11-02; GitHub Settings → Emails: keep email private and block command-line pushes that expose it are on). Decide whether to rewrite the existing commits' author email, and whether to switch `resume.yaml` to a `contact@<domain>` address first (see #14), before the repo goes public | Task 2.16 (before making the repo public, #11). Audit in 2.16: 23 of 37 commits (2026-10-17 to 2026-11-01) carry the personal address; it's also in `resume.yaml`'s history by design. No phone, no secrets |
+| 13 | Email privacy: git now uses the GitHub noreply address for new commits (set on 2026-11-02; GitHub Settings → Emails: keep email private and block command-line pushes that expose it are on). Decide whether to rewrite the existing commits' author email, and whether to switch `resume.yaml` to a `contact@<domain>` address first (see #14), before the repo goes public | Task 2.16 (before making the repo public, #11). Audit in 2.16: 23 of 37 commits (2026-10-17 to 2026-11-01) carry the personal address; it's also in `resume.yaml`'s history by design. No phone, no secrets. Once the repo is public, consider adding a repo link to the console greeting (F.1, `src/lib/console-greeting.ts`) |
 | 14 | Consider a `contact@<domain>` address via Cloudflare Email Routing for `resume.yaml` and the PDF, so the personal Gmail isn't public anywhere. If wanted before the repo goes public, buy the domain (#9) before going public (#11) | Milestone 4, Task 4.2 |
 
 ## New dependencies introduced by this plan
@@ -1355,17 +1355,60 @@ Small extras for curious visitors, added after the MVP is live (2.16) and before
 is part of the recruiter path: the homepage, `/resume` and the PDF work exactly the same without them. Each
 one is its own task (one at a time, plan first, tests + e2e + screenshots as usual). Decided on 2026-11-12.
 
-- [ ] **F.1 Console greeting** — A friendly message for people who open DevTools: an ASCII "SA", one line of
-  text, and a link to the site's code.
+- [x] **F.1 Console greeting** — A friendly message for people who open DevTools: an ASCII "SA", an "Open to
+  work" line with a link to LinkedIn, and a line with a link to the GitHub profile (the repo is still private, so
+  no repo link yet; see action item #13).
   - Decided: no red "self-XSS" warning. The site has no accounts or sessions to steal, and the audience is
     engineers, so a warning would only be noise.
-  - It doubles as CTF clue 1 (F.2): the message includes the clue's base64 string.
   - Depends on: 2.16.
+  - Done:
+    - `src/lib/console-greeting.ts`: pure functions. `consoleGreeting()` builds the text from the resume's
+      LinkedIn and GitHub profiles, and the build fails if either is missing. `consoleGreetingScript()` turns it
+      into one `console.log` call with `%c` styling.
+      - Every `<` in the script is written as the JS escape `<`, so the text can never close the
+        `<script>` element.
+      - No email (`getResume()` doesn't have it) and no phone.
+    - **The flag:** `OPEN_TO_WORK` in `src/lib/site.ts`, a new file (no site-constants module existed; `seo.ts`
+      holds only SEO constants). `false` drops only the "Open to work" line.
+    - BaseLayout inlines the script last in `<body>`, behind a new `consoleGreeting` prop (default `true`).
+      `/resume` passes `consoleGreeting={false}`, its only change. It runs in dev and production (no `PROD`
+      gate, unlike the beacon) and logs once per page load.
+    - **Colour (deviation from "green text"):** no single text colour reaches 4.5:1 on both a white and a
+      #282828 console (the best possible is about 3.84:1 on each). So "Open to work" is a badge: white text on
+      `#1a7f37`.
+      - Text contrast: 5.08:1 in either DevTools theme.
+      - The badge itself against the console background: 5.08:1 on #ffffff, 2.90:1 on #282828.
+      - The `%c` style uses only `background`, `color`, `padding`, `border-radius` and `font-weight`, all
+        supported by Firefox's console too.
+      - The hex values live in console-greeting.ts, not global.css: the console can't read CSS variables.
+    - **CSP:** the script is inline, so `cspHeaders()` hashes it. It adds one hash (the same text on `/` and the
+      404 page): the CSP line went from 676 to 730/2000 characters.
+    - **JS budget:** the homepage went from 12.24 to 12.47 KB gzipped.
+    - The WCAG contrast helpers moved to `tests/helpers/contrast.ts`, shared by the design-token and greeting
+      tests.
+    - The e2e console watcher (`watchSecurityErrors`) matches CSP/header text only, so a `console.log` can't trip
+      it. No change was needed.
+    - The greeting spec's warning/error check goes through `unexpectedConsoleProblems()`
+      (`tests/e2e/console-problems.ts`). It ignores only two "Failed to load resource" lines, matched by their
+      location URL: the beacon the fixture blocks (`isBlockedUrl`, now shared with `tests/e2e-fixtures.test.ts`
+      from `blocked-hosts.ts`), and on the 404 test only, the page's own URL. Any other failed request still fails
+      the test. The proof is unit tests (`tests/console-problems.test.ts`) plus an e2e test where a missing
+      `/_astro/` image is reported.
+    - The live run (`npm run test:live`) includes `console-greeting.spec.ts`, now 7 specs. Like every live spec it
+      uses the same blocking fixture (`tests/e2e/fixtures.ts`), so no analytics visit is sent.
+    - Tests: `npm test` 483 (was 460). `npm run test:e2e` 221 (was 217).
+      - Unit (`tests/console-greeting.test.ts`): the text in both flag states, the URLs, no email or phone, the
+        contrast, the escape, and one greeting on `/` and the 404 page with none on `/resume` (dist/).
+      - `tests/csp.test.ts`: the greeting's hash is in the policy.
+      - e2e (`tests/e2e/console-greeting.spec.ts`): exactly one log message and no CSP violation on `/` and the
+        404 page; none on `/resume`.
 
 - [ ] **F.2 CTF chain** — A chain of clues that lead from one to the next, ending in a final answer.
   - Static steps (this task):
     - 0: an HTML comment (found with View Source).
-    - 1: the console greeting from F.1, with a base64 string (DevTools).
+    - 1: the console greeting from F.1, with a base64 string (DevTools). Moved here from F.1: F.2 adds the base64
+      string to the greeting (`src/lib/console-greeting.ts`), since the step it points to doesn't exist until
+      this task.
     - 2: an `X-Clue` header on `/favicon.ico` (`curl -I` or the Network tab).
     - 3: a `tEXt` chunk in `og-image.png` (`exiftool` or `strings`).
     - 4: a file under `/.well-known/` holding ROT13 or hex (`curl`).
