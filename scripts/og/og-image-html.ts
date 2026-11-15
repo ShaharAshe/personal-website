@@ -6,10 +6,14 @@
 // render-og-image.ts checks that layout before writing the PNG.
 //
 // Stale check: ogSourceHash() is stored in the PNG (tEXt "og-source-sha256"); tests/og-image.test.ts recomputes it,
-// so a change to the text, a token or this template fails npm test until npm run og is run again.
+// so a change to the text, a token or this template fails npm test until npm run og is run again. The PNG also carries
+// the CTF chain's clue 3 (Task F.2: tEXt "Comment", CTF_PNG_TEXT from src/lib/ctf.mts); ogStaleProblems() checks it
+// too, so changing that clue fails npm test the same way.
 
 import crypto from 'node:crypto';
 import path from 'node:path';
+import { CTF_PNG_TEXT } from '../../src/lib/ctf.mts';
+import { readPngText } from './png.ts';
 import type { Tokens } from './tokens.ts';
 
 export const OG_WIDTH = 1200;
@@ -110,4 +114,29 @@ export function ogSourceHash(content: OgContent, tokens: Tokens): string {
     .createHash('sha256')
     .update(lf(ogImageHtml(content, tokens)), 'utf8')
     .digest('hex');
+}
+
+export interface PngTextChunk {
+  keyword: string;
+  text: string;
+}
+
+/** The tEXt chunks npm run og writes besides the hash: the CTF chain's clue 3. */
+export const OG_EXTRA_TEXT: readonly PngTextChunk[] = [CTF_PNG_TEXT];
+
+/**
+ * Why a PNG is stale, as readable problems (empty when it's current): its stored hash isn't expectedHash, or one of
+ * the extra tEXt chunks is missing or holds other text.
+ */
+export function ogStaleProblems(png: Buffer, expectedHash: string, extra = OG_EXTRA_TEXT): string[] {
+  const problems: string[] = [];
+  const stored = readPngText(png, OG_HASH_KEY);
+  if (stored === undefined) problems.push(`no ${OG_HASH_KEY} chunk`);
+  else if (stored !== expectedHash) problems.push(`${OG_HASH_KEY} doesn't match the template, text or tokens`);
+  for (const { keyword, text } of extra) {
+    const found = readPngText(png, keyword);
+    if (found === undefined) problems.push(`no ${keyword} chunk`);
+    else if (found !== text) problems.push(`the ${keyword} chunk doesn't match src/lib/ctf.mts`);
+  }
+  return problems;
 }

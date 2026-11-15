@@ -62,6 +62,8 @@ tests/                      node:test tests (npm test); fixtures/ holds test inp
 tests/e2e/                  Playwright tests (npm run test:e2e) + review-screenshots.ts (npm run screenshots)
 scripts/github/             GitHub fetcher
 scripts/og/                 OG image + site icon generator (npm run og) + PNG/ICO helpers for their stale checks
+src/lib/ctf.mts             CTF chain (F.2): every clue text and answer part; the joined answer is never written out
+scripts/ctf/                ctfHeaders(): appends the X-Clue rule for /favicon.ico to dist/_headers (before cspHeaders)
 src/lib/seo.ts              absolute URLs from `site`, sitemap/robots text, Person JSON-LD, site icon paths/sizes
 scripts/csp/                CSP: cspHeaders() integration (astro.config.mjs) hashes inline scripts/styles in dist/
                             into dist/_headers after every build; public/_headers holds the fail-closed template

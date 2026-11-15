@@ -1,6 +1,7 @@
 // npm run og: renders public/og-image.png (1200×630) from resume.yaml and the design tokens, with the Playwright
 // already installed (Edge locally, Playwright's Chromium in CI, as in playwright.config.ts). The PNG is committed;
-// tests/og-image.test.ts fails when it's stale (its tEXt hash no longer matches the template, text or tokens).
+// tests/og-image.test.ts fails when it's stale (its tEXt hash no longer matches the template, text or tokens, or its
+// CTF clue chunk no longer matches src/lib/ctf.mts).
 //
 // Needs a build first: the site's own fonts come from dist/ (the <Font /> @font-face styles in dist/index.html and
 // the files in dist/_astro/fonts/), served to the page through page.route. Run npm run build again afterwards so
@@ -21,6 +22,7 @@ import {
   OG_HASH_KEY,
   OG_HEIGHT,
   OG_IMAGE_FILE,
+  OG_EXTRA_TEXT,
   OG_MAX_BYTES,
   OG_WIDTH,
   ogImageHtml,
@@ -75,10 +77,15 @@ try {
     problems.push(`the site fonts did not load (loaded: ${layout.fontsLoaded.join(', ') || 'none'})`);
   }
 
-  const png = withPngText(
-    await page.screenshot({ type: 'png', clip: { x: 0, y: 0, width: OG_WIDTH, height: OG_HEIGHT } }),
-    OG_HASH_KEY,
-    ogSourceHash(content, tokens),
+  // The source hash (the stale check), then the CTF chain's clue 3 (src/lib/ctf.mts). Metadata only: the pixels are
+  // the screenshot's.
+  const png = OG_EXTRA_TEXT.reduce(
+    (image, { keyword, text }) => withPngText(image, keyword, text),
+    withPngText(
+      await page.screenshot({ type: 'png', clip: { x: 0, y: 0, width: OG_WIDTH, height: OG_HEIGHT } }),
+      OG_HASH_KEY,
+      ogSourceHash(content, tokens),
+    ),
   );
   if (png.length >= OG_MAX_BYTES) problems.push(`the PNG is ${png.length} bytes (must be under ${OG_MAX_BYTES})`);
 

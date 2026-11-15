@@ -3,6 +3,7 @@ import { defineConfig, fontProviders } from 'astro/config';
 import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
 import { cspHeaders } from './scripts/csp/csp.mts';
+import { ctfHeaders } from './scripts/ctf/ctf-headers.mts';
 
 // https://docs.astro.build/en/reference/configuration-reference/
 export default defineConfig({
@@ -12,8 +13,9 @@ export default defineConfig({
   // Dev and preview match production, where wrangler.jsonc sets html_handling (design-doc §13.1).
   trailingSlash: 'never',
   // cspHeaders(): after every build, hashes the inline scripts and styles in dist/ and writes the
-  // Content-Security-Policy into dist/_headers (scripts/csp/csp.mts, design-doc §12).
-  integrations: [react(), cspHeaders()],
+  // Content-Security-Policy into dist/_headers (scripts/csp/csp.mts, design-doc §12). ctfHeaders() runs first: it
+  // appends the CTF chain's X-Clue rule (scripts/ctf/ctf-headers.mts), so the CSP step's limits check covers it.
+  integrations: [react(), ctfHeaders(), cspHeaders()],
   // Self-hosted fonts (design-doc §9.3): downloaded from Fontsource at build time and served from the
   // site itself. <Font /> in BaseLayout emits the @font-face rules; global.css maps them to font-sans/mono.
   fonts: [

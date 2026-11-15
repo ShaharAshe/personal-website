@@ -28,6 +28,8 @@ export const LIVE_SPECS = [
   'resume.spec.ts',
   // The console greeting (F.1): logged once on / and the 404 with no unexpected console problem, absent on /resume.
   'console-greeting.spec.ts',
+  // The CTF chain (F.2), solved from what a visitor sees; checks that production serves /.well-known/ as text/plain.
+  'ctf.spec.ts',
 ];
 
 const channel = base.projects?.[0]?.use?.channel;

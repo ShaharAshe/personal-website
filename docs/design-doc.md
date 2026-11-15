@@ -577,6 +577,7 @@ education:
 - **X-Frame-Options: DENY:** כפול ל-`frame-ancestors 'none'`, בשביל דפדפנים ישנים. לא עולה כלום.
 - **Strict-Transport-Security: max-age=31536000:** ב-workers.dev לא מוסיף (הסיומת `.dev` כולה ב-HSTS preload), אבל חשוב אם הדומיין יהיה `.com`. בלי `includeSubDomains` ו-`preload` עד שהדומיין נקבע (Task 4.2).
 - נשארים: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, ו-`X-Robots-Tag: noindex` עד המעבר לדומיין.
+- **`X-Clue` על `/favicon.ico`:** לא header אבטחה. רמז בשרשרת ה-CTF (F.2). הטקסט מגיע מ-`src/lib/ctf.mts`, ולכן הוא לא כתוב ב-`public/_headers`: integration קטן (`scripts/ctf/ctf-headers.mts`) מוסיף את ה-rule ל-`dist/_headers` ורץ לפני שלב ה-CSP, כך שבדיקת המגבלות של Cloudflare מכסה גם אותו. ה-rule של `/*` עדיין חל על הקובץ. השורה הנוספת בברכת ה-console (רמז 1) שינתה את ה-hash שלה אבל לא את אורך שורת ה-CSP (עדיין 730 מתוך 2,000).
 
 #### בדיקה
 - `tests/csp.test.ts` בודק על `dist/` שלכל סקריפט וסגנון inline בכל דף (כולל 404) יש hash במדיניות, ושה-hash של הסקריפט נגד הבהוב מחושב מחדש מ-`themeInitScript`.

@@ -1,6 +1,7 @@
 // The DevTools console greeting (Task F.1, src/lib/console-greeting.ts): its text with the OPEN_TO_WORK flag on and
 // off, the profile URLs from resume.yaml, no email or phone, the badge contrast, the script's escaping, and (on dist/)
-// that every page but /resume inlines it exactly once. That the browser logs it once with no CSP violation is in
+// that every page but /resume inlines it exactly once. Its last line is the CTF chain's clue 1 (src/lib/ctf.mts), in
+// either flag state; the clue itself is tested in tests/ctf.test.ts. That the browser logs it once with no CSP violation is in
 // tests/e2e/console-greeting.spec.ts. Comparisons with the email or phone report only true/false.
 
 import { test } from 'node:test';
@@ -16,6 +17,7 @@ import {
   consoleGreeting,
   consoleGreetingScript,
 } from '../src/lib/console-greeting.ts';
+import { CTF_CONSOLE_LINE } from '../src/lib/ctf.mts';
 import { joinEmail } from '../src/lib/email-client.ts';
 import { getEmailParts, getResume } from '../src/lib/resume.ts';
 import { OPEN_TO_WORK } from '../src/lib/site.ts';
@@ -26,8 +28,9 @@ const urlOf = (network: string) => profiles.find((p) => p.network === network)?.
 const LINKEDIN = urlOf('LinkedIn');
 const GITHUB = urlOf('GitHub');
 
-const on = consoleGreeting({ profiles, openToWork: true });
-const off = consoleGreeting({ profiles, openToWork: false });
+const clue = CTF_CONSOLE_LINE;
+const on = consoleGreeting({ profiles, openToWork: true, clue });
+const off = consoleGreeting({ profiles, openToWork: false, clue });
 
 test('resume.yaml has the LinkedIn and GitHub profiles the greeting links to', () => {
   assert.match(LINKEDIN, /^https:\/\/(www\.)?linkedin\.com\//);
@@ -44,10 +47,10 @@ test('the ASCII art is "SA": the initials of basics.name, 5 lines, no trailing s
   for (const line of SA_ASCII) assert.equal(line, line.trimEnd(), `trailing space in ${JSON.stringify(line)}`);
 });
 
-test('flag on: ASCII art, the green "Open to work" badge with the LinkedIn URL, then the GitHub URL', () => {
+test('flag on: ASCII art, the "Open to work" badge with the LinkedIn URL, the GitHub URL, then the CTF clue', () => {
   assert.equal(
     on.format,
-    [...SA_ASCII, '', `%c ${OPEN_TO_WORK_LABEL} %c LinkedIn: ${LINKEDIN}`, `GitHub: ${GITHUB}`].join('\n'),
+    [...SA_ASCII, '', `%c ${OPEN_TO_WORK_LABEL} %c LinkedIn: ${LINKEDIN}`, `GitHub: ${GITHUB}`, '', clue].join('\n'),
   );
   assert.equal(on.format.match(/%c/g)?.length, 2);
   assert.deepEqual(on.styles, [OPEN_TO_WORK_STYLE, '']);
@@ -62,12 +65,13 @@ test('flag off: the same greeting without the "Open to work" line', () => {
     .join('\n');
   assert.equal(off.format, withoutBadgeLine);
   assert.ok(off.format.includes(GITHUB));
+  assert.ok(off.format.endsWith(`\n\n${clue}`), 'the CTF clue is the last line with the flag off too');
 });
 
 test('a missing LinkedIn or GitHub profile fails the build', () => {
   const only = (network: string) => profiles.filter((p) => p.network === network);
-  assert.throws(() => consoleGreeting({ profiles: only('GitHub'), openToWork: false }), /LinkedIn and a GitHub/);
-  assert.throws(() => consoleGreeting({ profiles: only('LinkedIn'), openToWork: true }), /LinkedIn and a GitHub/);
+  assert.throws(() => consoleGreeting({ profiles: only('GitHub'), openToWork: false, clue }), /LinkedIn and a GitHub/);
+  assert.throws(() => consoleGreeting({ profiles: only('LinkedIn'), openToWork: true, clue }), /LinkedIn and a GitHub/);
 });
 
 test('the badge style uses only properties every console supports (Chrome and Firefox)', () => {
@@ -121,7 +125,7 @@ test('consoleGreetingScript writes "<" as \\u003c, so the text can never close t
 
 const DIST = path.join(import.meta.dirname, '..', 'dist');
 const skip = fs.existsSync(path.join(DIST, 'index.html')) ? false : 'no dist/index.html: run npm run build first';
-const built = consoleGreetingScript(consoleGreeting({ profiles, openToWork: OPEN_TO_WORK }));
+const built = consoleGreetingScript(consoleGreeting({ profiles, openToWork: OPEN_TO_WORK, clue }));
 const greetingsIn = (page: string) =>
   extractInline(fs.readFileSync(path.join(DIST, page), 'utf8')).scripts.filter((s) => s.includes('console.'));
 

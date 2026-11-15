@@ -1403,7 +1403,7 @@ one is its own task (one at a time, plan first, tests + e2e + screenshots as usu
       - e2e (`tests/e2e/console-greeting.spec.ts`): exactly one log message and no CSP violation on `/` and the
         404 page; none on `/resume`.
 
-- [ ] **F.2 CTF chain** — A chain of clues that lead from one to the next, ending in a final answer.
+- [x] **F.2 CTF chain** — A chain of clues that lead from one to the next, ending in a final answer.
   - Static steps (this task):
     - 0: an HTML comment (found with View Source).
     - 1: the console greeting from F.1, with a base64 string (DevTools). Moved here from F.1: F.2 adds the base64
@@ -1430,6 +1430,57 @@ one is its own task (one at a time, plan first, tests + e2e + screenshots as usu
     its stale check stay in sync. Check that Cloudflare static assets serve `/.well-known/` and that the HTML
     comment survives the build (Astro may strip comments).
   - Depends on: F.1.
+  - Done:
+    - **One source of truth:** `src/lib/ctf.mts`. `CTF_STEPS` is an ordered list of `{ part, foundAt }`, and
+      `ctfClue(i)` builds every text from it. Each clue says "Part i" and "Next: <the next step's foundAt>", and the
+      last one gives the assembly instructions plus the ending. The parts are `dig`, `deeper`, `than`, `the`, `dom`,
+      joined with hyphens. The joined answer is never written in any file, only computed by `ctfAnswer()`.
+      - `.mts` because astro.config.mjs loads it (through the integration) under plain Node, like `csp.mts`. It
+        imports nothing.
+      - Guards at import fail the build: printable ASCII only, one-line header value, no `--` inside the comment.
+    - **Where each clue lives:**
+      - 0: `<Fragment set:html={CTF_COMMENT_HTML} />` in `src/pages/index.astro`. compressHTML only collapses
+        template whitespace and doesn't touch a `set:html` string. Proven by a dist test: the exact comment is in
+        `dist/index.html`, and absent from `/resume` and the 404 page.
+      - 1: `consoleGreeting()` takes a required `clue` line (BaseLayout passes `CTF_CONSOLE_LINE`). It's printed after
+        a blank line, with `OPEN_TO_WORK` on or off. Like the rest of the greeting it's on `/` and the 404 page, never
+        on `/resume`.
+      - 2: `scripts/ctf/ctf-headers.mts`, a `ctfHeaders()` integration. It appends a `/favicon.ico` rule with
+        `X-Clue` to `dist/_headers`, registered before `cspHeaders()` so the Cloudflare-limits check covers it. It
+        fails if `public/_headers` ever gets its own `/favicon.ico` rule. `/*` still applies to the icon.
+      - 3: `npm run og` writes a second `tEXt` chunk (keyword `Comment`, which exiftool shows) next to the hash.
+        The pixels are byte-identical to the previous commit (the decompressed IDAT was compared). Only the metadata
+        changed: 195,430 → 195,530 bytes.
+      - 4: `src/pages/.well-known/ctf.txt.ts`, an endpoint like robots.txt (`text/plain; charset=utf-8`).
+        - Astro routes `.well-known` (the one dot folder its router doesn't skip).
+        - wrangler's asset upload ignores only `.assetsignore`, `_headers` and `_redirects`.
+        - Served 200 `text/plain` under `wrangler dev`. Production is checked by the live run.
+    - **Stale check:** `ogStaleProblems()` (`scripts/og/og-image-html.ts`) checks the hash and the clue chunk. A test
+      on a copy of the PNG proves that an edited clue 3 (or a missing chunk) fails it.
+    - **Adding step 5 (DNS TXT, after 4.2) or 6 (Worker `Accept`, after 3.3):**
+      - Append one `{ part, foundAt }` entry to `CTF_STEPS`, and deliver `ctfClue(5)` there (the TXT record by hand,
+        or from the Worker importing the module).
+      - Clue 4 (the .well-known file, rebuilt every build) then says "Next: ..." instead of ending, and the ending
+        moves to the new last step. No other clue or file changes, and the OG image doesn't need a refresh.
+      - A new part also changes the answer. If that's unwanted, give the new step no part (a small change to
+        `ctfClueLines`).
+      - Add the new step to the solver spec.
+    - Not in the sitemap, and nothing links to a clue (tested). No hidden page text. Resume files and `/resume`
+      untouched.
+    - **CSP:** the greeting's hash changed. The CSP line stays 730/2000 (a hash is the same length).
+    - **JS budget:** the homepage went from 12.47 to 12.60 KB gzipped (the longer greeting).
+    - **Tests:**
+      - `npm test`: 502 (was 483).
+      - `npm run test:e2e`: 223 (was 221).
+      - `tests/ctf.test.ts`:
+        - the exact texts, and each clue naming the next step;
+        - base64 and ROT13 decoding back to the module's text;
+        - guards, and adding a step moving the ending;
+        - the joined parts appearing in no tracked file and no `dist/` file;
+        - the dist placements, and `listSiteFiles()` covering `.well-known/`, so no-phone and no-email scan it.
+      - `tests/e2e/ctf.spec.ts`: a solver that reads each next location from the clue text, using only the page
+        source, the console, the headers, `strings` on the PNG bytes and the .well-known file. It ends with the
+        assembled answer equal to `ctfAnswer()`. It's in LIVE_SPECS (now 8).
 
 - [ ] **F.3 404 game** — A small original character that runs and jumps (the Chrome dino is a reference for
   the feel, not for the art).

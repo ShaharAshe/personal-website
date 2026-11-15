@@ -1,6 +1,7 @@
 // The OG image (Task 2.13): public/og-image.png is a 1200×630 PNG under 300 KB, and it isn't stale. Its tEXt hash
 // must match the hash of the template rendered from today's resume.yaml and global.css. Also the PNG helpers, and
-// that the hash doesn't depend on line endings (generated on Windows, checked on Linux). Needs no build.
+// that the hash doesn't depend on line endings (generated on Windows, checked on Linux). The PNG also carries the CTF
+// chain's clue 3 (tEXt "Comment", src/lib/ctf.mts), part of the same stale check. Needs no build.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -12,13 +13,16 @@ import {
   OG_HASH_KEY,
   OG_HEIGHT,
   OG_IMAGE_FILE,
+  OG_EXTRA_TEXT,
   OG_MAX_BYTES,
   OG_WIDTH,
   ogImageHtml,
   ogSourceHash,
+  ogStaleProblems,
 } from '../scripts/og/og-image-html.ts';
 import { isPng, pngChunks, readPngSize, readPngText, withPngText } from '../scripts/og/png.ts';
 import { GLOBAL_CSS, darkTokens, readDarkTokens } from '../scripts/og/tokens.ts';
+import { CTF_PNG_TEXT } from '../src/lib/ctf.mts';
 import { heroContent } from '../src/lib/hero.ts';
 import { getEmailParts, getResume } from '../src/lib/resume.ts';
 
@@ -40,14 +44,46 @@ test('public/og-image.png is under 300 KB (WhatsApp skips larger preview images)
   assert.equal(OG_MAX_BYTES, 300 * 1024);
 });
 
+const REFRESH = 'run npm run build && npm run og, then npm run build again, and commit public/og-image.png';
+
 test('public/og-image.png is not stale (its hash matches resume.yaml, global.css and the template)', () => {
   const stored = readPngText(png, OG_HASH_KEY);
-  assert.ok(stored, `no ${OG_HASH_KEY} in og-image.png: regenerate it with npm run build && npm run og`);
-  assert.equal(
-    stored,
-    ogSourceHash(contentOf(), readDarkTokens()),
-    'OG image is stale: run npm run build && npm run og, then npm run build again, and commit public/og-image.png',
+  assert.ok(stored, `no ${OG_HASH_KEY} in og-image.png: ${REFRESH}`);
+  assert.equal(stored, ogSourceHash(contentOf(), readDarkTokens()), `OG image is stale: ${REFRESH}`);
+});
+
+test('public/og-image.png carries the CTF clue 3 from src/lib/ctf.mts, and nothing is stale', () => {
+  assert.deepEqual(OG_EXTRA_TEXT, [CTF_PNG_TEXT]);
+  assert.equal(readPngText(png, CTF_PNG_TEXT.keyword), CTF_PNG_TEXT.text, `CTF clue is stale: ${REFRESH}`);
+  assert.deepEqual(ogStaleProblems(png, ogSourceHash(contentOf(), readDarkTokens())), [], REFRESH);
+});
+
+test('the stale check fails when the CTF clue 3 text changes (on a copy of the PNG)', () => {
+  const hash = ogSourceHash(contentOf(), readDarkTokens());
+  const current = withPngText(withPngText(png, OG_HASH_KEY, hash), CTF_PNG_TEXT.keyword, CTF_PNG_TEXT.text);
+  assert.deepEqual(ogStaleProblems(current, hash), []);
+  // The clue in the module changed, the PNG wasn't regenerated.
+  const changedClue = [{ ...CTF_PNG_TEXT, text: `${CTF_PNG_TEXT.text} (edited)` }];
+  assert.deepEqual(ogStaleProblems(current, hash, changedClue), [
+    `the ${CTF_PNG_TEXT.keyword} chunk doesn't match src/lib/ctf.mts`,
+  ]);
+  // A PNG written before the clue existed.
+  const withoutClue = withPngText(
+    Buffer.concat([
+      png.subarray(0, 8),
+      ...pngChunks(png)
+        .filter(
+          ({ type, data }) => !(type === 'tEXt' && data.toString('latin1').startsWith(`${CTF_PNG_TEXT.keyword}\0`)),
+        )
+        .map(({ offset, data }) => png.subarray(offset, offset + 12 + data.length)),
+    ]),
+    OG_HASH_KEY,
+    hash,
   );
+  assert.deepEqual(ogStaleProblems(withoutClue, hash), [`no ${CTF_PNG_TEXT.keyword} chunk`]);
+  assert.deepEqual(ogStaleProblems(current, 'other-hash'), [
+    `${OG_HASH_KEY} doesn't match the template, text or tokens`,
+  ]);
 });
 
 test('every chunk of public/og-image.png has a valid CRC', () => {

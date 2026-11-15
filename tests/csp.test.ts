@@ -27,6 +27,7 @@ import {
   type HeadersRule,
 } from '../scripts/csp/csp.mts';
 import { consoleGreeting, consoleGreetingScript } from '../src/lib/console-greeting.ts';
+import { CTF_CONSOLE_LINE } from '../src/lib/ctf.mts';
 import { getResume } from '../src/lib/resume.ts';
 import { OPEN_TO_WORK } from '../src/lib/site.ts';
 import { themeInitScript } from '../src/lib/theme.ts';
@@ -319,7 +320,7 @@ test(
   { skip },
   () => {
     const greeting = consoleGreetingScript(
-      consoleGreeting({ profiles: getResume().basics.profiles, openToWork: OPEN_TO_WORK }),
+      consoleGreeting({ profiles: getResume().basics.profiles, openToWork: OPEN_TO_WORK, clue: CTF_CONSOLE_LINE }),
     );
     assert.ok(directive('script-src').includes(`'${sha256Source(greeting)}'`));
   },

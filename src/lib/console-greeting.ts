@@ -1,5 +1,6 @@
 // The DevTools console greeting (Task F.1, plan.md "Fun (after MVP)"): an ASCII "SA", an "Open to work" line with
-// the LinkedIn link (only while OPEN_TO_WORK in src/lib/site.ts is true), and a line with the GitHub profile link.
+// the LinkedIn link (only while OPEN_TO_WORK in src/lib/site.ts is true), a line with the GitHub profile link, and
+// after a blank line the CTF chain's clue 1 (Task F.2: CTF_CONSOLE_LINE from src/lib/ctf.mts, in either flag state).
 //
 // BaseLayout inlines consoleGreetingScript() at the end of <body> on every page except /resume (which passes
 // consoleGreeting={false}: the Fun features never touch the resume). It's one console.log call: no warning, no
@@ -55,16 +56,19 @@ export function linkedinProfileUrl(profiles: Profile[]): string | null {
 export function consoleGreeting({
   profiles,
   openToWork,
+  clue,
 }: {
   profiles: Profile[];
   openToWork: boolean;
+  /** The last line, after a blank one: the CTF chain's clue 1 (CTF_CONSOLE_LINE). */
+  clue: string;
 }): ConsoleGreeting {
   const linkedin = linkedinProfileUrl(profiles);
   const github = githubProfileUrl(profiles);
   if (!linkedin || !github) throw new Error('console greeting: resume.yaml needs a LinkedIn and a GitHub profile');
   const lines: string[] = [...SA_ASCII, ''];
   if (openToWork) lines.push(`%c ${OPEN_TO_WORK_LABEL} %c LinkedIn: ${linkedin}`);
-  lines.push(`GitHub: ${github}`);
+  lines.push(`GitHub: ${github}`, '', clue);
   return { format: lines.join('\n'), styles: openToWork ? [OPEN_TO_WORK_STYLE, ''] : [] };
 }
 

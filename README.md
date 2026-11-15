@@ -88,7 +88,15 @@ flowchart LR
 every build. After changing one of those inputs, run `npm run build`, then `npm run og` (it renders with the
 installed Edge, or Playwright's Chromium in CI, using the built fonts), then `npm run build` again, and commit the
 new images. `npm test` fails while an image is stale: a hash of its inputs is stored inside each PNG and compared
-with the current ones.
+with the current ones. The OG image also carries one of the CTF chain's clues (below), so changing that clue makes it
+stale the same way.
+
+**A small CTF for the curious:** a chain of five clues, each pointing to the next and holding one part of a final
+answer. They live in an HTML comment on the homepage, the DevTools console greeting, a response header, the OG
+image's metadata and a file under `/.well-known/`. All clue texts and parts come from one module, `src/lib/ctf.mts`;
+the build writes them out (`scripts/ctf/ctf-headers.mts` adds the header rule to `dist/_headers`, before the CSP
+step). Nothing is linked from the pages, and the joined answer is never written in any file (`tests/ctf.test.ts`
+checks that). No spoilers here: start with View Source.
 
 In CI, every pull request goes through build → `npm run check` → Playwright e2e. After it's merged, the
 same run on `main` repeats them and then deploys to Cloudflare (see [Contributing and deploy flow](#contributing-and-deploy-flow)).
