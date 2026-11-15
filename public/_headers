@@ -25,6 +25,10 @@
   Referrer-Policy: strict-origin-when-cross-origin
   X-Robots-Tag: noindex
 
+# The build appends one more rule after this file: the CTF chain's X-Clue header on /favicon.ico (Task F.2, text in
+# src/lib/ctf.mts, written by scripts/ctf/ctf-headers.mts). Don't add a /favicon.ico rule here; the build fails if
+# one exists.
+#
 # Opens in the browser; saving it uses the published file name. The "Download Resume" buttons use the
 # <a download> attribute to download instead.
 /resume.pdf

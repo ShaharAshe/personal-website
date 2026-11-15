@@ -7,6 +7,7 @@ import Footer from '../components/Footer.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
 import { analyticsBeacon } from '../lib/analytics';
 import { consoleGreeting, consoleGreetingScript } from '../lib/console-greeting';
+import { CTF_CONSOLE_LINE } from '../lib/ctf.mts';
 import { getResume } from '../lib/resume';
 import { OPEN_TO_WORK } from '../lib/site';
 import { OG_IMAGE, SITE_ICONS, absoluteUrl, iconSizesAttr, ogImageAlt } from '../lib/seo';
@@ -42,8 +43,11 @@ const canonical = noindex ? undefined : absoluteUrl(Astro.url.pathname, Astro.si
 const ogImage = absoluteUrl(OG_IMAGE.path, Astro.site);
 // Cloudflare Web Analytics: production builds only, never the dev server (src/lib/analytics.ts).
 const beacon = analyticsBeacon(import.meta.env.PROD);
-// Dev and production alike (unlike the beacon). Inline, so the CSP build step hashes it (scripts/csp/csp.mts).
-const greetingScript = greet ? consoleGreetingScript(consoleGreeting({ profiles, openToWork: OPEN_TO_WORK })) : null;
+// Dev and production alike (unlike the beacon). Inline, so the CSP build step hashes it (scripts/csp/csp.mts). Its last
+// line is the CTF chain's clue 1 (src/lib/ctf.mts).
+const greetingScript = greet
+  ? consoleGreetingScript(consoleGreeting({ profiles, openToWork: OPEN_TO_WORK, clue: CTF_CONSOLE_LINE }))
+  : null;
 ---
 
 <html lang="en">

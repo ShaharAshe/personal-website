@@ -6,6 +6,7 @@ import Experience from '../components/Experience.astro';
 import Hero from '../components/Hero.astro';
 import Projects from '../components/Projects.astro';
 import Skills from '../components/Skills.astro';
+import { CTF_COMMENT_HTML } from '../lib/ctf.mts';
 import { getResume } from '../lib/resume';
 import { jsonLdScript, personJsonLd } from '../lib/seo';
 
@@ -19,6 +20,9 @@ const jsonLd = jsonLdScript(personJsonLd(resume, Astro.site));
 <BaseLayout title={`${name} – ${label}`} description={tagline}>
   {/* schema.org Person from resume.yaml, never email or phone (src/lib/seo.ts). Data, not code: it runs nothing. */}
   <script slot="head" type="application/ld+json" is:inline set:html={jsonLd} />
+  {/* The CTF chain's first clue (src/lib/ctf.mts): an HTML comment, seen only with View Source. set:html writes it
+      as is; tests/ctf.test.ts checks it's in dist/index.html. */}
+  <Fragment set:html={CTF_COMMENT_HTML} />
   <Hero />
   <Experience />
   <Projects />
