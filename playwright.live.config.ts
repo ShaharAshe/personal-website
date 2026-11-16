@@ -30,6 +30,8 @@ export const LIVE_SPECS = [
   'console-greeting.spec.ts',
   // The CTF chain (F.2), solved from what a visitor sees; checks that production serves /.well-known/ as text/plain.
   'ctf.spec.ts',
+  // The 404 game (F.3): loads only on Play, plays, ends, restarts; no game on / or /resume; no CSP violation.
+  'game.spec.ts',
 ];
 
 const channel = base.projects?.[0]?.use?.channel;

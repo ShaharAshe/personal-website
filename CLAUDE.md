@@ -62,6 +62,8 @@ tests/                      node:test tests (npm test); fixtures/ holds test inp
 tests/e2e/                  Playwright tests (npm run test:e2e) + review-screenshots.ts (npm run screenshots)
 scripts/github/             GitHub fetcher
 scripts/og/                 OG image + site icon generator (npm run og) + PNG/ICO helpers for their stale checks
+src/lib/game/               404 game (F.3): pure engine + words (unit-tested), canvas drawing, and play.ts, which
+                            the 404's loader (src/components/LostPageGame.astro) imports only on Play
 src/lib/ctf.mts             CTF chain (F.2): every clue text and answer part; the joined answer is never written out
 scripts/ctf/                ctfHeaders(): appends the X-Clue rule for /favicon.ico to dist/_headers (before cspHeaders)
 src/lib/seo.ts              absolute URLs from `site`, sitemap/robots text, Person JSON-LD, site icon paths/sizes
@@ -113,6 +115,8 @@ scripts/git/                hook installer + the pre-push logic (push-policy.ts)
 - Section entrance animations run once.
 - `prefers-reduced-motion: reduce` disables all animation.
 - Not allowed: 3D/WebGL, particles, custom cursors, loading screens, animating every element on scroll.
+- Exception: the 404 game (F.3) animates a canvas after the visitor presses Play, calmer under reduced motion (no
+  shake, moving background, leg animation or flashing). See design-doc §10.3. Don't "fix" it.
 
 ## Quality targets
 

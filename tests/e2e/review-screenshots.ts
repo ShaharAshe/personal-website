@@ -54,6 +54,24 @@ for (const width of WIDTHS) {
         await page.screenshot({ path: `${OUT_DIR}/${width}-${theme}-404.png`, fullPage: true });
       });
 
+      // The 404 game (F.3) during a round: Play, a jump, then paused about a second in, so the frame holds still.
+      test('404 game', async ({ page }) => {
+        await page.goto('/no-such-page');
+        await page.evaluate(() => document.fonts.ready);
+        const canvas = page.locator('[data-game-canvas]');
+        await page.getByRole('button', { name: 'Play' }).click();
+        await canvas.and(page.locator('[data-game-state="running"]')).waitFor();
+        await page.waitForTimeout(900);
+        await page.keyboard.press('Space');
+        await page.waitForTimeout(150);
+        await page.evaluate(() => {
+          Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+          document.dispatchEvent(new Event('visibilitychange'));
+        });
+        await page.locator('[data-game-score]').scrollIntoViewIfNeeded();
+        await page.screenshot({ path: `${OUT_DIR}/${width}-${theme}-404-game.png`, fullPage: true });
+      });
+
       test('toggle focused', async ({ page }) => {
         await page.goto('/');
         await page.evaluate(() => document.fonts.ready);
