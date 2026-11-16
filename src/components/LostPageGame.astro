@@ -1,0 +1,107 @@
+---
+// The 404 game (Task F.3): "the lost page", a sheet of paper with a folded corner running home and jumping over ink
+// blots, puddles and staplers. Only on the 404 page, below its heading, text and Back to home, which stay first in
+// reading and Tab order.
+//
+// Nothing moves and no game code loads until the visitor presses Play, taps the game, or presses Space, ArrowUp or
+// Enter with focus on the page itself or the game (never on a link or another button: src/lib/game/controls.ts). The
+// small script below then imports src/lib/game/play.ts (its own file, allowed by the CSP's 'self') and starts it. Before that, the box shows a still picture of the character (inline SVG, no download).
+//
+// prefers-reduced-motion: the game still runs once started (started by the visitor and essential to it, design-doc
+// §10.3), without the hit shake, the sliding ground and the stepping legs.
+//
+// No style attributes (the CSP allows none): sizes come from classes. Colors are tokens only, no accent.
+---
+
+<section data-game aria-labelledby="game-heading" class="mt-12">
+  <h2 id="game-heading" class="text-lg font-semibold">
+    While you're here
+  </h2>
+  <p class="mt-2 text-text-muted">This page got lost too. Help it get home.</p>
+  {/* Play before the game in Tab order: the button is how most visitors start. */}
+  <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+    <button
+      type="button"
+      data-game-play
+      class="inline-flex min-h-10 min-w-28 items-center justify-center rounded-md border border-border px-4 py-2 font-medium hover:bg-surface"
+    >
+      Play
+    </button>
+    <p data-game-score class="font-mono text-sm tabular-nums">
+      Score 0 · Best 0
+    </p>
+  </div>
+
+  <div class="relative mt-4">
+    <canvas
+      data-game-canvas
+      data-game-state="idle"
+      data-player-y="0"
+      width="360"
+      height="114"
+      tabindex="0"
+      role="application"
+      aria-label="Lost page game"
+      aria-describedby="game-controls"
+      class="block aspect-[2/1] w-full touch-manipulation rounded-lg border border-border bg-surface select-none sm:aspect-[3/1]"
+    ></canvas>
+    {/* The still picture before the first round, drawn like the canvas's first frame: the world is 114 units tall,
+        and slice keeps it filling the box's height at both aspect ratios, so the character doesn't jump in size. */}
+    <div data-game-poster class="pointer-events-none absolute inset-0">
+      <svg
+        aria-hidden="true"
+        focusable="false"
+        viewBox="0 0 360 114"
+        preserveAspectRatio="xMinYMax slice"
+        class="h-full w-full"
+      >
+        <path d="M0 96H360" class="stroke-border" stroke-width="1.5"></path>
+        <path d="M36 64H52L60 72V90H36Z" class="fill-text"></path>
+        <path d="M52 64V72H60Z" class="fill-text-muted stroke-surface" stroke-width="1.5"></path>
+        <path d="M41 77H55M41 82H52" class="stroke-surface" stroke-width="1.5"></path>
+        <path d="M44 90V96M52 90V96" class="stroke-text" stroke-width="2.5" stroke-linecap="round"></path>
+      </svg>
+    </div>
+  </div>
+
+  <p id="game-controls" class="mt-3 text-sm text-text-muted">
+    Press Space or tap to play and jump. Press Enter to play again.
+  </p>
+  {/* Written only at game over, so screen readers hear the result once, not every point. */}
+  <p data-game-status aria-live="polite" class="mt-2 min-h-5 text-sm"></p>
+</section>
+
+<script>
+  import { isGameKeyEvent, keyAction } from '../lib/game/controls';
+
+  const root = document.querySelector<HTMLElement>('[data-game]');
+  const canvas = root?.querySelector<HTMLCanvasElement>('[data-game-canvas]');
+  const button = root?.querySelector<HTMLButtonElement>('[data-game-play]');
+
+  if (root && canvas && button) {
+    let loading = false;
+    const load = () => {
+      if (loading) return;
+      loading = true;
+      button.removeEventListener('click', load);
+      document.removeEventListener('keydown', onKey);
+      canvas.removeEventListener('pointerdown', onTap);
+      import('../lib/game/play').then(({ mount }) => {
+        mount(root).act('start');
+        canvas.focus();
+      });
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (!isGameKeyEvent(event, document.activeElement, canvas, document.body)) return;
+      if (keyAction(event.key, 'idle', 0) === null) return;
+      event.preventDefault();
+      load();
+    };
+    const onTap = (event: PointerEvent) => {
+      if (event.isPrimary) load();
+    };
+    button.addEventListener('click', load);
+    document.addEventListener('keydown', onKey);
+    canvas.addEventListener('pointerdown', onTap);
+  }
+</script>

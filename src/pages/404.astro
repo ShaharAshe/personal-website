@@ -1,7 +1,10 @@
 ---
 // The page for unknown URLs. Cloudflare serves it with status 404 (not_found_handling in wrangler.jsonc, design-doc
-// §13.1). Ships no JS besides the theme scripts in BaseLayout. Asset and nav URLs are absolute, so it also works from
-// a nested path. text-xl: text-display is only for the Hero and the /resume <h1> (design-doc §9.3).
+// §13.1). Asset and nav URLs are absolute, so it also works from a nested path. Below the page's own job (heading,
+// text, Back to home) sits the lost page game (Task F.3, LostPageGame.astro): its small loader is the only JS here
+// besides BaseLayout's scripts, and the game itself loads only when the visitor presses Play. text-xl: text-display
+// is only for the Hero and the /resume <h1> (design-doc §9.3).
+import LostPageGame from '../components/LostPageGame.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getResume } from '../lib/resume';
 
@@ -14,7 +17,7 @@ const { name } = getResume().basics;
   noindex
   backToTop={false}
 >
-  <div class="mx-auto max-w-[720px] px-4 py-(--section-gap)">
+  <div class="mx-auto max-w-[720px] px-4 pt-12 pb-(--section-gap) sm:pt-16">
     <h1 class="text-xl font-semibold tracking-tight">Page not found</h1>
     <p class="mt-4 text-text-muted">There's nothing at this address. It may have moved, or the link may be wrong.</p>
     <p class="mt-8">
@@ -26,5 +29,6 @@ const { name } = getResume().basics;
         <span aria-hidden="true">←</span> Back to home
       </a>
     </p>
+    <LostPageGame />
   </div>
 </BaseLayout>

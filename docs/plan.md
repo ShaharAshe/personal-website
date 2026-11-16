@@ -1482,7 +1482,7 @@ one is its own task (one at a time, plan first, tests + e2e + screenshots as usu
         source, the console, the headers, `strings` on the PNG bytes and the .well-known file. It ends with the
         assembled answer equal to `ctfAnswer()`. It's in LIVE_SPECS (now 8).
 
-- [ ] **F.3 404 game** — A small original character that runs and jumps (the Chrome dino is a reference for
+- [x] **F.3 404 game** — A small original character that runs and jumps (the Chrome dino is a reference for
   the feel, not for the art).
   - One button (Space or tap), instant start, gradually faster, short rounds, a high score in `localStorage`
     (try/catch, like the theme).
@@ -1490,6 +1490,122 @@ one is its own task (one at a time, plan first, tests + e2e + screenshots as usu
   - Loaded only on the 404 page, small, works with keyboard and touch. Respects `prefers-reduced-motion`
     (no autostart).
   - Depends on: 2.16.
+  - Done:
+    - **The character:** "the lost page", a sheet of paper with a folded corner, two lines of writing and two
+      legs, running home. It jumps over ink blots (low, narrow), puddles (low, wide) and staplers (tall).
+      - Colors: body `--text`; fold `--text-muted`, set apart by its shape and a crease line; obstacles
+        `--text-muted`; ground `--border`. No accent in the game: ui.md stays strict (accent means clickable).
+    - **Where:** `src/components/LostPageGame.astro`, below Back to home on the 404 page.
+      - Order: an `<h2>` "While you're here", one line, a Play button (outline) with the score line, the canvas,
+        the controls line ("Press Space or tap to play and jump. Press Enter to play again."), and the game-over
+        line.
+      - Reading and Tab order: heading, text, Back to home, Play, the game. The page still answers 404.
+      - Spacing: the 404 page's top padding is `pt-12 sm:pt-16` (was the 64/96px section gap), and the game's top
+        margin is `mt-12`. At 1280×800 the whole game box is on screen (bottom about 700px). At 375×667 the box is
+        too (top about 480px). The canvas keeps its size.
+    - **Controls** (pure rules in `src/lib/game/controls.ts`, shared by the loader and the game): keys are heard on
+      the whole document, but only with focus on the page itself (`<body>`) or the canvas, never shortcuts.
+      - Space / ArrowUp: start when idle, jump when running, go on when paused, play again when over (after 400 ms).
+        A press just before landing jumps on landing.
+      - Enter: start when idle or over, go on when paused.
+      - `preventDefault` only for keys the game handles, so Space never scrolls the page. A start from the page moves
+        focus to the canvas.
+      - A tap does what Space does.
+      - The button says what a click does: Play / Restart / Continue / Play again. Its action is read on
+        `pointerdown`, so it does what its label said when it was pressed.
+    - **Pause:** only when the tab is hidden (`visibilitychange`) or the window loses focus. Focus moving within the
+      page never pauses. The button then reads "Continue".
+    - **Accessibility:**
+      - The canvas: `role="application"`, `aria-label="Lost page game"`, `aria-describedby` = the visible controls
+        line, `tabindex="0"`.
+      - The score line updates only when its text changes and isn't live. The game-over line (`aria-live="polite"`)
+        is written only at game over.
+    - **Rules:** `src/lib/game/engine.ts`, a pure module with a seedable random (mulberry32). Imports nothing.
+      - Physics: gravity 1290, jump 387 (peak about 58 units, 1.8 times the character; 0.6 s in the air).
+      - Speed: 186 units/s, plus 4.3 per second, up to 371 (about 370 to 740 px/s on a 229 px tall box).
+      - Gaps: always at least 0.85 s at the speed they were made; the longest gap shrinks as the speed rises.
+      - Score: one point per 18 units (about 10 a second at the start).
+      - Frame-rate independence: fixed 1/240 s slices, frames capped at 100 ms.
+      - The first obstacle reaches a character that never jumps within `FIRST_HIT_MAX_MS` (3 s) for any seed.
+      - World: 114 units tall, the character 32 (about 28% of the box). Width from the box's aspect: about 228 at 2:1
+        (below `sm`), 342 at 3:1, clamped to 216–360.
+      - Always jumpable: proven by an autopilot test that survives 90 s (past top speed) for 200 seeds at both
+        widths.
+    - **Other modules:**
+      - Best score: `src/lib/game/best-score.ts`, key `lost-page-best`, storage passed as a getter like `saveTheme`.
+      - Words: `src/lib/game/hud.ts`.
+      - Drawing: `src/lib/game/draw.ts`, shapes only, colors read from the tokens at start and on a `data-theme`
+        or OS theme change.
+      - Browser glue: `src/lib/game/play.ts` (rAF with delta time, input, pause, resize). The test hooks
+        `data-game-state`, `data-player-y` and `data-motion` change nothing for visitors.
+    - **Loading:** the component's small script is the only game code on the 404 page. On the first Play, Space or
+      tap it imports `play.ts` (its own `/_astro/` file).
+      - The still picture before Play is inline SVG matching the first frame (nothing to download).
+      - `/` and `/resume` have no game markup and request neither file (dist test + e2e).
+    - **Reduced motion:** nothing moves before Play for anyone, and nothing flashes for anyone.
+      - With `prefers-reduced-motion` the game runs once started, without the hit shake, the sliding ground dashes
+        and the stepping legs (`effectsFor()`).
+      - Recorded as an exception in design-doc §10.3, with a pointer in CLAUDE.md's Motion section.
+    - **Deviations from the plan:**
+      - The paused state shows in the button ("Continue"), not in the score line: a longer line wrapped at 375px and
+        pushed the game down.
+      - The world was zoomed in twice after screenshot reviews (200 → 160 → 114 units tall), so the character went
+        from about 16% to 28% of the box's height. Speeds in units were scaled down with the second zoom, so the
+        on-screen speed and the time to see an obstacle coming stayed the same. The jump couldn't grow the full ×1.4
+        and stay inside the box: its peak went from 75 to 58 units (about ×1.08 on screen), with the same 0.6 s
+        airtime.
+      - A thin bar at the box's right edge was a drawing artifact, not an obstacle. The box is about 3.02:1, so a strip
+        about 2 units wide past the clamped world width was never repainted and kept old frames. Now every frame paints
+        the whole canvas, and the world's width follows the box (clamp 216–360).
+      - Review round: page-level keys, and pause only on a hidden tab or window blur (no pause on canvas blur).
+        Pausing on canvas blur broke Restart in Safari and Firefox on macOS: a clicked button isn't focused there,
+        so the click found the game paused and continued.
+      - With focus on the game's own button, Space and Enter press the button the normal way (its click does what
+        its label says) instead of going through the game's key rules. A keyboard user on "Restart" gets a restart,
+        as a button should.
+    - **JS:**
+      - The 404 page: 11.91 → 13.18 KB gzipped up front (beacon included). The loader is 1.27 KB, about 0.8 KB of
+        it Vite's preload helper.
+      - The game: 3.06 KB gzipped, loaded on Play (limit 8 KB, tested).
+      - The homepage is unchanged (12.60 KB).
+    - **CSP:** unchanged, 730/2000. Both files are `/_astro/` scripts (`'self'`). No inline script, no style
+      attributes.
+    - **Tests:**
+      - `npm test`: 542 (was 502).
+      - `npm run test:e2e`: 248 (was 223).
+      - Unit (`tests/game-engine.test.ts`, `tests/game-best-score.test.ts`, `tests/game-controls.test.ts`):
+        - jump arc and gravity, the jump buffer, collisions with the forgiving inset;
+        - speed over time and its cap, score from distance;
+        - the same seed giving the same obstacles, every kind showing up, minimum gaps;
+        - the first-hit bound over 1,000 seeds at both widths;
+        - the autopilot surviving 90 s for 200 seeds at both widths, and the jump's peak staying inside the box;
+        - 60 Hz / 144 Hz / uneven frames giving the same state, the frame cap;
+        - `effectsFor`, the words, `changedOnly`, and the best score with failing storage;
+        - every key, tap and button action per phase, and keys heard only with focus on the page or the canvas.
+      - dist (`tests/not-found-page.test.ts`):
+        - the game after Back to home, the canvas's name and description;
+        - an outline Play button, no accent, only the game-over line live;
+        - the size limit, and no game on `/` and `/resume`.
+      - e2e (`tests/e2e/game.spec.ts`):
+        - 404 status and Tab order;
+        - nothing moves and nothing loads before Play;
+        - Play, Space and a tap start it; a jump changes the height;
+        - game over within the bound, announced once, Enter restarts, best saved;
+        - Restart in the Safari order (pointerdown, the canvas blurred with no relatedTarget, then click) starts a new
+          round, and Continue goes on;
+        - pause on a hidden tab, and no pause when the canvas loses focus;
+        - Space on the page starts the game and jumps without scrolling; Enter on the page plays again after game
+          over; Space on "Back to home" doesn't start it, and Enter there still follows the link;
+        - the game's bottom edge on screen at 1280×800, its top edge at 375×667;
+        - colors following the toggle;
+        - reduced motion;
+        - no console problems or CSP violations;
+        - no game on `/` and `/resume`;
+        - 375/1280 × light/dark with no horizontal scroll and the game inside the column.
+        - In LIVE_SPECS (now 9).
+      - Review screenshots: a new `*-404-game.png` (paused about a second into a round) next to `*-404.png`.
+    - **Left open:** the ~0.8 KB preload helper in the loader could go with `vite.build.modulePreload: false` (a
+      site-wide config change, not worth it for 0.8 KB now).
 
 - [ ] **F.4 Doodles** — On a few special days, a small doodle drawn with the Hero's dots.
   - Chosen by the daily CI build, so there is no JS on other days. Shown from a day before to a day after
@@ -1545,7 +1661,23 @@ one is its own task (one at a time, plan first, tests + e2e + screenshots as usu
   - Inspired by adventofcode.com's look; nothing copied.
   - Note for planning: design-doc §9 describes one look (one accent color); add a short note there that
     terminal view is an opt-in alternate style.
+  - Note from F.3: the 404 game reads its palette from the tokens (`readPalette()` in `src/lib/game/draw.ts`), so it
+    follows terminal view if F.7 defines that through the tokens.
+    - The game repaints on a `data-theme` change. If F.7 switches with another attribute, the game must observe that
+      attribute too.
+    - Whether the character gets its own terminal look (e.g. ASCII) is decided in F.7.
   - Depends on: 2.16.
+
+- [ ] **F.8 Game v2 (after launch, after 4.3)** — More to the 404 game (F.3), once the site is live on its domain.
+  - More variety in rhythm: obstacle combos (pairs, a long gap then a quick run), not just random gaps.
+  - More obstacles: ordinary objects, for every audience.
+  - Maybe airborne obstacles with a duck move, but only if it stays easy on touch. Decide then: a second control
+    breaks "one button".
+  - Difficulty that rises by itself in stages (speed, new obstacles, maybe day/night by score), not a difficulty
+    menu.
+  - Keep: lazy-loaded on Play, under 8 KB gzipped, tokens only, the reduced-motion exception rules (design-doc
+    §10.3).
+  - Depends on: F.3, 4.3.
 
 ## Milestone 3 — Depth (design-doc §16 Phase 2)
 

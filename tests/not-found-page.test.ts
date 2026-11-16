@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import zlib from 'node:zlib';
 import { CF_BEACON_SRC } from '../src/lib/analytics.ts';
 import { pageJsGzipBytes, pageScripts } from './helpers/page-js.ts';
 import { listSiteFiles } from '../scripts/checks/dist-files.ts';
@@ -86,4 +87,99 @@ test('the 404 page ships only the theme scripts and the analytics beacon: no ema
   for (const code of scripts) assert.doesNotMatch(code, /clipboard/i);
   const bytes = pageJsGzipBytes(html, DIST);
   console.log(`404 JS: ${(bytes / 1024).toFixed(2)} KB gzipped (beacon included), ${scripts.length + 1} scripts`);
+});
+
+// --- The lost page game (Task F.3) ---
+
+const GAME_CHUNK_GZIP_LIMIT = 8 * 1024;
+
+/** The page's own module scripts (src under /_astro/), with their code. */
+const astroScripts = (page: string) =>
+  [...page.matchAll(/<script\b[^>]*\bsrc="(\/_astro\/[^"]+\.js)"/g)].map(([, src = '']) => ({
+    src,
+    code: fs.readFileSync(path.join(DIST, src), 'utf8'),
+  }));
+
+/** The game's loader on the 404 page, and the file it imports on Play. */
+function gameFiles() {
+  const loader = astroScripts(html).find(({ code }) => code.includes('[data-game]'));
+  assert.ok(loader, 'no game loader script on the 404 page');
+  const chunk = loader.code.match(/import\(`\.\/([^`]+\.js)`\)|import\("\.\/([^"]+\.js)"\)/);
+  const file = chunk?.[1] ?? chunk?.[2];
+  assert.ok(file, 'the loader has no dynamic import of the game');
+  return { loader, chunk: `/_astro/${file}`, chunkCode: fs.readFileSync(path.join(DIST, '_astro', file), 'utf8') };
+}
+
+const gameSection = main.match(/<section\b[^>]*data-game[\s\S]*?<\/section>/)?.[0] ?? '';
+
+test("the game comes after the page's own content: heading, text and Back to home first", { skip }, () => {
+  assert.ok(gameSection, 'no game section in <main>');
+  const order = ['<h1', 'nothing at this address', 'data-not-found-home', 'data-game'].map((s) => main.indexOf(s));
+  for (const i of order) assert.ok(i >= 0);
+  assert.deepEqual(
+    [...order].sort((a, b) => a - b),
+    order,
+  );
+});
+
+test('the game canvas has a name, keyboard focus and points to the visible controls line', { skip }, () => {
+  const canvas = gameSection.match(/<canvas\b[^>]*>/)?.[0] ?? '';
+  assert.match(canvas, /\baria-label="[^"]+"/);
+  assert.match(canvas, /\brole="application"/);
+  assert.match(canvas, /\btabindex="0"/);
+  assert.match(canvas, /\bdata-game-state="idle"/);
+  const describedBy = canvas.match(/\baria-describedby="([^"]+)"/)?.[1];
+  assert.ok(describedBy);
+  const controls = gameSection.match(new RegExp(`<p [^>]*id="${describedBy}"[^>]*>([^<]+)</p>`))?.[1] ?? '';
+  assert.match(controls, /Space/);
+  assert.match(controls, /tap/);
+  assert.match(controls, /Enter/);
+});
+
+test(
+  'the game has a Play button (outline: the only accent-filled one stays Back to home) and its words',
+  { skip },
+  () => {
+    const play = gameSection.match(/<button\b[^>]*data-game-play[^>]*>([\s\S]*?)<\/button>/);
+    assert.ok(play);
+    assert.match(play[0], /\btype="button"/);
+    assert.doesNotMatch(play[0], /\bbg-accent\b/);
+    assert.equal(play[1]!.trim(), 'Play');
+    assert.doesNotMatch(gameSection, /\baccent\b/, 'no accent anywhere in the game (accent means clickable)');
+    // The score line isn't live (it changes all the time); only the game-over line is.
+    assert.doesNotMatch(gameSection.match(/<p\b[^>]*data-game-score[^>]*>/)?.[0] ?? 'x', /aria-live/);
+    assert.match(gameSection, /<p\b[^>]*data-game-status[^>]*aria-live="polite"[^>]*><\/p>/);
+  },
+);
+
+test('the still picture before Play is inline SVG, hidden from screen readers: nothing to download', { skip }, () => {
+  const poster = gameSection.match(/<div\b[^>]*data-game-poster[\s\S]*?<\/svg>/)?.[0] ?? '';
+  assert.match(poster, /<svg\b[^>]*aria-hidden="true"/);
+  assert.doesNotMatch(gameSection, /<img\b|url\(/);
+});
+
+test(
+  `the game itself is loaded only on Play, and stays under ${GAME_CHUNK_GZIP_LIMIT / 1024} KB gzipped`,
+  { skip },
+  () => {
+    const { loader, chunk, chunkCode } = gameFiles();
+    assert.ok(!html.includes(chunk), 'the game file is not linked from the page (no preload either)');
+    const loaderBytes = zlib.gzipSync(loader.code).length;
+    const chunkBytes = zlib.gzipSync(chunkCode).length;
+    console.log(
+      `404 game: loader ${(loaderBytes / 1024).toFixed(2)} KB up front, game ${(chunkBytes / 1024).toFixed(2)} KB on Play (gzipped)`,
+    );
+    assert.ok(chunkBytes < GAME_CHUNK_GZIP_LIMIT, `the game is ${chunkBytes} bytes gzipped`);
+  },
+);
+
+test('no game on / or /resume: no markup, no loader, no game file', { skip }, () => {
+  const { loader, chunk } = gameFiles();
+  for (const page of [home, resume]) {
+    assert.doesNotMatch(page, /data-game/);
+    const srcs = astroScripts(page).map(({ src }) => src);
+    assert.ok(!srcs.includes(loader.src));
+    assert.ok(!page.includes(chunk));
+    for (const { code } of astroScripts(page)) assert.ok(!code.includes(chunk.replace('/_astro/', '')));
+  }
 });

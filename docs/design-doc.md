@@ -115,7 +115,7 @@
 ├── /case-studies/table-migration → Case study: מיגרציית טבלת publishers
 ├── /resume                     → קורות חיים כ-HTML + כפתור הורדת PDF
 ├── /resume.pdf                 → הקובץ להורדה (כתובת קבועה)
-└── /404                        → דף שגיאה מעוצב
+└── /404                        → דף שגיאה מעוצב, ומתחתיו משחק קטן (F.3)
 ```
 
 **ניווט עליון:** `Experience · Projects · Resume · Contact` + מתג Dark/Light. משמאל: השם (מ-`resume.yaml`) כקישור ל-`/`, בצבע מושתק כמו שאר ה-chrome. הוא מוצג מ-640px (`sm`) ומעלה. ברוחב טלפון אין לו מקום בשורה, והעמוד עצמו מתחיל בשם. לכן ב-`/resume` נשאר הקישור "← Back to home".
@@ -495,6 +495,11 @@ education:
 - **Easing:** `ease-out`.
 - **`prefers-reduced-motion`:** כל האנימציות מכובות. חובה.
 - רק `transform` ו-`opacity` (בלי layout shifts).
+- **חריג: משחק ה-404 (F.3, `src/components/LostPageGame.astro`, `src/lib/game/`).** המשחק הוא תנועה מתמשכת על `<canvas>`, והוא חריג מכוון לשני הכללים שלמעלה:
+  - **שום דבר לא זז לפני שהמבקר לוחץ Play** (או נוגע במשחק, או לוחץ Space / Enter כשהפוקוס על הדף עצמו או על המשחק, כמו בדינוזאור של Chrome), לאף אחד. אין autostart. מקש שנלחץ על קישור, על כפתור או על שדה שומר על התפקיד הרגיל שלו (Space על "Back to home" לא מתחיל משחק).
+  - **עם `prefers-reduced-motion`** המשחק עדיין רץ אחרי שהמבקר התחיל אותו: התנועה הופעלה על ידו והיא עיקר התוכן, כמו ש-WCAG 2.3.3 מתיר. אבל בלי מה שרק מקשט את התנועה: בלי רעידה בפגיעה, בלי רקע זז (הקווקווים על הקרקע), בלי הליכה של הרגליים, ובלי הבהוב ב-game over (גם בלי reduced motion אין הבהוב: game over הוא שינוי סטטי אחד). המהירות והפיזיקה זהות. `effectsFor()` ב-`src/lib/game/engine.ts`.
+  - **"רק `transform` ו-`opacity`"** הוא כלל על CSS בדף. הציור על ה-canvas מחוץ לו: הוא לא משנה layout, וה-canvas עצמו לא זז.
+  - לא "לתקן" את המשחק לפי הכללים הכלליים. ההחלטה מתועדת כאן ובשורה ב-CLAUDE.md.
 
 ### 10.4 דיאגרמת ארכיטקטורה
 - **דיאגרמה סטטית (SVG)** בעמוד ה-Log Analytics Platform, שמתאימה בדיוק לארכיטקטורה בריפו.
@@ -578,6 +583,7 @@ education:
 - **Strict-Transport-Security: max-age=31536000:** ב-workers.dev לא מוסיף (הסיומת `.dev` כולה ב-HSTS preload), אבל חשוב אם הדומיין יהיה `.com`. בלי `includeSubDomains` ו-`preload` עד שהדומיין נקבע (Task 4.2).
 - נשארים: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, ו-`X-Robots-Tag: noindex` עד המעבר לדומיין.
 - **`X-Clue` על `/favicon.ico`:** לא header אבטחה. רמז בשרשרת ה-CTF (F.2). הטקסט מגיע מ-`src/lib/ctf.mts`, ולכן הוא לא כתוב ב-`public/_headers`: integration קטן (`scripts/ctf/ctf-headers.mts`) מוסיף את ה-rule ל-`dist/_headers` ורץ לפני שלב ה-CSP, כך שבדיקת המגבלות של Cloudflare מכסה גם אותו. ה-rule של `/*` עדיין חל על הקובץ. השורה הנוספת בברכת ה-console (רמז 1) שינתה את ה-hash שלה אבל לא את אורך שורת ה-CSP (עדיין 730 מתוך 2,000).
+- **משחק ה-404 (F.3)** לא שינה את המדיניות: ה-loader וקובץ המשחק הם קבצי JS ב-`/_astro/` (מכוסים ב-`'self'`), בלי סקריפט inline ובלי `style` attributes, והצבעים נקראים מה-tokens ב-JS. השורה נשארה 730 מתוך 2,000.
 
 #### בדיקה
 - `tests/csp.test.ts` בודק על `dist/` שלכל סקריפט וסגנון inline בכל דף (כולל 404) יש hash במדיניות, ושה-hash של הסקריפט נגד הבהוב מחושב מחדש מ-`themeInitScript`.

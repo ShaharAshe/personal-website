@@ -98,6 +98,13 @@ the build writes them out (`scripts/ctf/ctf-headers.mts` adds the header rule to
 step). Nothing is linked from the pages, and the joined answer is never written in any file (`tests/ctf.test.ts`
 checks that). No spoilers here: start with View Source.
 
+**A small game on the 404 page:** "the lost page", a sheet of paper running home and jumping over ink blots, puddles
+and staplers (Space or tap). It sits below the page's heading and Back to home, and nothing moves until the visitor
+presses Play (or Space, like the Chrome dino). Only a small loader (about 1.3 KB gzipped) ships with the 404 page;
+the game itself (`src/lib/game/`, about 3 KB gzipped) is imported on Play, and no other page loads either. The rules are a pure, seedable module (`src/lib/game/engine.ts`)
+with unit tests; the colors come from the theme tokens; with reduced motion it runs without its decorative motion
+(design-doc §10.3).
+
 In CI, every pull request goes through build → `npm run check` → Playwright e2e. After it's merged, the
 same run on `main` repeats them and then deploys to Cloudflare (see [Contributing and deploy flow](#contributing-and-deploy-flow)).
 
@@ -188,7 +195,7 @@ nothing. To run the same check by hand: `npm run check:staged`.
   CSP: a test fails on any CSP violation, and one checks that an injected inline script is blocked. Every spec takes
   `test` from `tests/e2e/fixtures.ts`, which blocks Cloudflare Web Analytics requests, so test runs send no visits.
 - **`npm run test:live`** (Playwright, run by hand after a deploy): reuses the CSP and headers, analytics, SEO, 404,
-  Hero and resume specs against the live URL (`site` in `astro.config.mjs`, so it follows a domain change). It
+  Hero, resume, console greeting, CTF and 404 game specs against the live URL (`site` in `astro.config.mjs`, so it follows a domain change). It
   checks status codes, every header from `public/_headers`, that the console has no CSP or header errors, the theme
   toggle, Copy, the PDF download, the OG image and icons, `sitemap.xml` and `robots.txt`. Nothing is started
   locally and no build is needed. Analytics requests are blocked as in every e2e run, so it sends no Web Analytics
