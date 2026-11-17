@@ -298,13 +298,20 @@ test('in terminal view the doodle repaints in the terminal palette, and only mar
   await expect(link(page)).toHaveAttribute('data-no-brackets', '');
 });
 
-/** Links that neither show terminal brackets nor carry data-no-brackets (should be none). */
+/**
+ * Links that neither show terminal brackets nor carry data-no-brackets (should be none), as neutral labels: the index
+ * and the data-* attribute names, never text, URLs or attribute values (the email link carries the address in parts).
+ */
 function linksWithoutBrackets(page: Page): Promise<string[]> {
   return page.evaluate(() =>
     [...document.querySelectorAll('a')]
-      .filter((a) => !a.hasAttribute('data-no-brackets'))
-      .filter((a) => !getComputedStyle(a, '::before').content.includes('['))
-      .map((a) => a.outerHTML.slice(0, 120)),
+      .map((a, index) => ({ a, index }))
+      .filter(({ a }) => !a.hasAttribute('data-no-brackets'))
+      .filter(({ a }) => !getComputedStyle(a, '::before').content.includes('['))
+      .map(({ a, index }) => {
+        const names = a.getAttributeNames().filter((name) => name.startsWith('data-'));
+        return `link ${index} [${names.join(' ')}]`;
+      }),
   );
 }
 

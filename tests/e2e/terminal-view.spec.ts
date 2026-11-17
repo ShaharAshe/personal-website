@@ -32,50 +32,83 @@ async function expectTerminal(page: Page, on: boolean): Promise<void> {
 }
 
 /**
- * The visible space inside a bracketed link: from the ink of "[" to the first ink of its content (icon or text), and
- * from the last ink of its content to the ink of "]". Glyph ink comes from canvas measureText in the link's own font;
- * an icon's ink from its path's getBBox(), scaled to its rendered size.
+ * The space inside a bracketed link, from layout boxes only (glyph ink differs between platforms, so it isn't used).
+ * The brackets are pseudo-elements, which have no box to measure, so for the measurement they're swapped for real
+ * spans with the same character and the same computed margins, in the same places. Then, to the boxes of the first and
+ * last non-space characters (so whitespace rendered as extra space counts as space): from "[" to the link's first
+ * content, from its last content (on its last line) to "]", and between the icon and the text. A "]" stranded away
+ * from the text (a wrapped flex link) shows as a large right gap. Everything is put back after.
  */
-function bracketGaps(link: Locator): Promise<{ left: number; right: number }> {
+function bracketGaps(link: Locator): Promise<{ left: number; right: number; inner: number; lines: number }> {
   return link.evaluate((a) => {
-    const cs = getComputedStyle(a);
-    const ctx = document.createElement('canvas').getContext('2d')!;
-    ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
-    const rect = a.getBoundingClientRect();
-    const contentLeft = rect.left + parseFloat(cs.paddingLeft) + parseFloat(cs.borderLeftWidth);
-    const contentRight = rect.right - parseFloat(cs.paddingRight) - parseFloat(cs.borderRightWidth);
-    const open = ctx.measureText('[');
-    const close = ctx.measureText(']');
-    const openInkRight = contentLeft + open.actualBoundingBoxRight;
-    const closeInkLeft = contentRight - close.width - close.actualBoundingBoxLeft;
-
-    /** Ink edges of a child: an <svg> by its drawing, a text node by its first or last visible character. */
-    const ink = (node: Node, edge: 'left' | 'right'): number => {
-      if (node instanceof SVGSVGElement) {
-        const box = node.getBBox();
-        const r = node.getBoundingClientRect();
-        const scale = r.width / node.viewBox.baseVal.width;
-        // getBBox() leaves out the stroke: a stroked icon's ink reaches half the stroke width further.
-        const style = getComputedStyle(node.firstElementChild ?? node);
-        const half = style.stroke === 'none' ? 0 : parseFloat(style.strokeWidth) / 2;
-        return edge === 'left' ? r.left + (box.x - half) * scale : r.left + (box.x + box.width + half) * scale;
-      }
-      if (node instanceof Element) return ink(edge === 'left' ? node.firstChild! : node.lastChild!, edge);
-      const text = node.textContent!;
-      const index = edge === 'left' ? text.search(/\S/) : text.trimEnd().length - 1;
-      const range = document.createRange();
-      range.setStart(node, index);
-      range.setEnd(node, index + 1);
-      const r = range.getBoundingClientRect();
-      const glyph = ctx.measureText(text[index]!);
-      return edge === 'left' ? r.left - glyph.actualBoundingBoxLeft : r.left + glyph.actualBoundingBoxRight;
-    };
     const visible = [...a.childNodes].filter((n) => n instanceof Element || n.textContent!.trim());
-    return {
-      left: ink(visible[0]!, 'left') - openInkRight,
-      right: closeInkLeft - ink(visible.at(-1)!, 'right'),
+    const standIn = (text: string, pseudo: '::before' | '::after') => {
+      const style = getComputedStyle(a, pseudo);
+      const span = document.createElement('span');
+      span.textContent = text;
+      span.style.marginInlineStart = style.marginInlineStart;
+      span.style.marginInlineEnd = style.marginInlineEnd;
+      return span;
     };
+    const open = standIn('[', '::before');
+    const close = standIn(']', '::after');
+
+    // A constructed stylesheet: the CSP blocks an injected <style>, not CSSOM.
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync('[data-measuring]::before, [data-measuring]::after { content: none !important; }');
+    const sheets = document.adoptedStyleSheets;
+    document.adoptedStyleSheets = [...sheets, sheet];
+    a.setAttribute('data-measuring', '');
+    a.prepend(open);
+    a.append(close);
+
+    /** The text node holding a child's text: the node itself, or the first text inside an element (the address span). */
+    const textOf = (node: Node): Text => {
+      if (node instanceof Text) return node;
+      return document.createTreeWalker(node, NodeFilter.SHOW_TEXT).nextNode() as Text;
+    };
+    /** The layout box of a text's first or last non-space character. */
+    const charBox = (text: Text, which: 'first' | 'last'): DOMRect => {
+      const content = text.data;
+      const index = which === 'first' ? content.search(/\S/) : content.trimEnd().length - 1;
+      const range = document.createRange();
+      range.setStart(text, index);
+      range.setEnd(text, index + 1);
+      return range.getClientRects()[0]!;
+    };
+    /** A child's left or right edge: an icon's box, or its text's first or last character. */
+    const edge = (node: Node, side: 'left' | 'right'): number =>
+      node instanceof SVGElement
+        ? node.getBoundingClientRect()[side]
+        : charBox(textOf(node), side === 'left' ? 'first' : 'last')[side];
+
+    const first = visible[0]!;
+    const last = visible.at(-1)!;
+    const icon = visible.find((node) => node instanceof SVGElement)!;
+    const text = visible.find((node) => !(node instanceof SVGElement))!;
+    const textRange = document.createRange();
+    textRange.selectNodeContents(textOf(text));
+    const result = {
+      left: edge(first, 'left') - open.getBoundingClientRect().right,
+      right: close.getBoundingClientRect().left - edge(last, 'right'),
+      inner: icon === first ? edge(text, 'left') - edge(icon, 'right') : edge(icon, 'left') - edge(text, 'right'),
+      // From the text's own line boxes (an icon's box is centered, so its top isn't a line's top).
+      lines: new Set([...textRange.getClientRects()].map((box) => Math.round(box.top))).size,
+    };
+
+    open.remove();
+    close.remove();
+    a.removeAttribute('data-measuring');
+    document.adoptedStyleSheets = sheets;
+    return result;
   });
+}
+
+/** A neutral label for a link in test output: never its text (it can be the email address) or its URL. */
+async function linkLabel(link: Locator, section: string, index: number): Promise<string> {
+  const href = (await link.getAttribute('href')) ?? '';
+  const kind = href.startsWith('mailto:') ? 'mailto' : href.startsWith('http') ? 'external' : 'internal';
+  return `${section} link ${index} (${kind})`;
 }
 
 /** The computed CSS of one element (or its pseudo-element). */
@@ -241,38 +274,56 @@ test.describe('in terminal view', () => {
       test.use({ viewport: { width, height: 800 } });
 
       // The footer, the /resume contact line, Contact, and the Hero (whose links are all marked: none to measure).
-      for (const [path, selector] of [
-        ['/', 'footer a:not([data-no-brackets])'],
-        ['/', '[data-contact] a:not([data-no-brackets])'],
-        ['/', '[data-hero] a:not([data-no-brackets])'],
-        ['/resume', '[data-resume-contact] a:not([data-no-brackets])'],
+      for (const [path, section, selector] of [
+        ['/', 'footer', 'footer a:not([data-no-brackets])'],
+        ['/', 'contact', '[data-contact] a:not([data-no-brackets])'],
+        ['/', 'hero', '[data-hero] a:not([data-no-brackets])'],
+        ['/resume', 'resume contact line', '[data-resume-contact] a:not([data-no-brackets])'],
       ] as const) {
-        test(`links with an icon have even space inside their brackets: ${path} ${selector.split(' ')[0]}`, async ({
-          page,
-        }) => {
+        test(`links with an icon have even space inside their brackets: ${path} ${section}`, async ({ page }) => {
           await page.goto(path);
           await page.evaluate(() => document.fonts.ready);
           const links = await page
             .locator(selector)
             .filter({ has: page.locator('svg') })
             .all();
-          if (selector.startsWith('[data-hero]')) expect(links).toHaveLength(0);
-          for (const link of links) {
+          if (section === 'hero') expect(links).toHaveLength(0);
+          for (const [index, link] of links.entries()) {
             if (!(await link.isVisible())) continue;
-            const { left, right } = await bracketGaps(link);
-            const name = (await link.textContent())!.trim();
-            console.log(`${width}px ${name}: [${left.toFixed(1)}px … ${right.toFixed(1)}px]`);
-            // The spacing is the same 0.5ch on both sides; what's left is ink: the side bearings of the glyphs next to
-            // the brackets and the empty edge of an icon's drawing (Back to top's narrow chevron: 1.5px). Before the
-            // even gap the footer's LinkedIn was 5.6 vs 1.4px.
-            expect(Math.abs(left - right), `${name}: ${left.toFixed(1)} vs ${right.toFixed(1)}`).toBeLessThanOrEqual(
-              1.6,
-            );
+            const { left, right, inner } = await bracketGaps(link);
+            const label = await linkLabel(link, section, index);
+            // Layout boxes: "[" to the content, the icon to the text, and the content to "]" are all the same 0.5ch, on
+            // any platform, up to subpixel rounding. Extra rendered whitespace would show in one of them.
+            const gaps = `"[" ${left.toFixed(1)}, icon ${inner.toFixed(1)}, "]" ${right.toFixed(1)}px`;
+            expect(left, `${label}: space after "["`).toBeGreaterThan(0);
+            expect(Math.abs(left - right), `${label}: ${gaps}`).toBeLessThanOrEqual(0.5);
+            expect(Math.abs(left - inner), `${label}: ${gaps}`).toBeLessThanOrEqual(0.5);
           }
         });
       }
     });
   }
+
+  // CI's Chromium on Linux lays text out on whole pixels: each mono character is 10px, not 9.6px, and the Contact card's
+  // LinkedIn link no longer fits one line at 1280px. 0.4px of letter-spacing reproduces that here.
+  test('a bracketed link that wraps keeps "]" right after its last word', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/');
+    await page.evaluate(() => document.fonts.ready);
+    await page.evaluate(() => {
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync('[data-contact-linkedin] { letter-spacing: 0.4px; }');
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+    });
+    const link = page.locator('[data-contact-linkedin]');
+    const { left, right, inner, lines } = await bracketGaps(link);
+    expect(lines, 'the link wraps, as on CI').toBe(2);
+    const gaps = `"[" ${left.toFixed(1)}, icon ${inner.toFixed(1)}, "]" ${right.toFixed(1)}px`;
+    expect(Math.abs(left - right), gaps).toBeLessThanOrEqual(0.5);
+    expect(Math.abs(left - inner), gaps).toBeLessThanOrEqual(0.5);
+    // Wrapping keeps the 40px target height, now with two lines.
+    expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(40);
+  });
 
   for (const width of [640, 1280]) {
     test.describe(`footer at ${width}px`, () => {
@@ -302,11 +353,16 @@ test.describe('in terminal view', () => {
     test(`every link on ${path} either shows brackets or is marked data-no-brackets`, async ({ page }) => {
       await page.goto(path);
       await expect(html(page)).toHaveAttribute('data-style', 'terminal');
+      // Neutral labels in any failure output: the index and data-* attribute names, never text, URLs or values.
       const unmarked = await page.evaluate(() =>
         [...document.querySelectorAll('a')]
-          .filter((a) => !a.hasAttribute('data-no-brackets'))
-          .filter((a) => !getComputedStyle(a, '::before').content.includes('['))
-          .map((a) => a.outerHTML.slice(0, 120)),
+          .map((a, index) => ({ a, index }))
+          .filter(({ a }) => !a.hasAttribute('data-no-brackets'))
+          .filter(({ a }) => !getComputedStyle(a, '::before').content.includes('['))
+          .map(({ a, index }) => {
+            const names = a.getAttributeNames().filter((name) => name.startsWith('data-'));
+            return `link ${index} [${names.join(' ')}]`;
+          }),
       );
       expect(unmarked).toEqual([]);
       // And the marked ones really have none.

@@ -1860,9 +1860,12 @@ one is its own task (one at a time, plan first, tests + e2e + screenshots as usu
         screen has;
       - /resume reserves 280px for the email (263px in mono with brackets; regular stays 240px);
       - the footer keeps its phone layout (copyright above the links) at every width;
-      - text-only links have no flex gap, so their brackets sit tight (`[Resume]`); links with an icon get one even
-        0.5ch gap between every item, brackets included (`[ (icon) LinkedIn ]`), so both sides match whichever side
-        the icon is on (an e2e test measures the ink gaps);
+      - text-only links have no flex gap, so their brackets sit tight (`[Resume]`); links with an icon get the same
+        0.5ch on both sides and between icon and text (`[ (icon) LinkedIn ]`), and flow as inline text, so a link that
+        wraps keeps `]` after its last word (as flex items, CI's Chromium on Linux wrapped Contact's LinkedIn link at
+        1280px and left `]` at the card's edge). The two email links stay flex with an even gap: their markup has
+        whitespace that inline layout would show. An e2e test measures layout boxes, not glyph ink, so it's the same
+        on every platform;
       - the switch shows a visible `[on]` in terminal view (kept out of its name); no `[off]` in the regular style,
         whose footer row has no room for it at 640px;
       - topic chips (text on the `--border` fill) have no glow, which would bring them to 3.3:1.

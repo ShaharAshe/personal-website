@@ -114,15 +114,50 @@
     content: ']' / '';
   }
 
-  /* In a flex link the brackets are flex items, so the link's gap spaces them too. Text-only links get no gap, so
-     their brackets sit tight ("[Read more →]", like "[Resume]"). Links with an icon get one even gap between every
-     item, brackets included: "[ (icon) LinkedIn ]", "[ Back to top (icon) ]", the same on both sides whichever side
-     the icon is on (an icon is a link's only element child, so CSS can't tell those two apart to space it alone). */
+  /* In a flex link the brackets are flex items, so the link's gap would space them out. Text-only links get no gap,
+     so their brackets sit tight ("[Read more →]", like "[Resume]"). */
   :root[data-style='terminal'] a:not([data-no-brackets]) {
     column-gap: 0;
   }
 
-  :root[data-style='terminal'] a:not([data-no-brackets]):has(> svg) {
+  /* Links with an icon flow as text instead of flex items: in a flex link, text that wraps (mono is wide: "View my
+     LinkedIn profile" at 1280px wraps where text is laid out on whole pixels, e.g. Chromium on Linux) becomes a box as
+     wide as the card, and "]" ends up at its far edge. Inline, "]" follows the last word. Same even space on both
+     sides: "[ (icon) LinkedIn ]", "[ Back to top (icon) ]". GitHub, LinkedIn and mail icons come before the text and
+     the arrows after it (.claude/rules/ui.md), so the icon's margin goes on the text side. The 40px target height
+     stays (min-height applies to inline-block), with one line centered in it.
+     The email links stay flex, with one even gap between every item instead: CopyEmail.astro's markup has whitespace
+     around their text, which flex drops but inline layout would show as extra spaces. They're short ("Open in mail
+     app", and the address in its reserved slot on /resume), so they don't wrap. */
+  :root[data-style='terminal'] a:not([data-no-brackets], [data-email-link]):has(> svg) {
+    display: inline-block;
+  }
+
+  :root[data-style='terminal'] a:not([data-no-brackets], [data-email-link]):has(> svg).min-h-10 {
+    padding-block: calc((2.5rem - 1lh) / 2);
+  }
+
+  :root[data-style='terminal'] a:not([data-no-brackets], [data-email-link]):has(> svg)::before {
+    margin-inline-end: 0.5ch;
+  }
+
+  :root[data-style='terminal'] a:not([data-no-brackets], [data-email-link]):has(> svg)::after {
+    margin-inline-start: 0.5ch;
+  }
+
+  :root[data-style='terminal'] a:not([data-no-brackets], [data-email-link]) > svg {
+    display: inline-block;
+    vertical-align: middle;
+    margin-inline-end: 0.5ch;
+  }
+
+  :root[data-style='terminal']
+    a:not([data-no-brackets], [data-email-link])
+    > svg:is([data-icon='arrow-up'], [data-icon='arrow-up-right']) {
+    margin-inline: 0.5ch 0;
+  }
+
+  :root[data-style='terminal'] a[data-email-link]:not([data-no-brackets]) {
     column-gap: 0.5ch;
   }
 
