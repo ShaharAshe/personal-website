@@ -41,16 +41,19 @@ const doodle = selectDoodle({ now: new Date(), env: process.env.DOODLE, launchDa
       {tagline}
     </p>
 
+    {/* data-no-brackets: button-style and icon-only links don't get terminal view's [brackets] (global.css). */}
     <div class="mt-8 flex flex-wrap items-center gap-3">
       <a
         href={RESUME_PDF_URL}
         download={RESUME_PDF_FILENAME}
+        data-no-brackets
         class="inline-flex items-center rounded-md bg-accent px-5 py-2.5 font-medium text-on-accent hover:opacity-90"
       >
         Download Resume
       </a>
       <a
         href="/#projects"
+        data-no-brackets
         class="inline-flex items-center rounded-md border border-border px-5 py-2.5 font-medium hover:border-text-muted"
       >
         View Projects
@@ -66,6 +69,7 @@ const doodle = selectDoodle({ now: new Date(), env: process.env.DOODLE, launchDa
               href={url}
               aria-label={network}
               data-social={icon}
+              data-no-brackets
               class="inline-flex size-10 items-center justify-center rounded-md text-text-muted hover:text-text"
             >
               {icon === 'github' && <GitHubIcon size={20} />}
@@ -76,6 +80,7 @@ const doodle = selectDoodle({ now: new Date(), env: process.env.DOODLE, launchDa
         <li data-email-reveal hidden>
           <EmailLink
             aria-label="Email"
+            noBrackets
             class="inline-flex size-10 items-center justify-center rounded-md text-text-muted hover:text-text"
           >
             <MailIcon size={20} />

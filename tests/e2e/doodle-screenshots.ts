@@ -1,22 +1,25 @@
 // Review screenshots of the doodle (Task F.4), not assertions: the Hero of the doodle preview build (dist-doodle/),
-// closed and with the bubble open, at 375px and 1280px in both themes. npm run screenshots:doodles runs this once per
+// closed and with the bubble open, at 375px and 1280px in both themes and terminal view. npm run screenshots:doodles runs this once per
 // doodle, rebuilding dist-doodle/ in between; files are named after the doodle the build has. Writes screenshots/
 // (gitignored). The normal Hero is in review-screenshots.ts (npm run screenshots).
 
 import { expect, test } from './fixtures.ts';
 import { DOODLE_PORT } from '../../scripts/doodles/doodle-server.ts';
-import { THEMES } from '../../src/lib/theme.ts';
+import { LOOKS, useLook } from './helpers.ts';
 
 const OUT_DIR = 'screenshots';
 
 test.use({ baseURL: `http://127.0.0.1:${DOODLE_PORT}` });
 
+// Both themes and terminal view (Task F.7); `theme` in the file names is the look.
 for (const width of [375, 1280]) {
-  for (const theme of THEMES) {
+  for (const look of LOOKS) {
+    const theme = look.name;
     test.describe(`${width}px ${theme}`, () => {
       // Reduced motion: the bubble's short fade-in is off, so the open shot isn't caught mid-fade. The shape is the
       // same either way (it moves only while playing).
-      test.use({ viewport: { width, height: 800 }, colorScheme: theme, reducedMotion: 'reduce' });
+      test.use({ viewport: { width, height: 800 }, colorScheme: look.colorScheme, reducedMotion: 'reduce' });
+      test.beforeEach(({ page }) => useLook(page, look));
 
       test('doodle', async ({ page }) => {
         await page.goto('/');

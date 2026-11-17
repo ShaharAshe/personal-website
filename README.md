@@ -16,6 +16,9 @@ What the MVP contains:
   same `resume.yaml` in CI.
 - A styled **404 page**, dark and light themes (OS setting by default, saved toggle), an Open Graph image and site
   icons, `sitemap.xml`, `robots.txt` and `Person` JSON-LD.
+- **Terminal view**: an opt-in alternate look (green monospace on black, `[links]`, dashed borders), switched by
+  `>_ Terminal view` in the footer and saved like the theme. CSS and design tokens only; print never changes
+  (design-doc §9.5).
 - A hash-based **Content-Security-Policy** and security headers, and **Cloudflare Web Analytics** (no cookies).
 - The workers.dev URL sends `X-Robots-Tag: noindex` until the site moves to its own domain, so it isn't indexed as a
   duplicate.
@@ -190,10 +193,10 @@ nothing. To run the same check by hand: `npm run check:staged`.
 | `npm test` | Unit and integration tests (`node:test`, `tests/**/*.test.ts`) |
 | `npm run test:update-golden` | Re-record the golden Word files that pin the resume design (only after an intended design change) |
 | `npm run test:e2e` | Playwright end-to-end tests against the existing builds (`wrangler dev` with the real headers: `dist/` on port 4322, `dist-doodle/` on 4323, so run `npm run doodle:build` first) |
-| `npm run screenshots` | Review screenshots (375px, 640px and 1280px, dark and light, plus header clips, the `/resume` print preview, the OG image and the icons) into `screenshots/` |
+| `npm run screenshots` | Review screenshots (375px, 640px and 1280px, dark, light and terminal view, plus header clips, the `/resume` print preview, the OG image and the icons) into `screenshots/` |
 | `npm run doodle -- <id>` | Build `dist-doodle/` with that doodle forced (after `npm run build`), then serve it at http://127.0.0.1:4323 with the real headers |
 | `npm run doodle:build -- <id>` | Only build `dist-doodle/` with that doodle (default `pi-day`): `astro build` alone, reusing the main build's outputs. CI runs it for the tests; it's never deployed |
-| `npm run screenshots:doodles` | Review screenshots of every doodle (375px and 1280px, dark and light, closed and with the bubble open), building `dist-doodle/` for each in turn |
+| `npm run screenshots:doodles` | Review screenshots of every doodle (375px and 1280px, dark, light and terminal view, closed and with the bubble open), building `dist-doodle/` for each in turn |
 | `npm run test:live` | Live smoke run: a read-only subset of the e2e specs against the deployed site (`playwright.live.config.ts`) |
 | `npm run screenshots:live` | The same review screenshots, taken from the deployed site |
 | `npm run check` | On an existing build: `astro check` → lint → `npm test` → site checks → format check |
@@ -214,7 +217,7 @@ nothing. To run the same check by hand: `npm run check:staged`.
   skip if there's no build.
 - **`npm run test:e2e`** (Playwright): behavior that needs a real browser, such as the theme toggle,
   saving the chosen theme, no flash on reload, keyboard navigation and focus states, reduced motion,
-  layout at 375px and 1280px, and the self-hosted fonts. They run against `wrangler dev`, so every page gets the real
+  layout at 375px and 1280px (in terminal view too), and the self-hosted fonts. They run against `wrangler dev`, so every page gets the real
   CSP: a test fails on any CSP violation, and one checks that an injected inline script is blocked. Every spec takes
   `test` from `tests/e2e/fixtures.ts`, which blocks Cloudflare Web Analytics requests, so test runs send no visits.
 - **`npm run test:live`** (Playwright, run by hand after a deploy): reuses the CSP and headers, analytics, SEO, 404,

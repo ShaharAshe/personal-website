@@ -1,6 +1,8 @@
 ---
 // Dark/light toggle for the nav. An Astro component with a small script, not a React island: React
-// would ship ~45-60KB of JS on every page for one button. Logic lives in src/lib/theme.ts.
+// would ship ~45-60KB of JS on every page for one button. Logic lives in src/lib/theme.ts. The script also wires the
+// footer's terminal view switch (StyleToggle.astro). In terminal view global.css hides this button: terminal is
+// always dark.
 //
 // Both icons are in the markup and CSS shows the one for the theme a click switches to (sun in dark,
 // moon in light), resolved like the color tokens, so the icon is right before any JS runs. The
@@ -88,9 +90,34 @@
 </style>
 
 <script>
-  import { currentTheme, nextTheme, saveTheme, toggleLabel } from '../lib/theme';
+  import {
+    TERMINAL,
+    currentStyle,
+    currentTheme,
+    nextStyle,
+    nextTheme,
+    saveStyle,
+    saveTheme,
+    toggleLabel,
+  } from '../lib/theme';
 
   const root = document.documentElement;
+
+  // The footer's terminal view switch (src/components/StyleToggle.astro) is wired here, so the site keeps one inline
+  // script for both choices. Instant, like the theme's colors: no transition, so nothing to turn off for reduced motion.
+  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-style-toggle]')) {
+    const updatePressed = () =>
+      button.setAttribute('aria-pressed', String(currentStyle(root.dataset.style) === TERMINAL));
+    updatePressed();
+
+    button.addEventListener('click', () => {
+      const next = nextStyle(currentStyle(root.dataset.style));
+      if (next === TERMINAL) root.dataset.style = next;
+      else delete root.dataset.style;
+      saveStyle(next, () => localStorage);
+      updatePressed();
+    });
+  }
   const osLight = matchMedia('(prefers-color-scheme: light)');
   const read = () => currentTheme(root.dataset.theme, osLight.matches);
 

@@ -1,0 +1,23 @@
+---
+// The terminal view switch (Task F.7), in the footer: a toggle button, not a link, so aria-pressed tells its state and
+// its name never changes ("Terminal view"). In terminal view global.css adds a visible "[on]" after it (kept out of the
+// name). Looks like the footer's links (muted site chrome, 40px tall, so it works
+// at 375px). Logic lives in src/lib/theme.ts; global.css does all the styling from <html data-style="terminal">.
+//
+// No script of its own: ThemeToggle's script (in the nav, on every page) wires it. Two scripts importing
+// src/lib/theme.ts would make the bundler split it into a shared chunk, turning both inline scripts into three files to
+// download. The built aria-pressed is "false"; that script sets the real state at once (the no-flash head script may
+// already have set data-style). Without JS the button does nothing, like the theme toggle.
+---
+
+<button
+  type="button"
+  data-style-toggle
+  aria-pressed="false"
+  class="inline-flex min-h-10 items-center gap-1.5 text-text-muted hover:text-text"
+>
+  <span aria-hidden="true" class="font-mono">
+    &gt;_
+  </span>
+  Terminal view
+</button>

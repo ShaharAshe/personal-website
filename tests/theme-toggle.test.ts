@@ -1,6 +1,7 @@
-// Tests for the theme toggle: the pure logic in src/lib/theme.ts (current/next theme, label, saving),
-// then the built homepage (dist/): the toggle button in the nav with both icons, the icon animation
-// only without reduced motion, and the homepage JS budget. The dist/ tests skip without a build.
+// Tests for the theme toggle and the terminal view switch (Task F.7): the pure logic in src/lib/theme.ts (current/next
+// theme and style, label, saving), then the built pages (dist/): the toggle button in the nav with both icons, the
+// icon animation only without reduced motion, the switch in every footer, one script wiring both, and the homepage JS
+// budget. The dist/ tests skip without a build.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -8,7 +9,21 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { CF_BEACON_SRC } from '../src/lib/analytics.ts';
 import { BEACON_GZIP_BYTES, pageJsGzipBytes, pageScripts } from './helpers/page-js.ts';
-import { THEME_STORAGE_KEY, THEMES, currentTheme, nextTheme, saveTheme, toggleLabel } from '../src/lib/theme.ts';
+import {
+  STYLE_STORAGE_KEY,
+  STYLES,
+  TERMINAL,
+  THEME_STORAGE_KEY,
+  THEMES,
+  currentStyle,
+  currentTheme,
+  isStyle,
+  nextStyle,
+  nextTheme,
+  saveStyle,
+  saveTheme,
+  toggleLabel,
+} from '../src/lib/theme.ts';
 
 // --- Pure logic ---
 
@@ -68,6 +83,55 @@ test('saving when accessing localStorage itself throws (storage blocked) does no
   );
 });
 
+// --- Terminal view (Task F.7): the style choice ---
+
+test('the style values are regular and terminal, saved under their own key', () => {
+  assert.deepEqual([...STYLES], ['regular', 'terminal']);
+  assert.equal(TERMINAL, 'terminal');
+  assert.equal(STYLE_STORAGE_KEY, 'style');
+  assert.notEqual(STYLE_STORAGE_KEY, THEME_STORAGE_KEY);
+});
+
+test('isStyle accepts only the two values', () => {
+  for (const style of STYLES) assert.equal(isStyle(style), true);
+  for (const value of ['Terminal', 'dark', '', null, undefined, 1]) assert.equal(isStyle(value), false);
+});
+
+test('the current style is terminal only when data-style says so', () => {
+  assert.equal(currentStyle('terminal'), 'terminal');
+  for (const value of [undefined, '', 'regular', 'Terminal', 'blue']) assert.equal(currentStyle(value), 'regular');
+});
+
+test('next style flips between regular and terminal', () => {
+  assert.equal(nextStyle('regular'), 'terminal');
+  assert.equal(nextStyle('terminal'), 'regular');
+});
+
+for (const style of STYLES) {
+  test(`saving "${style}" writes it under the style key`, () => {
+    const saved = new Map<string, string>();
+    saveStyle(style, () => ({ setItem: (key, value) => void saved.set(key, value) }));
+    assert.deepEqual([...saved], [[STYLE_STORAGE_KEY, style]]);
+  });
+}
+
+test('saving the style with a throwing setItem does not throw', () => {
+  const throwing = {
+    setItem() {
+      throw new Error('QuotaExceededError');
+    },
+  };
+  assert.doesNotThrow(() => saveStyle('terminal', () => throwing));
+});
+
+test('saving the style when accessing localStorage itself throws (storage blocked) does not throw', () => {
+  assert.doesNotThrow(() =>
+    saveStyle('terminal', () => {
+      throw new Error('SecurityError: access denied');
+    }),
+  );
+});
+
 // --- Built homepage ---
 
 const ROOT = path.join(import.meta.dirname, '..');
@@ -114,6 +178,39 @@ test('the icon animation only exists without reduced motion', { skip }, () => {
     const media = before.lastIndexOf('@media');
     assert.match(before.slice(media), /^@media\s*\(prefers-reduced-motion:\s*no-preference\)\s*\{[^}]*$/);
   }
+});
+
+const PAGES = ['index.html', 'resume/index.html', '404.html'];
+
+test(
+  'every page has one terminal view switch in the footer: a button with aria-pressed and a fixed name',
+  { skip },
+  () => {
+    for (const file of PAGES) {
+      const page = fs.readFileSync(path.join(DIST, file), 'utf8');
+      const switches = [...page.matchAll(/<button\b[^>]*data-style-toggle[^>]*>[\s\S]*?<\/button>/g)].map(([b]) => b);
+      assert.equal(switches.length, 1, `${file}: style switches`);
+      const footer = page.match(/<footer\b[\s\S]*?<\/footer>/)?.[0] ?? '';
+      assert.ok(footer.includes(switches[0]), `${file}: the switch is not in the footer`);
+      assert.match(switches[0], /^<button\b[^>]*\btype="button"/, file);
+      assert.match(switches[0], /^<button\b[^>]*\baria-pressed="false"/, file);
+      // The name is the visible text; the >_ prompt is hidden from screen readers.
+      assert.doesNotMatch(switches[0], /aria-label=/, file);
+      assert.match(
+        switches[0],
+        /<span aria-hidden="true"[^>]*>\s*&gt;_\s*<\/span>\s*Terminal view\s*<\/button>$/,
+        file,
+      );
+    }
+  },
+);
+
+test('the page has one toggle script, wiring both switches (no shared chunk files)', { skip }, () => {
+  const scripts = [...html.matchAll(/<script type="module">([\s\S]*?)<\/script>/g)].map(([, js]) => js);
+  const toggles = scripts.filter((js) => js.includes('[data-theme-toggle]'));
+  assert.equal(toggles.length, 1, 'inline scripts wiring the theme toggle');
+  assert.ok(toggles[0].includes('[data-style-toggle]'), 'the toggle script does not wire the style switch');
+  assert.equal(scripts.filter((js) => js.includes('[data-style-toggle]')).length, 1, 'scripts wiring the switch');
 });
 
 test('homepage JS stays under 30KB gzipped (CLAUDE.md quality target), the analytics beacon included', { skip }, () => {

@@ -9,9 +9,8 @@ import { type Page } from '@playwright/test';
 import { expect, test } from './fixtures.ts';
 import { FIRST_HIT_MAX_MS } from '../../src/lib/game/engine.ts';
 import { BEST_SCORE_KEY } from '../../src/lib/game/best-score.ts';
-import { THEMES } from '../../src/lib/theme.ts';
 import { unexpectedConsoleProblems, type ConsoleEntry } from './console-problems.ts';
-import { cspViolations, expectTheme, themeToggle, watchSecurityErrors } from './helpers.ts';
+import { cspViolations, expectTheme, LOOKS, themeToggle, useLook, watchSecurityErrors } from './helpers.ts';
 
 const PATH = '/no-such-page';
 /** The first obstacle reaches a character that never jumps within FIRST_HIT_MAX_MS (engine guarantee), plus margin. */
@@ -356,14 +355,17 @@ for (const { width, height, edge } of [
   });
 }
 
+// In both themes and in terminal view (Task F.7).
 for (const width of [375, 1280]) {
-  for (const theme of THEMES) {
-    test.describe(`game at ${width}px, ${theme}`, () => {
-      test.use({ viewport: { width, height: 800 }, colorScheme: theme });
+  for (const look of LOOKS) {
+    test.describe(`game at ${width}px, ${look.name}`, () => {
+      test.use({ viewport: { width, height: 800 }, colorScheme: look.colorScheme });
 
       test('no horizontal scroll, and the game fits the column, before and during play', async ({ page }) => {
+        await useLook(page, look);
         await open(page);
-        await expectTheme(page, theme);
+        await page.evaluate(() => document.fonts.ready);
+        await expectTheme(page, look.scheme);
         const check = async () => {
           const box = await page.evaluate(() => {
             const c = document.querySelector('[data-game-canvas]')!.getBoundingClientRect();

@@ -6,17 +6,19 @@ import fs from 'node:fs';
 import { test } from './fixtures.ts';
 import { readIco } from '../../scripts/og/ico.ts';
 import { SITE_ICONS } from '../../src/lib/seo.ts';
-import { THEMES } from '../../src/lib/theme.ts';
-import { themeToggle } from './helpers.ts';
+import { LOOKS, styleToggle, themeToggle, useLook } from './helpers.ts';
 
 // 640px is sm, where the nav first shows the home link and the layout changes most (Task 2.16).
 const WIDTHS = [375, 640, 1280];
 const OUT_DIR = 'screenshots';
 
+// Both themes and terminal view (Task F.7). The `theme` in each file name is the look: dark, light or terminal.
 for (const width of WIDTHS) {
-  for (const theme of THEMES) {
+  for (const look of LOOKS) {
+    const theme = look.name;
     test.describe(`${width}px ${theme}`, () => {
-      test.use({ viewport: { width, height: 800 }, colorScheme: theme });
+      test.use({ viewport: { width, height: 800 }, colorScheme: look.colorScheme });
+      test.beforeEach(({ page }) => useLook(page, look));
 
       test('page', async ({ page }) => {
         await page.goto('/');
@@ -29,6 +31,10 @@ for (const width of WIDTHS) {
         await page.evaluate(() => document.fonts.ready);
         await page.locator('[data-resume] [data-email-address]').waitFor({ state: 'visible' });
         await page.screenshot({ path: `${OUT_DIR}/${width}-${theme}-resume.png`, fullPage: true });
+        // The top of /resume up close: Download PDF and the contact line (email, Copy, profile links).
+        await page
+          .locator('[data-resume] > header')
+          .screenshot({ path: `${OUT_DIR}/${width}-${theme}-resume-top.png` });
       });
 
       // The homepage Skills card with the last project card above it, to compare the two; and /resume's Skills.
@@ -72,14 +78,27 @@ for (const width of WIDTHS) {
         await page.screenshot({ path: `${OUT_DIR}/${width}-${theme}-404-game.png`, fullPage: true });
       });
 
-      test('toggle focused', async ({ page }) => {
+      // Terminal view hides the theme toggle, so it has no shot of it.
+      if (look.style !== 'terminal') {
+        test('toggle focused', async ({ page }) => {
+          await page.goto('/');
+          await page.evaluate(() => document.fonts.ready);
+          // Keyboard focus, so :focus-visible draws the ring.
+          await themeToggle(page).focus();
+          await page.keyboard.press('Shift+Tab');
+          await page.keyboard.press('Tab');
+          await page.screenshot({ path: `${OUT_DIR}/${width}-${theme}-toggle-focused.png` });
+        });
+      }
+
+      // The footer with the terminal view switch focused by keyboard (F.7).
+      test('switch focused', async ({ page }) => {
         await page.goto('/');
         await page.evaluate(() => document.fonts.ready);
-        // Keyboard focus, so :focus-visible draws the ring.
-        await themeToggle(page).focus();
+        await styleToggle(page).focus();
         await page.keyboard.press('Shift+Tab');
         await page.keyboard.press('Tab');
-        await page.screenshot({ path: `${OUT_DIR}/${width}-${theme}-toggle-focused.png` });
+        await page.getByRole('contentinfo').screenshot({ path: `${OUT_DIR}/${width}-${theme}-switch-focused.png` });
       });
 
       test.describe('with clipboard access', () => {
@@ -107,9 +126,11 @@ for (const width of WIDTHS) {
 // fit), and sits at the column's left edge at 1280px.
 const HEADER_PAGES = { home: '/', resume: '/resume', '404': '/no-such-page' };
 for (const width of [375, 640, 1280]) {
-  for (const theme of THEMES) {
+  for (const look of LOOKS) {
+    const theme = look.name;
     test.describe(`header ${width}px ${theme}`, () => {
-      test.use({ viewport: { width, height: 800 }, colorScheme: theme });
+      test.use({ viewport: { width, height: 800 }, colorScheme: look.colorScheme });
+      test.beforeEach(({ page }) => useLook(page, look));
 
       for (const [name, url] of Object.entries(HEADER_PAGES)) {
         test(`header ${name}`, async ({ page }) => {
@@ -156,6 +177,19 @@ test.describe('resume print', () => {
     await page.emulateMedia({ media: 'print' });
     await page.screenshot({ path: `${OUT_DIR}/resume-print.png`, fullPage: true });
     await page.pdf({ path: `${OUT_DIR}/print-preview-resume.pdf`, format: 'A4', preferCSSPageSize: true });
+  });
+
+  // Printed from terminal view (F.7): must look exactly like the shot above.
+  test('print from terminal view', async ({ page }) => {
+    await useLook(
+      page,
+      LOOKS.find((look) => look.style === 'terminal')!,
+    );
+    await page.goto('/resume');
+    await page.evaluate(() => document.fonts.ready);
+    await page.locator('[data-resume] [data-email-address]').waitFor({ state: 'visible' });
+    await page.emulateMedia({ media: 'print' });
+    await page.screenshot({ path: `${OUT_DIR}/resume-print-terminal.png`, fullPage: true });
   });
 });
 

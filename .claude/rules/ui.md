@@ -37,6 +37,10 @@ paths:
   tall cards. Cards use a subtle 1px border, no heavy shadows. Every homepage section after the Hero uses
   cards (`rounded-lg border border-border bg-surface`): Skills is one card with each category's name above its
   chips at every width.
+- Terminal view (F.7, design-doc §9.5) is an opt-in alternate style that restyles all of the above with CSS only, in
+  the terminal blocks of `src/styles/global.css`: dashed square borders, no card fill, mono, green tokens. Components
+  keep the classes these rules describe; don't add terminal-specific classes to them. The one marker:
+  `data-no-brackets` on a button-style or icon-only link (every other link shows `[brackets]` in terminal view).
 - Prefer an Astro component with a small script for simple interactions, such as the theme toggle
   (`src/components/ThemeToggle.astro`) and the copy-email button (`src/components/CopyEmail.astro`).
 - Use a React island only when the interaction is complex enough to need it, such as the contact
