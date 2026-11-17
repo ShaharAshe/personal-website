@@ -1,6 +1,6 @@
 # Design doc: personal portfolio site – Shahar Asher
 
-> **Status:** decisions final, ready for development · **Version:** 0.2 · **Date:** October 2026
+> **Status:** decisions final; what's built and what's next is tracked in `docs/plan.md` · **Version:** 1.0 · **Date:** November 2026
 > **Purpose of this document:** to collect every decision made, the reasoning and the options considered, as the basis for development with Claude Code.
 
 ---
@@ -94,7 +94,7 @@ To get interviews with companies for **Backend / Software Engineer** roles, by s
 | Framework | **Astro** | A fast static content site, zero JS by default, built-in MDX |
 | Language | **TypeScript** | Type safety for the data (a schema for the YAML and the GitHub data) |
 | Styling | **Tailwind CSS** | Fast to develop, consistent, Claude Code knows it well |
-| Interactive islands | **React** | Only for complex interaction (the contact form). Simple interactions (the Theme toggle, probably the Copy button too) are Astro components with a small script: React would add 45–60KB of JS to every page for one button, and break the 30KB target |
+| Interactive islands | **React** | Only for complex interaction (the contact form). Simple interactions are Astro components with a small script: React would add 45–60KB of JS to every page for one button, and break the 30KB target. So far the interactive parts (the theme toggle, the Copy button) are Astro components with small scripts; the first React island is planned with the contact form (task 3.3) |
 | Animation | **CSS**, and Motion only if needed | See [§10](#10-animation-and-graphics) |
 | Content | **YAML** (resume) + **MDX** (deep-dive pages) + **GitHub API** (project cards) | |
 | Hosting | **Cloudflare** | See [§13](#13-hosting-domain-and-cicd) |
@@ -111,8 +111,8 @@ To get interviews with companies for **Backend / Software Engineer** roles, by s
 
 ```
 /                               → homepage (scrolling, 5 sections)
-├── /projects/[repo-name]       → project deep-dive page (only for projects that have an MDX file)
-├── /case-studies/table-migration → Case study: the publishers table migration
+├── /projects/[repo-name]       → project deep-dive page (only for projects that have an MDX file) (planned, Milestone 3)
+├── /case-studies/table-migration → Case study: the publishers table migration (planned, Milestone 3)
 ├── /resume                     → resume as HTML + a PDF download button
 ├── /resume.pdf                 → the file to download (a fixed URL)
 └── /404                        → a designed error page, with a small game below it (F.3)
@@ -140,7 +140,7 @@ To get interviews with companies for **Backend / Software Engineer** roles, by s
 #### Experience
 - **Built from `resume.yaml`**, so there's no duplication with the resume.
 - A card for Taboola. The homepage shows the 3–4 strongest highlights (marked `featured: true` in the YAML), with a link to the full resume.
-- A "Read the migration case study →" link.
+- A "Read the migration case study →" link (planned, task 3.2, with the case study).
 - A timeline structure, so there's room for future roles.
 - A role with no `featured` highlights is still shown (company, position and dates only), so there's no gap in the timeline.
 
@@ -241,17 +241,19 @@ The projects are pulled from GitHub automatically. A new project appears on the 
 
 **Links vs. tags:** the links on the card are text links in the accent color (because accent = clickable). The language tags are outlined and the topic tags have a `--border` background, and none of them is in the accent color.
 
-### 6.5 The repos today and the proposed mapping
+### 6.5 The repos and their topics
 
-| Repo | Description on GitHub | Proposed topic |
+| Repo | Description on GitHub | Topic |
 |---|---|---|
 | log-analytics-platform | ✅ exists | `portfolio-featured` |
 | scam-reporting-app | ✅ exists | `portfolio` |
 | diff-checker | ✅ exists | `portfolio` |
-| Cryptography_modules | ✅ exists | `portfolio` (optional) |
+| Cryptography_modules | ✅ exists | `portfolio` |
 | LeetCode | ✅ exists | `portfolio-practice` |
 | NeetCode | ✅ exists | `portfolio-practice` |
 | project_euler | ✅ exists | `portfolio-practice` |
+
+The descriptions and topics are set on the repos. GitHub is the source; this table is the mapping as decided.
 
 ### 6.6 Build checks
 - A repo with `portfolio-featured` or `portfolio` **and no description** → the build fails with a clear message. That way no empty card goes live.
@@ -261,8 +263,8 @@ The projects are pulled from GitHub automatically. A new project appears on the 
 
 ## 7. Resume: single source of truth
 
-### 7.1 The situation today
-The resume is created in a claude.ai chat, by a `create_cv.js` script (the `docx` library) that generates a Word file, and a PDF from it. **The content and the design live together in the same script**, so every update in a new chat also rewrites the design.
+### 7.1 Before this site
+Before this site, the resume was created in a claude.ai chat, by a `create_cv.js` script (the `docx` library) that generated a Word file, and a PDF from it. **The content and the design lived together in the same script**, so every update in a new chat also rewrote the design.
 
 ### 7.2 The decision
 Separate the content from the design:
@@ -286,9 +288,11 @@ src/data/resume.yaml          ← the content, and only here
 Instead of a claude.ai chat, updates are made in Claude Code inside the repo:
 > "Add a bullet to the resume about Spring Security in the Scam Reporting project"
 
-Claude Code updates `resume.yaml`, you see the diff, approve it and push. The build regenerates everything.
+Claude Code edits `resume.yaml` and runs `npm run cv` (with the one-page check). You review and approve the diff, commit it on a branch, and it reaches `main` through a PR. The build regenerates everything. The exact steps are in CLAUDE.md ("Updating the resume").
 
 ### 7.4 The `resume.yaml` structure (draft)
+
+An illustration of the shape. The real file is `src/data/resume.yaml`, validated by `src/data/resume.schema.ts`.
 
 ```yaml
 basics:
@@ -434,7 +438,7 @@ The structure is based on the open [JSON Resume](https://jsonresume.org/schema) 
 | `--surface` | `#14171C` | `#FFFFFF` |
 | `--text` | `#E6E8EB` | `#111418` |
 | `--text-muted` | `#8B93A1` | `#5B6472` |
-| `--accent` | `#4F9DFF` | A darker shade (for example `#1F6FD1`), for contrast on white |
+| `--accent` | `#4F9DFF` | `#1F6FD1` (a darker shade, for contrast on white) |
 | `--border` | `#23272F` | `#E5E7EB` |
 
 **Why blue:** it's the color everyone recognizes as "link" and "button", it conveys trust and professionalism, and it doesn't compete with the content.
@@ -482,6 +486,8 @@ The structure is based on the open [JSON Resume](https://jsonresume.org/schema) 
 | Section entrance | Fade + a small slide (8–16px), **once** | CSS + IntersectionObserver |
 | Theme toggle | The colors switch at once (no transition, since only `transform` and `opacity` may be animated); only the new icon rotates and fades in (200ms), and only after a click, not on load | CSS animation |
 | Copy button | An instant swap to a check icon and "Copied" | CSS |
+
+The theme toggle and the Copy button are built as described. The page transitions, the section entrance and the card hover are planned (task 3.4).
 
 ### 10.2 What's out
 - ❌ Three.js / 3D / WebGL
@@ -662,76 +668,38 @@ at this stage. A push to another branch doesn't run the workflow by itself (so a
 
 ## 14. Project structure
 
+The top level only, one line per folder. File-level details are in the directory map in CLAUDE.md.
+
 ```
-portfolio/
-├── CLAUDE.md                        # standing instructions for Claude Code
-├── astro.config.mjs
-├── wrangler.jsonc                   # Cloudflare settings
-├── public/
-│   ├── og-image.png
-│   ├── favicon.ico                  # 16/32/48, generated by npm run og
-│   ├── apple-touch-icon.png         # 180×180, generated by npm run og
-│   └── _headers                     # Security headers
+./
+├── CLAUDE.md, README.md, astro.config.mjs, wrangler.jsonc   # instructions, setup, Astro and Cloudflare config
+├── .github/workflows/       # deploy.yml: build, checks, e2e, deploy from main only
+├── .githooks/               # pre-commit (phone check) + pre-push (refuses pushes to main)
+├── docs/                    # this design doc + plan.md (the task list and status)
+├── public/                  # _headers template, OG image, site icons
 ├── scripts/
-│   ├── cv/
-│   │   ├── validate-resume.ts       # validates resume.yaml against the schema
-│   │   ├── create_cv.js             # the current design, reads from resume.yaml
-│   │   ├── format.js                # formats dates and URLs (used by create_cv.js)
-│   │   ├── paths.js                 # shared input/output paths (.generated/cv/)
-│   │   ├── to-pdf.js                # runs soffice (Word → PDF)
-│   │   ├── check-pdf.ts             # checks the PDF is one page (pdf-parse)
-│   │   └── publish-pdf.ts           # copies the PDF to dist/resume.pdf (end of the build)
-│   ├── checks/                      # site checks: phone and email not in dist/ etc. (npm run check)
-│   ├── og/                          # generates og-image.png and the site icons (npm run og) + a PNG/ICO check to detect a stale image
-│   └── github/
-│       └── fetch-projects.ts        # pulls from the GitHub API → src/data/projects.json
+│   ├── cv/                  # resume.yaml → Word → PDF + the one-page check
+│   ├── github/              # GitHub fetcher → src/data/projects.json
+│   ├── og/                  # OG image + site icons (npm run og)
+│   ├── checks/              # site checks (phone/email not in dist/ etc.)
+│   ├── csp/                 # writes the CSP with hashes into dist/_headers
+│   ├── ctf/                 # adds the CTF's X-Clue rule to dist/_headers (F.2)
+│   ├── doodles/             # doodle builds and screenshots, the guard on dist/ (F.4)
+│   └── git/                 # hook installer + pre-push policy
 ├── src/
-│   ├── content.config.ts            # Content collections: the projects' deep-dive pages (MDX)
-│   ├── lib/
-│   │   ├── resume.ts                # validated resume for components (no email; getEmailParts() separately)
-│   │   ├── seo.ts                   # full URLs from site, the sitemap and robots text, JSON-LD of type Person
-│   │   └── projects.ts              # validated projects.json for components (the schema is the source of the types)
-│   ├── data/
-│   │   ├── resume.yaml              # ⭐ the single source for the resume
-│   │   ├── resume.schema.ts         # Schema for resume.yaml (shared by the scripts and src/lib/resume.ts)
-│   │   ├── project-page.schema.ts   # Schema for the project pages' frontmatter
-│   │   └── projects.json            # generated in the build (not kept in git)
-│   ├── content/
-│   │   ├── projects/
-│   │   │   └── log-analytics-platform.mdx
-│   │   └── case-studies/
-│   │       └── table-migration.mdx
-│   ├── components/
-│   │   ├── Hero.astro
-│   │   ├── Experience.astro
-│   │   ├── Projects.astro
-│   │   ├── ProjectCard.astro
-│   │   ├── Skills.astro
-│   │   ├── TechChip.astro
-│   │   ├── Contact.astro
-│   │   ├── ArchitectureDiagram.astro
-│   │   ├── ThemeToggle.astro        # an Astro component + a small script, not an island
-│   │   ├── CopyEmail.astro          # an Astro component + a small script, not an island
-│   │   └── islands/
-│   │       └── ContactForm.tsx      # phase 2
-│   ├── layouts/
-│   │   ├── BaseLayout.astro
-│   │   └── ArticleLayout.astro
-│   ├── pages/
-│   │   ├── index.astro
-│   │   ├── resume.astro
-│   │   ├── projects/[slug].astro
-│   │   ├── case-studies/[slug].astro
-│   │   ├── 404.astro
-│   │   ├── sitemap.xml.ts           # endpoint: the sitemap (the site URL from site in astro.config.mjs)
-│   │   ├── robots.txt.ts            # endpoint: robots.txt with a Sitemap line
-│   │   └── api/contact.ts           # phase 2: the form's function
-│   └── styles/
-│       └── global.css               # Design tokens
-├── tests/                           # node:test tests (npm test), fixtures/ for test files
-│   └── e2e/                         # Playwright tests in the browser (npm run test:e2e)
-└── .github/workflows/
-    └── deploy.yml
+│   ├── data/                # resume.yaml ⭐ + schemas (projects.json generated, not in git)
+│   ├── lib/                 # validated data for components (resume, projects, seo, theme…)
+│   │   ├── game/            # the 404 game (F.3)
+│   │   ├── doodles/         # the doodles (F.4)
+│   │   └── ctf.mts          # the CTF chain's clues (F.2)
+│   ├── components/          # .astro components
+│   │   └── islands/         # React islands: ContactForm (planned, Milestone 3)
+│   ├── layouts/             # BaseLayout (ArticleLayout planned, Milestone 3)
+│   ├── pages/               # index, resume, 404, sitemap.xml, robots.txt, .well-known/
+│   │                        #   projects/, case-studies/, api/contact (planned, Milestone 3)
+│   ├── content/             # MDX deep-dive pages and case studies (planned, Milestone 3)
+│   └── styles/              # global.css: design tokens
+└── tests/                   # node:test (npm test); e2e/ Playwright; fixtures/, helpers/
 ```
 
 ---
@@ -762,68 +730,41 @@ portfolio/
 
 ## 16. Roadmap by phase
 
+The phases and what each one means. Status, tasks and their order are tracked in `docs/plan.md` (Milestones 1–2 = Phases 0–1, Milestone 3 = Phase 2, Milestone 4 = Phase 3).
+
 ### Phase 0: Prep (before code)
-- [ ] Add descriptions to the repos that are missing them: **log-analytics-platform**, NeetCode, project_euler
-- [ ] Add topics to the repos according to the table in [§6.5](#65-the-repos-today-and-the-proposed-mapping)
-- [ ] Fix in the scam-reporting-app README: "About As" → "About Us"
-- [ ] Open a Cloudflare account (free)
-- [ ] Write the Hero text (one sentence)
+The repos get their descriptions and topics ([§6.5](#65-the-repos-and-their-topics)), a Cloudflare account is opened, and the Hero sentence is written.
 
 ### Phase 1: MVP
-- [ ] Scaffold: Astro + Tailwind + TypeScript
-- [ ] Design tokens, BaseLayout, Dark/Light with a toggle
-- [ ] `resume.yaml` + schema (converted from the existing `create_cv.js`)
-- [ ] `create_cv.js` reads from the YAML, PDF generation + the one-page check
-- [ ] Pulling projects from GitHub + filtering by topics
-- [ ] Homepage: Hero, Experience, Projects, Skills, Contact (email + Copy, LinkedIn, GitHub)
-- [ ] The `/resume` page + PDF download
-- [ ] Basic SEO + OG image + security headers
-- [ ] GitHub Actions: build, checks, deploy, daily build
-- [ ] Cloudflare Web Analytics
-- [ ] **→ The site is live at Cloudflare's free URL**
+Everything a recruiter needs, live at Cloudflare's free URL: the scaffold, design tokens and theme, `resume.yaml` driving the Word/PDF and the site, projects from GitHub, the homepage, the `/resume` page, SEO and security headers, CI/CD with the daily build, and analytics.
 
 ### Phase 2: Depth
-- [ ] The Log Analytics Platform page with a static diagram
-- [ ] Case study: the migration
-- [ ] Contact form (function + Turnstile)
-- [ ] Subtle animations + View Transitions
+What the hiring manager and the interviewer read: the Log Analytics Platform page with a static diagram, the migration case study, the contact form (function + Turnstile), and the subtle animations + View Transitions.
 
 ### Phase 3: Official launch
-- [ ] Choose and buy a domain
-- [ ] Update the link on LinkedIn, on GitHub and in `resume.yaml`
-- [ ] Final check: Lighthouse, mobile, contrast, all the links
+A domain is chosen and bought, the links on LinkedIn, GitHub and in `resume.yaml` are updated, and a final check (Lighthouse, mobile, contrast, all the links) is done.
 
 ---
 
 ## 17. Working with Claude Code
 
 ### 17.1 `CLAUDE.md`
-A file at the project root that Claude Code reads in every session. It will include:
-- The site's goal and audience ([§1](#1-goals-and-audience))
-- The stack and the folder structure ([§3](#3-tech-stack), [§14](#14-project-structure))
-- Design tokens and design rules ([§9](#9-visual-design))
-- Animation rules ([§10.3](#103-rules))
-- Performance targets ([§11](#11-performance-accessibility-and-seo))
-- **Rules:**
-  - Resume content **only** in `resume.yaml`, never hardcoded in components.
-  - **Don't change the design in `create_cv.js`** without an explicit request.
-  - The phone is never shown on the site.
-  - No new libraries without asking.
-  - Run build and type-check before finishing a task.
-  - Taboola confidentiality ([§12](#12-privacy-security-and-confidentiality)).
+A file at the project root that Claude Code reads in every session. It holds the goal and audience, the stack and commands, the directory map, the hard rules (resume content only in `resume.yaml`, the phone never on the site, Taboola confidentiality and the rest), the design and motion rules, the quality targets, how to work and the definition of done. The rules live there, not here: this doc keeps the decisions and their reasons.
 
 ### 17.2 Way of working
-1. **One task at a time**, following the Roadmap.
-2. **Plan mode** before big tasks.
+The flow in brief (the exact rules are in CLAUDE.md, "How to work"):
+
+1. **One task at a time**, in the order of `docs/plan.md`.
+2. **Plan mode first:** Claude Code proposes a plan, and you approve it and then every file edit.
 3. **UI tests and visual checks:** behavior that needs a real browser (keyboard, focus, saving the theme, fonts)
    is tested by permanent Playwright tests in `tests/e2e/`, which also run in CI before deploy. On top of that, review
    screenshots (`npm run screenshots`) at 375px and 1280px, in both color modes, are checked by eye. There's no automatic
    screenshot comparison: font rendering differs between Windows and Linux.
-4. **Commit after every step** that works.
+4. **You commit, through a PR:** Claude Code never commits. It proposes the commit message and the commands; you commit on a branch, open a PR, and once the `build` check passes it's squash merged into `main`.
 5. **Your content:** Claude Code can help with wording, but the final text should sound like you.
 
 ### 17.3 Updating the resume
-> "Update the resume: [the change]. Then run the build and show me the PDF."
+See [§7.3](#73-the-new-way-of-working). The steps are in CLAUDE.md ("Updating the resume").
 
 ---
 
