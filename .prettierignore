@@ -5,6 +5,7 @@ docs/
 tests/fixtures/
 package-lock.json
 dist/
+dist-doodle/
 .generated/
 .astro/
 playwright-report/

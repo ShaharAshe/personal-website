@@ -11,12 +11,13 @@ import { isBlockedUrl } from './e2e/blocked-hosts.ts';
 const E2E = path.join(import.meta.dirname, 'e2e');
 const files = fs
   .readdirSync(E2E)
-  .filter((file) => file.endsWith('.spec.ts') || file === 'review-screenshots.ts')
+  .filter((file) => file.endsWith('.spec.ts') || file.endsWith('screenshots.ts'))
   .sort();
 
 test('the e2e folder has specs and the screenshot script', () => {
   assert.ok(files.length > 1);
   assert.ok(files.includes('review-screenshots.ts'));
+  assert.ok(files.includes('doodle-screenshots.ts'));
   assert.ok(files.includes('analytics.spec.ts'));
 });
 

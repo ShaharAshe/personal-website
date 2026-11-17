@@ -5,8 +5,9 @@
 # Dependencies
 node_modules/
 
-# Build output and Astro's generated types
+# Build output and Astro's generated types (dist-doodle/: the doodle preview build, npm run doodle:build; never deployed)
 dist/
+dist-doodle/
 .astro/
 
 # Generated at build time (CLAUDE.md hard rule 6)
