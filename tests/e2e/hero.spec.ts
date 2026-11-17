@@ -1,14 +1,13 @@
 // Hero (Task 2.5) in a real browser: the resume download, the CTA targets, keyboard order with focus
-// rings, and the layout at 375px and 1280px in both themes. What the built HTML contains is checked by
-// tests/hero.test.ts (npm test).
+// rings, and the layout at 375px and 1280px in both themes and terminal view. What the built HTML contains is checked
+// by tests/hero.test.ts (npm test).
 
 import { type Page } from '@playwright/test';
 import { expect, test } from './fixtures.ts';
-import { THEMES } from '../../src/lib/theme.ts';
 import { mailtoHref } from '../../src/lib/email-client.ts';
 import { getEmailParts, getResume } from '../../src/lib/resume.ts';
 import { RESUME_PDF_FILENAME } from '../../src/lib/resume-pdf.ts';
-import { expectFocusRing, expectTheme, themeToggle } from './helpers.ts';
+import { expectFocusRing, expectTheme, LOOKS, themeToggle, useLook } from './helpers.ts';
 
 const hero = (page: Page) => page.locator('[data-hero]');
 const download = (page: Page) => hero(page).getByRole('link', { name: 'Download Resume' });
@@ -55,14 +54,17 @@ test('keyboard: after the theme toggle, Tab reaches both CTAs and then each prof
   expect((await email.getAttribute('href')) === mailtoHref(getEmailParts())).toBe(true);
 });
 
+// In both themes and in terminal view (Task F.7), where mono text is wider.
 for (const width of [375, 1280]) {
-  for (const theme of THEMES) {
-    test.describe(`Hero at ${width}px, ${theme}`, () => {
-      test.use({ viewport: { width, height: 800 }, colorScheme: theme });
+  for (const look of LOOKS) {
+    test.describe(`Hero at ${width}px, ${look.name}`, () => {
+      test.use({ viewport: { width, height: 800 }, colorScheme: look.colorScheme });
 
       test('no horizontal scroll; both CTAs fully visible', async ({ page }) => {
+        await useLook(page, look);
         await page.goto('/');
-        await expectTheme(page, theme);
+        await page.evaluate(() => document.fonts.ready);
+        await expectTheme(page, look.scheme);
 
         const { scrollWidth, clientWidth } = await page.evaluate(() => ({
           scrollWidth: document.documentElement.scrollWidth,

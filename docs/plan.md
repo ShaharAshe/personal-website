@@ -1817,7 +1817,7 @@ one is its own task (one at a time, plan first, tests + e2e + screenshots as usu
     daily. Revisit only with a real need.
   - Depends on: 4.2 and action item #14.
 
-- [ ] **F.7 Terminal view** — A second visual style for the whole site, switched by a click and remembered,
+- [x] **F.7 Terminal view** — A second visual style for the whole site, switched by a click and remembered,
   like light/dark. Same pages, same content, same layout; only the look changes.
   - A separate switch from the light/dark toggle: style = `regular` | `terminal`. Terminal is always dark.
   - CSS and design tokens only, with no component or layout changes:
@@ -1844,6 +1844,30 @@ one is its own task (one at a time, plan first, tests + e2e + screenshots as usu
       attribute too.
     - Whether the character gets its own terminal look (e.g. ASCII) is decided in F.7.
   - Depends on: 2.16.
+  - Done (decisions and deviations; details in design-doc §9.5):
+    - Green on black (text `#4FDB67` 11.2:1, muted 7.2:1, accent 15.7:1), always dark. Applies to every page,
+      /resume included; every rule is inside `@media screen`, so print never changes.
+    - `<html data-style="terminal">`, key `style` (`regular`/`terminal`) in `src/lib/theme.ts`, set by the same
+      inline head script as the theme (one script, so the CSP line stays 730/2000, 784 on doodle days).
+    - The switch: a `>_ Terminal view` button in the footer (`aria-pressed`), before Back to top, which stays the last
+      Tab stop. No script of its own: ThemeToggle's script wires it (two scripts importing theme.ts made the bundler
+      split a shared chunk into three files). Homepage JS 12.60 → 12.76 KB gzipped.
+    - The light/dark toggle is hidden in terminal view; the saved theme comes back after.
+    - Button-style and icon-only links carry `data-no-brackets`; every other link gets `[ ]` (an e2e test checks every
+      link on every page has one or the other).
+    - Deviations, CSS-only in the terminal block:
+      - below sm the nav links drop their brackets: with them the nav is 376px and doesn't fit the 343px a 375px
+        screen has;
+      - /resume reserves 280px for the email (263px in mono with brackets; regular stays 240px);
+      - the footer keeps its phone layout (copyright above the links) at every width;
+      - text-only links have no flex gap, so their brackets sit tight (`[Resume]`); links with an icon get one even
+        0.5ch gap between every item, brackets included (`[ (icon) LinkedIn ]`), so both sides match whichever side
+        the icon is on (an e2e test measures the ink gaps);
+      - the switch shows a visible `[on]` in terminal view (kept out of its name); no `[off]` in the regular style,
+        whose footer row has no room for it at 640px;
+      - topic chips (text on the `--border` fill) have no glow, which would bring them to 3.3:1.
+    - The 404 game observes `data-style` too. Its character keeps its shape (recolored through the tokens); an ASCII
+      look is proposed for F.8.
 
 - [ ] **F.8 Game v2 (after launch, after 4.3)** — More to the 404 game (F.3), once the site is live on its domain.
   - More variety in rhythm: obstacle combos (pairs, a long gap then a quick run), not just random gaps.
@@ -1854,6 +1878,8 @@ one is its own task (one at a time, plan first, tests + e2e + screenshots as usu
     menu.
   - Keep: lazy-loaded on Play, under 8 KB gzipped, tokens only, the reduced-motion exception rules (design-doc
     §10.3).
+  - Maybe (from F.7): an ASCII look for the character in terminal view (`<html data-style="terminal">`). Not done in
+    F.7: draw.ts is shapes only, and text on the canvas needs the font loaded first and its own tests.
   - Depends on: F.3, 4.3.
 
 ## Milestone 3 — Depth (design-doc §16 Phase 2)

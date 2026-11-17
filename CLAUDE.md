@@ -122,6 +122,10 @@ scripts/git/                hook installer + the pre-push logic (push-policy.ts)
   try/catch), and from then on the saved choice wins. Key and values live in `src/lib/theme.ts`.
   The saved theme is applied by an inline script in `<head>` before first paint (no flash).
 - Accent: `#4F9DFF` in dark, a darker blue (e.g. `#1F6FD1`) in light for contrast.
+- Terminal view (F.7, design-doc §9.5): an opt-in alternate style, `<html data-style="terminal">`, key `style`
+  (`regular`/`terminal`) next to the theme's in `src/lib/theme.ts`, applied by the same head script. Green tokens,
+  always dark, CSS only (inside `@media screen`, so print never changes). It overrides the accent and card looks above;
+  components keep their classes.
 - Use the tokens in `src/styles/global.css`. Never hardcode colors in components.
 - Fonts: Inter (or Geist Sans) + JetBrains Mono (or Geist Mono), self-hosted.
 - No progress bars or percentages for skills.

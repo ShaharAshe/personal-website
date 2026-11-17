@@ -50,6 +50,133 @@
 }
 
 /*
+ * Terminal view (Task F.7, design-doc §9.5): an opt-in alternate style, switched in the footer
+ * (src/components/StyleToggle.astro) and saved like the theme (src/lib/theme.ts). <html data-style="terminal">, applied
+ * before first paint by the same head script. Always dark, whatever data-theme or the OS says.
+ *
+ * CSS only: components keep their classes, these rules restyle them.
+ *   - Order matters: these blocks come after every theme block above and have the same specificity, so they win.
+ *   - Unlayered, so they also win over Tailwind's utilities and the @layer base rules (--hero-glow).
+ *   - Everything is inside @media screen, so print never sees any of it: paper always gets the print block at the end.
+ * The first block holds exactly the six tokens; tests/design-tokens.test.ts reads it and checks WCAG AA, including
+ * against the glow below.
+ */
+@media screen {
+  :root[data-style='terminal'] {
+    color-scheme: dark;
+    --bg: #050805;
+    --surface: #050805;
+    --text: #4fdb67;
+    --text-muted: #3fb054;
+    --accent: #a6f5b3;
+    --border: #123118;
+  }
+
+  /* Monospace everywhere: the sans variable becomes the mono font the site already loads (no new download). Only
+     JetBrains Mono 400 is loaded, so no faux bold: headings stand out by size. Flat black behind the Hero; its dots
+     stay. */
+  :root[data-style='terminal'] {
+    --font-inter: var(--font-jetbrains-mono);
+    --hero-glow: transparent;
+    font-synthesis-weight: none;
+  }
+
+  /* A subtle glow in each element's own color. Its strength is checked against WCAG AA in the token test. */
+  :root[data-style='terminal'],
+  :root[data-style='terminal'] * {
+    text-shadow: 0 0 0.3em color-mix(in srgb, currentColor 25%, transparent);
+  }
+
+  /* No glow on a --border fill (the topic chips): there's little contrast to spare, and the glow would wash it out. */
+  :root[data-style='terminal'] .bg-border {
+    text-shadow: none;
+  }
+
+  /* Dashed, square borders instead of cards (cards have no fill: --surface is --bg). */
+  :root[data-style='terminal'] * {
+    border-style: dashed;
+    border-radius: 0;
+  }
+
+  /* Where a border is the only edge of a control (View Projects, Copy, the game's Play button and canvas), it draws in
+     --text-muted, at least 3:1 (WCAG 1.4.11). Card outlines stay --border: they're decoration. */
+  :root[data-style='terminal'] :is(a, button, canvas).border {
+    border-color: var(--text-muted);
+  }
+
+  /* Text links read [like this]. The alt-text syntax (after the slash) keeps the brackets out of the accessible name.
+     Button-style and icon-only links carry data-no-brackets. */
+  :root[data-style='terminal'] a:not([data-no-brackets])::before {
+    content: '[' / '';
+  }
+
+  :root[data-style='terminal'] a:not([data-no-brackets])::after {
+    content: ']' / '';
+  }
+
+  /* In a flex link the brackets are flex items, so the link's gap spaces them too. Text-only links get no gap, so
+     their brackets sit tight ("[Read more →]", like "[Resume]"). Links with an icon get one even gap between every
+     item, brackets included: "[ (icon) LinkedIn ]", "[ Back to top (icon) ]", the same on both sides whichever side
+     the icon is on (an icon is a link's only element child, so CSS can't tell those two apart to space it alone). */
+  :root[data-style='terminal'] a:not([data-no-brackets]) {
+    column-gap: 0;
+  }
+
+  :root[data-style='terminal'] a:not([data-no-brackets]):has(> svg) {
+    column-gap: 0.5ch;
+  }
+
+  /* The footer's links are wider in mono, so the copyright and the links don't fit on one row (the name would break
+     onto two lines). The footer keeps its phone layout at every width: the copyright above, the links below. */
+  :root[data-style='terminal'] [data-footer] > div {
+    flex-direction: column;
+    align-items: flex-start;
+    row-gap: 0.5rem;
+  }
+
+  /* The switch shows its state: ">_ Terminal view [on]", so it's clear the same button turns terminal view off. Its name
+     stays "Terminal view" (aria-pressed tells assistive tech the state), so the marker uses the alt-text syntax. Keyed
+     on <html data-style>, so it's right before any script runs. No "[off]" in the regular style: its footer row has
+     no room for it at 640px, and off is the look the visitor already sees. */
+  :root[data-style='terminal'] [data-style-toggle]::after {
+    content: '[on]' / '';
+    color: var(--text);
+  }
+
+  /* Terminal is always dark, so the light/dark toggle is hidden (and out of the tab order). The saved theme is kept
+     for when terminal is turned off. */
+  :root[data-style='terminal'] [data-theme-toggle] {
+    display: none;
+  }
+}
+
+/* Below sm (40rem), the nav links drop their brackets: in mono with brackets they're 376px wide, more than the 343px a
+   375px screen has, and the row would wrap. The current page keeps its underline. tests/e2e/seo.spec.ts checks the nav
+   stays on one row. */
+@media screen and (width < 40rem) {
+  :root[data-style='terminal'] nav[aria-label='Main'] a::before,
+  :root[data-style='terminal'] nav[aria-label='Main'] a::after {
+    content: none;
+  }
+}
+
+/* /resume's email slot reserves its width so nothing moves when the script reveals the address (resume.astro). In
+   mono with brackets the row is 263px, so terminal view reserves 280px from sm up (the regular one is 240px). */
+@media screen and (width >= 40rem) {
+  :root[data-style='terminal'] [data-resume-email] {
+    min-width: 17.5rem;
+  }
+}
+
+/* With prefers-contrast: more, terminal view has no glow at all. */
+@media screen and (prefers-contrast: more) {
+  :root[data-style='terminal'],
+  :root[data-style='terminal'] * {
+    text-shadow: none;
+  }
+}
+
+/*
  * Tailwind utilities: bg-bg, bg-surface, text-text, text-text-muted, text-accent, border-border, ...
  * `inline` makes them use var(--bg) etc. directly, so they follow the theme switch.
  * The default palette is removed so components can only use these tokens, never raw colors.

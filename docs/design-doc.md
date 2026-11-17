@@ -473,6 +473,34 @@ The structure is based on the open [JSON Resume](https://jsonresume.org/schema) 
 - Cards with a subtle border, no heavy shadows.
 - **Chips:** an outlined chip means "technology" across the whole site: a project's languages and the homepage Skills, all from one component (`src/components/TechChip.astro`). A filled chip (`--border` background) is only for a repo's topics. No chip uses the accent.
 
+### 9.5 Terminal view (an opt-in alternate style)
+Sections 9.1–9.4 describe the site's one look. **Terminal view** (F.7) is a second look that the visitor turns on: it's never the default, and the same pages, content and layout stay. It's inspired by the look of old terminals and puzzle sites like Advent of Code, with nothing copied.
+- **The switch:** a `>_ Terminal view` button in the Footer (a real `<button>` with `aria-pressed`), separate from the Dark/Light toggle. In terminal view it reads `>_ Terminal view [on]`, so it's clear the same button turns it off; the `[on]` isn't part of its accessible name. It's saved like the theme (`localStorage`, key `style`, values `regular`/`terminal`, in `src/lib/theme.ts`), and the same `<head>` script sets `<html data-style="terminal">` before the page is shown, so there's no flash.
+- **Always dark:** while it's on, the Dark/Light toggle is hidden. The saved theme is kept and comes back when terminal view is turned off.
+- **CSS and tokens only** (`src/styles/global.css`): the components keep their classes, and the 404 game and the doodles follow, because they read the tokens.
+  - Green on black, with the six tokens below.
+  - Monospace everywhere: the JetBrains Mono the site already loads, at weight 400 only (no faux bold, no new download).
+  - A subtle glow on text (none on the topic chips' `--border` fill, where it would take the contrast below AA).
+  - Text links shown like `[Resume]`; links with an icon get even space inside, `[ (icon) LinkedIn ]`. The brackets come from CSS `content` with alt text, so screen readers don't read them. Button-style and icon-only links are marked `data-no-brackets`.
+  - Dashed square borders instead of cards (cards get no fill). A border that is a control's only edge (View Projects, Copy, the game) uses `--text-muted`, so it meets 3:1.
+  - Mono is wider, so a few layouts adapt, still in CSS only:
+    - below 640px the nav links have no brackets, so the nav stays on one row;
+    - /resume reserves a wider slot for the email;
+    - the Footer keeps its phone layout at every width.
+- **The same rules as the regular look:**
+  - WCAG AA: tested like 9.2, and also against the glow at its strongest.
+  - `prefers-contrast: more` removes the glow.
+  - Switching is instant (no transition), so `prefers-reduced-motion` has nothing to turn off.
+  - **Print always uses the print stylesheet:** every terminal rule is inside `@media screen`.
+
+| Token | Terminal | Contrast on `--bg` |
+|---|---|---|
+| `--bg` / `--surface` | `#050805` | (the same: cards have no fill) |
+| `--text` | `#4FDB67` | 11.2:1 |
+| `--text-muted` | `#3FB054` | 7.2:1 (5.1:1 on `--border`, the topic chips) |
+| `--accent` | `#A6F5B3` | 15.7:1 (links and the focus ring, brighter than the text) |
+| `--border` | `#123118` | Decorative only |
+
 ---
 
 ## 10. Animation and graphics
@@ -486,6 +514,7 @@ The structure is based on the open [JSON Resume](https://jsonresume.org/schema) 
 | Section entrance | Fade + a small slide (8–16px), **once** | CSS + IntersectionObserver |
 | Theme toggle | The colors switch at once (no transition, since only `transform` and `opacity` may be animated); only the new icon rotates and fades in (200ms), and only after a click, not on load | CSS animation |
 | Copy button | An instant swap to a check icon and "Copied" | CSS |
+| Terminal view switch (9.5) | None: the style switches at once, like the theme's colors | CSS |
 
 The theme toggle and the Copy button are built as described. The page transitions, the section entrance and the card hover are planned (task 3.4).
 
@@ -535,8 +564,9 @@ The theme toggle and the Copy button are built as described. The page transition
 - Semantic HTML (`<nav>`, `<main>`, `<section>`, headings in the right order).
 - Full keyboard navigation + visible focus states.
 - Alt for every image, labels for every field.
-- WCAG AA contrast.
+- WCAG AA contrast, in terminal view too (9.5).
 - `prefers-reduced-motion`.
+- `prefers-contrast: more`: terminal view drops its text glow (9.5).
 
 ### SEO and sharing
 - A unique `<title>` and `<meta description>` for every page. On the homepage: the title is `name – role` and the description is the tagline, both from `resume.yaml`. That way the share card (the title and description under the image) doesn't repeat the name.

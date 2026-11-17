@@ -177,14 +177,15 @@ export function mount(root: HTMLElement): Game {
   });
   window.addEventListener('blur', pause);
 
-  // Theme: the toggle sets <html data-theme>; with nothing saved the page follows the OS.
+  // Theme: the toggle sets <html data-theme>; with nothing saved the page follows the OS. Terminal view (Task F.7) sets
+  // <html data-style>, which changes the same tokens.
   const repaint = () => {
     palette = readPalette();
     render();
   };
   new MutationObserver(repaint).observe(document.documentElement, {
     attributes: true,
-    attributeFilter: ['data-theme'],
+    attributeFilter: ['data-theme', 'data-style'],
   });
   osLight.addEventListener('change', repaint);
   reducedMotion.addEventListener('change', () => {

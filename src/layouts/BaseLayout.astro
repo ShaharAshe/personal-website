@@ -54,7 +54,7 @@ const greetingScript = greet
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    {/* Must stay before any stylesheet: sets data-theme before first paint (src/lib/theme.ts). */}
+    {/* Must stay before any stylesheet: sets data-theme and data-style before first paint (src/lib/theme.ts). */}
     <script is:inline set:html={themeInitScript} />
     <title>{title}</title>
     <meta name="description" content={description} />
@@ -88,9 +88,11 @@ const greetingScript = greet
         Tab lands on the skip link. tabindex="-1": focusable by the link, never a Tab stop. */}
     <div id="top" tabindex="-1" role="group" aria-label="Top of page"></div>
 
-    {/* Skip link: first Tab stop, moved above the viewport until focused. */}
+    {/* Skip link: first Tab stop, moved above the viewport until focused. A button-style link: no [brackets] in
+        terminal view (global.css). */}
     <a
       href="#main"
+      data-no-brackets
       class="fixed top-4 left-4 z-50 -translate-y-[200%] rounded-md bg-accent px-4 py-2 font-medium text-on-accent focus:translate-y-0"
     >
       Skip to content

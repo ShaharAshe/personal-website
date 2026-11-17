@@ -14,9 +14,8 @@ import { expect, test } from './fixtures.ts';
 import { doodleById, type Doodle } from '../../src/lib/doodles/doodles.ts';
 import { MOTION_MS } from '../../src/lib/doodles/motion.ts';
 import { DOODLE_PORT } from '../../scripts/doodles/doodle-server.ts';
-import { THEMES } from '../../src/lib/theme.ts';
 import { unexpectedConsoleProblems, type ConsoleEntry } from './console-problems.ts';
-import { cspViolations, watchSecurityErrors } from './helpers.ts';
+import { cspViolations, expectTheme, LOOKS, useLook, watchSecurityErrors } from './helpers.ts';
 
 test.use({ baseURL: `http://127.0.0.1:${DOODLE_PORT}` });
 
@@ -277,15 +276,50 @@ test.describe('prefers-reduced-motion on touch', () => {
   });
 });
 
+// Terminal view (Task F.7): the doodle is drawn in the tokens, so it turns terminal green with the rest of the page, and
+// it's an icon-only link, so it has no [brackets]. Every other link on the doodle build has them.
+test('in terminal view the doodle repaints in the terminal palette, and only marked links lack brackets', async ({
+  page,
+}) => {
+  await open(page);
+  const colors = () =>
+    link(page).evaluate((el) => {
+      const root = getComputedStyle(document.documentElement);
+      return { dot: getComputedStyle(el).color, muted: root.getPropertyValue('--text-muted').trim() };
+    });
+  const regular = await colors();
+  await page.getByRole('contentinfo').getByRole('button', { name: 'Terminal view', exact: true }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-style', 'terminal');
+  const terminal = await colors();
+  expect(terminal.muted).toBe('#3fb054');
+  expect(terminal.dot).toBe('rgb(63, 176, 84)');
+  expect(terminal.dot).not.toBe(regular.dot);
+  expect(await linksWithoutBrackets(page)).toEqual([]);
+  await expect(link(page)).toHaveAttribute('data-no-brackets', '');
+});
+
+/** Links that neither show terminal brackets nor carry data-no-brackets (should be none). */
+function linksWithoutBrackets(page: Page): Promise<string[]> {
+  return page.evaluate(() =>
+    [...document.querySelectorAll('a')]
+      .filter((a) => !a.hasAttribute('data-no-brackets'))
+      .filter((a) => !getComputedStyle(a, '::before').content.includes('['))
+      .map((a) => a.outerHTML.slice(0, 120)),
+  );
+}
+
 for (const width of [375, 1280]) {
-  for (const theme of THEMES) {
-    test.describe(`${width}px ${theme}`, () => {
-      test.use({ viewport: { width, height: 800 }, colorScheme: theme });
+  for (const look of LOOKS) {
+    test.describe(`${width}px ${look.name}`, () => {
+      test.use({ viewport: { width, height: 800 }, colorScheme: look.colorScheme });
 
       test('no horizontal scroll with the bubble open, and the doodle inside the column, apart from the icons', async ({
         page,
       }) => {
+        await useLook(page, look);
         await open(page);
+        await page.evaluate(() => document.fonts.ready);
+        await expectTheme(page, look.scheme);
         await link(page).hover();
         await expect(bubble(page)).toBeVisible();
         const { scrollWidth, clientWidth } = await page.evaluate(() => ({

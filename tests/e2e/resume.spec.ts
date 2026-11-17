@@ -7,7 +7,7 @@
 
 import { type Page } from '@playwright/test';
 import { expect, test } from './fixtures.ts';
-import { THEMES, THEME_STORAGE_KEY } from '../../src/lib/theme.ts';
+import { THEME_STORAGE_KEY } from '../../src/lib/theme.ts';
 import { COPY_FEEDBACK_MS, joinEmail, mailtoHref } from '../../src/lib/email-client.ts';
 import { getEmailParts, getResume } from '../../src/lib/resume.ts';
 import { RESUME_PDF_FILENAME, RESUME_PDF_URL } from '../../src/lib/resume-pdf.ts';
@@ -17,7 +17,9 @@ import {
   expectInstantCopySwap,
   expectNoCheckIcon,
   expectTheme,
+  LOOKS,
   themeToggle,
+  useLook,
 } from './helpers.ts';
 
 const ADDRESS = joinEmail(getEmailParts());
@@ -320,14 +322,17 @@ test('printing the homepage still hides its mail links', async ({ page }) => {
   await expect(page.locator('[data-contact] [data-email-address]')).toBeVisible();
 });
 
+// In both themes and in terminal view (Task F.7), where mono text and [brackets] make the contact line wider.
 for (const width of [375, 1280]) {
-  for (const theme of THEMES) {
-    test.describe(`/resume at ${width}px, ${theme}`, () => {
-      test.use({ viewport: { width, height: 800 }, colorScheme: theme });
+  for (const look of LOOKS) {
+    test.describe(`/resume at ${width}px, ${look.name}`, () => {
+      test.use({ viewport: { width, height: 800 }, colorScheme: look.colorScheme });
+      test.beforeEach(({ page }) => useLook(page, look));
 
       test('no horizontal scroll', async ({ page }) => {
         await page.goto('/resume');
-        await expectTheme(page, theme);
+        await page.evaluate(() => document.fonts.ready);
+        await expectTheme(page, look.scheme);
         await expect(resume(page).locator('[data-email-address]')).toBeVisible();
         const { scrollWidth, clientWidth } = await page.evaluate(() => ({
           scrollWidth: document.documentElement.scrollWidth,
@@ -338,6 +343,7 @@ for (const width of [375, 1280]) {
 
       test('the revealed email fits its reserved space, so nothing moves when it appears', async ({ page }) => {
         await page.goto('/resume');
+        await page.evaluate(() => document.fonts.ready);
         await expect(resume(page).locator('[data-email-address]')).toBeVisible();
 
         const row = await page.locator('[data-resume-email]').evaluate((slot) => {

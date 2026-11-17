@@ -1,12 +1,14 @@
 ---
 // The site footer, on every page through BaseLayout: name and build year, the profile links from
-// basics.profiles, and Back to top. Muted site chrome (.claude/rules/ui.md). Ships no JS.
+// basics.profiles, Back to top, and the terminal view switch (Task F.7). Muted site chrome (.claude/rules/ui.md). Ships
+// no script: the switch is wired by ThemeToggle's script.
 //
 // No email here: email links only work on pages that render CopyEmail, and the footer is on all of them.
 // Back to top targets BaseLayout's #top, so following it also moves keyboard focus to the top of the page.
 import ArrowUpIcon from './ArrowUpIcon.astro';
 import GitHubIcon from './GitHubIcon.astro';
 import LinkedInIcon from './LinkedInIcon.astro';
+import StyleToggle from './StyleToggle.astro';
 import { heroContent } from '../lib/hero';
 import { getResume } from '../lib/resume';
 
@@ -36,6 +38,10 @@ const linkClass = 'inline-flex min-h-10 items-center gap-1.5 text-text-muted hov
           </a>
         </li>
       ))}
+      {/* Before Back to top, which stays the page's last Tab stop. */}
+      <li>
+        <StyleToggle />
+      </li>
       {backToTop && (
         <li>
           <a href="#top" data-back-to-top class={linkClass}>

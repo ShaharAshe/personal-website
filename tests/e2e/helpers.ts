@@ -2,11 +2,38 @@
 
 import { expect, type Locator, type Page } from '@playwright/test';
 import { COPY_FEEDBACK_MS } from '../../src/lib/email-client.ts';
-import { nextTheme, type Theme } from '../../src/lib/theme.ts';
+import { nextTheme, STYLE_STORAGE_KEY, TERMINAL, type Theme, type ViewStyle } from '../../src/lib/theme.ts';
 
 /** The theme toggle, by role and accessible name (the name is set once the script runs). */
 export function themeToggle(page: Page): Locator {
   return page.getByRole('button', { name: /^Switch to (light|dark) theme$/ });
+}
+
+/** The terminal view switch in the footer (Task F.7). */
+export function styleToggle(page: Page): Locator {
+  return page.getByRole('contentinfo').getByRole('button', { name: 'Terminal view', exact: true });
+}
+
+/**
+ * The looks the layout checks run in: both themes, and terminal view (Task F.7). Terminal runs over a light OS, so the
+ * same checks also show it stays dark. `scheme` is the color-scheme the page must end up with (for expectTheme).
+ */
+export const LOOKS = [
+  { name: 'dark', colorScheme: 'dark', style: 'regular', scheme: 'dark' },
+  { name: 'light', colorScheme: 'light', style: 'regular', scheme: 'light' },
+  { name: 'terminal', colorScheme: 'light', style: TERMINAL, scheme: 'dark' },
+] as const satisfies readonly { name: string; colorScheme: Theme; style: ViewStyle; scheme: Theme }[];
+
+export type Look = (typeof LOOKS)[number];
+
+/** Saves the style before every page load from now on, as a returning visitor's choice. Call before page.goto. */
+export async function saveStyleBeforeLoad(page: Page, style: ViewStyle): Promise<void> {
+  await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [STYLE_STORAGE_KEY, style] as const);
+}
+
+/** Puts the page in `look` for the next page.goto: terminal view is saved first; the themes come from colorScheme. */
+export async function useLook(page: Page, look: Look): Promise<void> {
+  if (look.style === TERMINAL) await saveStyleBeforeLoad(page, TERMINAL);
 }
 
 /**

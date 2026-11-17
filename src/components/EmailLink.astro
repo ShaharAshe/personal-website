@@ -9,12 +9,21 @@ import { getEmailParts } from '../lib/resume';
 interface Props {
   class?: string;
   'aria-label'?: string;
+  /** An icon-only link: no [brackets] in terminal view (data-no-brackets, global.css). */
+  noBrackets?: boolean;
 }
 
-const { class: className, 'aria-label': ariaLabel } = Astro.props;
+const { class: className, 'aria-label': ariaLabel, noBrackets = false } = Astro.props;
 const { user, domain } = getEmailParts();
 ---
 
-<a data-email-link data-email-user={user} data-email-domain={domain} aria-label={ariaLabel} class={className}>
+<a
+  data-email-link
+  data-email-user={user}
+  data-email-domain={domain}
+  data-no-brackets={noBrackets ? '' : undefined}
+  aria-label={ariaLabel}
+  class={className}
+>
   <slot />
 </a>

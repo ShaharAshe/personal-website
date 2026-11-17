@@ -1,12 +1,12 @@
 // Task 2.13 checks that need a real browser: the header home link (visible from 640px, hidden below), its focus
-// ring, the nav fitting on one row at 640px (where the link first appears), no horizontal scroll, sitemap.xml
+// ring, the nav fitting on one row at 640px (where the link first appears) and 375px, in both themes and terminal
+// view, no horizontal scroll, sitemap.xml
 // parsing as XML, and the OG image being served. The built head tags are checked in tests/seo-dist.test.ts.
 
 import { type Page } from '@playwright/test';
 import { expect, test } from './fixtures.ts';
 import { getResume } from '../../src/lib/resume.ts';
-import { THEMES } from '../../src/lib/theme.ts';
-import { expectFocusRing, themeToggle } from './helpers.ts';
+import { expectFocusRing, expectTheme, LOOKS, themeToggle, useLook } from './helpers.ts';
 
 const NAME = getResume().basics.name;
 const PAGES = ['/', '/resume', '/no-such-page'];
@@ -63,28 +63,39 @@ for (const path of PAGES) {
   });
 }
 
-// 640px (sm) is where the home link first appears: the tightest width where the whole nav must fit on one row.
-for (const theme of THEMES) {
+// 640px (sm) is where the home link first appears: the tightest width where the whole nav must fit on one row. 375px
+// is the narrowest checked width, without the home link. In both themes and in terminal view (Task F.7), where mono
+// text and [brackets] make the links wider (and the theme toggle is hidden).
+for (const look of LOOKS) {
   for (const width of [375, 640, 1280]) {
-    test.describe(`${width}px ${theme}`, () => {
-      test.use({ viewport: { width, height: 800 }, colorScheme: theme });
+    test.describe(`${width}px ${look.name}`, () => {
+      test.use({ viewport: { width, height: 800 }, colorScheme: look.colorScheme });
+      test.beforeEach(({ page }) => useLook(page, look));
 
       for (const path of PAGES) {
         test(`no horizontal scroll on ${path}`, async ({ page }) => {
           await page.goto(path);
           await page.evaluate(() => document.fonts.ready);
+          await expectTheme(page, look.scheme);
           await expectNoHorizontalScroll(page);
         });
 
-        if (width !== 640) continue;
+        if (width === 1280) continue;
+        const withHome = width === 640;
 
-        test(`the nav fits on one row with the home link on ${path}`, async ({ page }) => {
+        test(`the nav fits on one row${withHome ? ' with the home link' : ''} on ${path}`, async ({ page }) => {
           await page.goto(path);
           await page.evaluate(() => document.fonts.ready);
-          await expect(homeLink(page)).toBeVisible();
+          await expect(homeLink(page)).toBeVisible({ visible: withHome });
 
           const nav = page.getByRole('navigation', { name: 'Main' });
-          const items = [homeLink(page), ...(await nav.locator('li a').all()), themeToggle(page)];
+          const toggle = themeToggle(page);
+          const items = [
+            ...(withHome ? [homeLink(page)] : []),
+            ...(await nav.locator('li a').all()),
+            ...((await toggle.isVisible()) ? [toggle] : []),
+          ];
+          expect(await toggle.isVisible()).toBe(look.style !== 'terminal');
           const boxes = await Promise.all(items.map(async (item) => (await item.boundingBox())!));
           const navBox = (await nav.boundingBox())!;
           const centers = boxes.map((b) => b.y + b.height / 2);
@@ -96,6 +107,7 @@ for (const theme of THEMES) {
             expect(b.x + b.width).toBeLessThanOrEqual(navBox.x + navBox.width + 0.5);
             if (i > 0) expect(b.x).toBeGreaterThanOrEqual(boxes[i - 1].x + boxes[i - 1].width);
           }
+          if (!withHome) return;
           // The name doesn't wrap: its text is one line box.
           const lineBoxes = await homeLink(page).evaluate((el) => {
             const range = document.createRange();
