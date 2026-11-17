@@ -1,6 +1,7 @@
 ---
 // Homepage Hero (design-doc §5.1): name (the page's only <h1>), title, one-line tagline, the two CTAs
-// and profile icon links. All text comes from resume.yaml via src/lib/hero.ts. Ships no JS.
+// and profile icon links. All text comes from resume.yaml via src/lib/hero.ts. Ships no JS (on a doodle day, the
+// Doodle brings its own small script).
 //
 // "Download Resume" is the section's one accent-filled button. The download attribute makes it save the
 // PDF; a plain link to /resume.pdf opens it in the browser (public/_headers serves it inline).
@@ -8,15 +9,23 @@
 // the page's email script (in CopyEmail.astro, rendered by Contact) joins the address and sets the
 // mailto: href. So the Hero itself still ships no script, and without JS the icon isn't shown.
 // Profile links open in the same tab (no target="_blank").
+//
+// On a doodle day (Task F.4, src/lib/doodles/), the day's Doodle sits at the right end of the profile row, chosen at
+// build time (the daily CI build) or forced with DOODLE=<id> for a preview build (npm run doodle:build). Other days
+// render no Doodle, so no page gets its markup or script.
+import Doodle from './Doodle.astro';
 import EmailLink from './EmailLink.astro';
 import GitHubIcon from './GitHubIcon.astro';
 import LinkedInIcon from './LinkedInIcon.astro';
 import MailIcon from './MailIcon.astro';
+import { selectDoodle } from '../lib/doodles/select';
 import { heroContent } from '../lib/hero';
 import { getResume } from '../lib/resume';
 import { RESUME_PDF_FILENAME, RESUME_PDF_URL } from '../lib/resume-pdf';
+import { LAUNCH_DATE } from '../lib/site';
 
 const { name, title, tagline, socials } = heroContent(getResume());
+const doodle = selectDoodle({ now: new Date(), env: process.env.DOODLE, launchDate: LAUNCH_DATE });
 ---
 
 {/* The background layers: remove hero-dots or hero-glow from this class list to turn that layer off. */}
@@ -49,29 +58,32 @@ const { name, title, tagline, socials } = heroContent(getResume());
     </div>
 
     {/* -ml-2.5: the 20px icons are centered in 40px hit areas, so this lines their left edge up with the text. */}
-    <ul class="mt-6 -ml-2.5 flex gap-2" aria-label="Profiles">
-      {socials.map(({ network, url, icon }) => (
-        <li>
-          <a
-            href={url}
-            aria-label={network}
-            data-social={icon}
+    <div class="mt-6 flex items-center">
+      <ul class="-ml-2.5 flex gap-2" aria-label="Profiles">
+        {socials.map(({ network, url, icon }) => (
+          <li>
+            <a
+              href={url}
+              aria-label={network}
+              data-social={icon}
+              class="inline-flex size-10 items-center justify-center rounded-md text-text-muted hover:text-text"
+            >
+              {icon === 'github' && <GitHubIcon size={20} />}
+              {icon === 'linkedin' && <LinkedInIcon size={20} />}
+            </a>
+          </li>
+        ))}
+        <li data-email-reveal hidden>
+          <EmailLink
+            aria-label="Email"
             class="inline-flex size-10 items-center justify-center rounded-md text-text-muted hover:text-text"
           >
-            {icon === 'github' && <GitHubIcon size={20} />}
-            {icon === 'linkedin' && <LinkedInIcon size={20} />}
-          </a>
+            <MailIcon size={20} />
+          </EmailLink>
         </li>
-      ))}
-      <li data-email-reveal hidden>
-        <EmailLink
-          aria-label="Email"
-          class="inline-flex size-10 items-center justify-center rounded-md text-text-muted hover:text-text"
-        >
-          <MailIcon size={20} />
-        </EmailLink>
-      </li>
-    </ul>
+      </ul>
+      {doodle && <Doodle doodle={doodle} />}
+    </div>
   </div>
 </section>
 

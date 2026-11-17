@@ -105,6 +105,27 @@ the game itself (`src/lib/game/`, about 3 KB gzipped) is imported on Play, and n
 with unit tests; the colors come from the theme tokens; with reduced motion it runs without its decorative motion
 (design-doc §10.3).
 
+**Doodles on a few special days:** New Year, Pi Day, Alan Turing's birthday, the Day of the Programmer (the 256th
+day), Halloween, Hanukkah and (from Task 4.2) the site's launch day. On those days a small picture drawn in the Hero's
+dots sits at the right end of the profile icons, from the day before to the day after (time zones). It's a link to
+the day's Wikipedia article: hovering or focusing it plays a short animation once and shows a bubble explaining the
+day; on touch, the first tap does that and the second opens the article. The daily scheduled build picks the doodle
+(`src/lib/doodles/`), so other days ship no doodle markup or code at all. On a doodle day the homepage gets a small
+loader (under 1 KB gzipped); the animation (about 1 KB) loads on the first hover, focus or tap, and never with
+reduced motion.
+
+To see any doodle on any day, build it into `dist-doodle/` (never deployed) and serve it with the real headers:
+
+```
+npm run build
+npm run doodle -- halloween
+```
+
+Then open http://127.0.0.1:4323. The ids are `launch`, `new-year`, `pi-day`, `turing`, `programmers-day`,
+`halloween` and `hanukkah`. `npm run doodle:build -- <id>` only builds (default `pi-day`, the one the e2e tests use).
+With `npm run dev`, set `DOODLE` first (cmd: `set DOODLE=halloween&& npm run dev`, PowerShell: `$env:DOODLE='halloween';
+npm run dev`). A build into `dist/` fails while `DOODLE` is set, so a forced doodle can't reach the live site.
+
 In CI, every pull request goes through build → `npm run check` → Playwright e2e. After it's merged, the
 same run on `main` repeats them and then deploys to Cloudflare (see [Contributing and deploy flow](#contributing-and-deploy-flow)).
 
@@ -169,8 +190,11 @@ nothing. To run the same check by hand: `npm run check:staged`.
 | `npm run og` | Render `public/og-image.png`, `public/favicon.ico` and `public/apple-touch-icon.png` from `resume.yaml` and the design tokens (needs a build first, for the fonts) |
 | `npm test` | Unit and integration tests (`node:test`, `tests/**/*.test.ts`) |
 | `npm run test:update-golden` | Re-record the golden Word files that pin the resume design (only after an intended design change) |
-| `npm run test:e2e` | Playwright end-to-end tests against the existing build (`wrangler dev` on port 4322, with the real headers) |
+| `npm run test:e2e` | Playwright end-to-end tests against the existing builds (`wrangler dev` with the real headers: `dist/` on port 4322, `dist-doodle/` on 4323, so run `npm run doodle:build` first) |
 | `npm run screenshots` | Review screenshots (375px, 640px and 1280px, dark and light, plus header clips, the `/resume` print preview, the OG image and the icons) into `screenshots/` |
+| `npm run doodle -- <id>` | Build `dist-doodle/` with that doodle forced (after `npm run build`), then serve it at http://127.0.0.1:4323 with the real headers |
+| `npm run doodle:build -- <id>` | Only build `dist-doodle/` with that doodle (default `pi-day`): `astro build` alone, reusing the main build's outputs. CI runs it for the tests; it's never deployed |
+| `npm run screenshots:doodles` | Review screenshots of every doodle (375px and 1280px, dark and light, closed and with the bubble open), building `dist-doodle/` for each in turn |
 | `npm run test:live` | Live smoke run: a read-only subset of the e2e specs against the deployed site (`playwright.live.config.ts`) |
 | `npm run screenshots:live` | The same review screenshots, taken from the deployed site |
 | `npm run check` | On an existing build: `astro check` → lint → `npm test` → site checks → format check |
@@ -204,7 +228,8 @@ nothing. To run the same check by hand: `npm run check:staged`.
   shown repo having a description are checked during the build itself.
 
 The workflow (`.github/workflows/deploy.yml`) runs on pull requests, on pushes to `main`, once a day
-(so GitHub project changes appear without a commit), and manually. **Any failing step blocks the
+(so GitHub project changes and the day's doodle appear without a commit), and manually. After the build it also
+builds `dist-doodle/` (`npm run doodle:build`) for the doodle tests; the deploy reads `dist/` only. **Any failing step blocks the
 deploy:** the Liberation Sans font check, the build, `npm run check` or the e2e tests. The deploy step
 only runs on `main`, so pull requests are built and checked but never deployed.
 

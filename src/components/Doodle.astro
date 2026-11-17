@@ -1,0 +1,190 @@
+---
+// The day's doodle (Task F.4): a small picture drawn with the Hero's dots (same 2px radius), a link to the day's
+// English Wikipedia article. Rendered by Hero.astro only on a doodle day (src/lib/doodles/), so on other days no page
+// has its markup or its script.
+//
+// It sits at the right end of the Hero's profile-icon row, apart from the icons, and its speech bubble opens below it,
+// under the Hero: it never covers the name, the buttons or the links.
+//
+// Colors: the dots are --text-muted (the token the Hero's dot grid is mixed from, at full strength for WCAG 1.4.11's
+// 3:1), --text on hover and focus, like the icon-only profile links. No accent (.claude/rules/ui.md).
+//
+// Behavior (src/lib/doodles/interaction.ts): hover or focus shows the bubble and plays the animation once; click or
+// Enter opens Wikipedia in the same tab; on touch the first tap shows the bubble and animates, the second opens
+// Wikipedia. The animation (src/lib/doodles/play.ts) is its own file, imported on the first interaction and never with
+// prefers-reduced-motion.
+//
+// No style attributes (the CSP allows none): sizes are SVG attributes and classes.
+import ArrowUpRightIcon from './ArrowUpRightIcon.astro';
+import { DOT_R, boxSize, dotCenter, dotsOf, shapeSize, type Doodle } from '../lib/doodles/doodles';
+
+interface Props {
+  doodle: Doodle;
+}
+
+const { doodle } = Astro.props;
+const { width, height } = boxSize(doodle.shape);
+const { cols, rows } = shapeSize(doodle.shape);
+const dots = dotsOf(doodle.shape).map((dot) => ({ ...dotCenter(dot), accent: dot.accent }));
+---
+
+<div
+  data-doodle={doodle.id}
+  data-doodle-motion={doodle.motion}
+  data-doodle-cols={cols}
+  data-doodle-rows={rows}
+  data-doodle-state="idle"
+  data-doodle-plays="0"
+  class="relative shrink-0"
+>
+  <a
+    href={doodle.wikipedia}
+    aria-label={doodle.label}
+    aria-describedby="doodle-bubble-text"
+    data-doodle-link
+    class="block rounded-md text-text-muted hover:text-text"
+  >
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      fill="currentColor"
+      class="block"
+    >
+      <g data-doodle-shape>
+        {dots.map(({ x, y, accent }) => (
+          <circle cx={x} cy={y} r={DOT_R} data-accent={accent ? '' : undefined} />
+        ))}
+      </g>
+    </svg>
+  </a>
+  {/* Below the doodle, right-aligned to it. Its top padding is a transparent bridge, so the pointer can move from the
+      doodle onto the bubble without leaving the wrapper (WCAG 1.4.13: hoverable). */}
+  <div data-doodle-bubble hidden>
+    <div class="doodle-bubble rounded-lg border border-border bg-surface text-sm">
+      <p id="doodle-bubble-text">{doodle.bubble}</p>
+      <p class="mt-2 flex items-center gap-1 text-text-muted">
+        <span data-doodle-more>Read more on Wikipedia</span>
+        <span data-doodle-hint hidden>
+          Tap again to read more on Wikipedia
+        </span>
+        <ArrowUpRightIcon size={14} class="shrink-0" />
+      </p>
+    </div>
+  </div>
+</div>
+
+{/* is:inline, not a scoped <style>: Astro adds a component's scoped styles to every page that imports it, rendered
+    or not, and this one renders only on a doodle day. Inline, it's in the HTML only then (hashed by the CSP step).
+    For the same reason the layout lives here rather than in Tailwind classes no other file uses: Tailwind would
+    generate those on every day. */}
+<style is:inline>
+  /* At the right end of the profile row, at least 24px from the icons. */
+  [data-doodle] {
+    margin-left: auto;
+    padding-left: 1.5rem;
+  }
+
+  [data-doodle-link]:focus-visible {
+    color: var(--text);
+  }
+
+  /* Rotate and scale around the shape's own center, and each flame around its own. */
+  [data-doodle-shape],
+  [data-doodle-shape] circle {
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  /* Below the doodle, right-aligned to it, above the next section. The top padding is the hover bridge. */
+  [data-doodle-bubble] {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: 10;
+    width: 16rem;
+    max-width: calc(100vw - 2rem);
+    padding-top: 0.5rem;
+  }
+
+  /* The speech bubble's tail, pointing up at the doodle: a square turned 45°, its top and left borders showing. */
+  .doodle-bubble {
+    position: relative;
+    padding: 0.75rem;
+  }
+
+  .doodle-bubble::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    right: 40px;
+    width: 9px;
+    height: 9px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-left: 1px solid var(--border);
+    transform: rotate(45deg);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    [data-doodle-bubble]:not([hidden]) .doodle-bubble {
+      animation: doodle-bubble-in 150ms ease-out;
+    }
+  }
+
+  @keyframes doodle-bubble-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+  }
+</style>
+
+<script>
+  import { INITIAL_STATE, reduce, type DoodleEvent } from '../lib/doodles/interaction';
+
+  const root = document.querySelector<HTMLElement>('[data-doodle]');
+  const link = root?.querySelector<HTMLAnchorElement>('[data-doodle-link]');
+  const bubble = root?.querySelector<HTMLElement>('[data-doodle-bubble]');
+  const more = root?.querySelector<HTMLElement>('[data-doodle-more]');
+  const hint = root?.querySelector<HTMLElement>('[data-doodle-hint]');
+
+  if (root && link && bubble && more && hint) {
+    let state = INITIAL_STATE;
+    let lastPointer = '';
+    const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
+    const send = (event: DoodleEvent, domEvent?: Event) => {
+      const reaction = reduce(state, event);
+      state = reaction.state;
+      bubble.hidden = !state.open;
+      hint.hidden = !state.armed;
+      more.hidden = state.armed;
+      if (reaction.preventNavigation) domEvent?.preventDefault();
+      if (reaction.animate && !reducedMotion.matches) {
+        import('../lib/doodles/play').then(({ play }) => play(root));
+      }
+    };
+
+    root.addEventListener('pointerenter', (e) => send({ type: 'enter', pointerType: e.pointerType }));
+    root.addEventListener('pointerleave', (e) => send({ type: 'leave', pointerType: e.pointerType }));
+    link.addEventListener('focus', () => send({ type: 'focus' }));
+    link.addEventListener('blur', () => send({ type: 'blur' }));
+    link.addEventListener('click', (e) => {
+      // detail 0: Enter on the focused link. Otherwise the pointer that pressed it (a click is a PointerEvent in
+      // current browsers; older Safari's isn't, so the last pointerdown is the fallback).
+      const pointerType = e instanceof PointerEvent && e.pointerType ? e.pointerType : lastPointer;
+      const via = e.detail === 0 ? 'keyboard' : pointerType === 'touch' ? 'touch' : 'pointer';
+      send({ type: 'click', via }, e);
+    });
+    document.addEventListener('pointerdown', (e) => {
+      lastPointer = e.pointerType;
+      if (!root.contains(e.target as Node)) send({ type: 'outside' });
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') send({ type: 'escape' });
+    });
+  }
+</script>

@@ -1607,19 +1607,134 @@ one is its own task (one at a time, plan first, tests + e2e + screenshots as usu
     - **Left open:** the ~0.8 KB preload helper in the loader could go with `vite.build.modulePreload: false` (a
       site-wide config change, not worth it for 0.8 KB now).
 
-- [ ] **F.4 Doodles** — On a few special days, a small doodle drawn with the Hero's dots.
+- [x] **F.4 Doodles** — On a few special days, a small doodle drawn with the Hero's dots.
   - Chosen by the daily CI build, so there is no JS on other days. Shown from a day before to a day after
     the date (time zones).
   - Days: Jan 1 New Year; Mar 14 Pi Day; Jun 23 Alan Turing's birthday; Programmers' Day (the 256th day of
-    the year); Oct 31 Halloween; the site's launch date; Hanukkah (optional).
+    the year); Oct 31 Halloween; the site's launch date; Hanukkah.
   - Never: the owner's birthday (privacy, it reveals age) or national days.
-  - Interaction: a real `<button>`. Hover/focus (desktop) or the first tap (mobile) shows a speech bubble
-    explaining the day; a click plays a 2–3 s animation (`transform`/`opacity` only). No sound in v1 (if
-    added later: on click only, short, quiet, `media-src 'self'`). `prefers-reduced-motion` shows the
-    bubble only. The doodle never covers the Hero's name, buttons or links.
+  - Interaction (changed at planning, see Deviations): a link to the day's English Wikipedia article. Hover/focus
+    shows a speech bubble explaining the day and plays a 2–3 s animation once (`transform`/`opacity` only); a click
+    or Enter opens the article; on touch the first tap shows the bubble and animates, the second opens the article.
+    No sound in v1 (if added later: on click only, short, quiet, `media-src 'self'`). `prefers-reduced-motion`
+    shows the bubble only. The doodle never covers the Hero's name, buttons or links.
   - Includes: a note in design-doc §10 that this user-triggered animation is a deliberate exception to the
     no-particles rule.
-  - Depends on: 2.16 (and the launch date, 4.x, for that day).
+  - Depends on: 2.16 (and the launch date, 4.2, for that day).
+  - Done:
+    - **The doodles** (`src/lib/doodles/doodles.ts`, pure data; the array order is the overlap priority):
+      | id | Dates (±1 day) | Shape | Motion | Wikipedia |
+      |---|---|---|---|---|
+      | `launch` | `LAUNCH_DATE`, every year (empty → off) | rocket | lifts off, returns from below | `"Hello, World!" program` |
+      | `new-year` | Jan 1 | firework | dots burst out and return | `New Year's Day` |
+      | `pi-day` | Mar 14 | π | one full turn | `Pi Day` |
+      | `turing` | Jun 23 | Turing-machine tape and head | the marks step one cell left, twice | `Alan Turing` |
+      | `programmers-day` | the 256th day (Sep 13; Sep 12 in leap years) | `</>` | fades, types back in | `Day of the Programmer` |
+      | `halloween` | Oct 31 | ghost | bobs twice, half see-through | `Halloween` |
+      | `hanukkah` | 25 Kislev + 7 (8 days) | hanukkiah, 8 candles + shamash | flames flicker | `Hanukkah` |
+      - **Priority:** launch, then the one-day doodles, then Hanukkah (the 8-day one still shows on its other days).
+        The real overlap: New Year beats a Hanukkah that runs into January (Dec 31 – Jan 2 in 2024/25 and 2027/28).
+      - **Hanukkah** from `Intl.DateTimeFormat('en-u-ca-hebrew')`, no dependency. Tested for 2021–2027.
+      - **Window:** the build's UTC date in [day − 1, last day + 1] (`src/lib/doodles/dates.ts`). The schedule is
+        03:17 UTC, but GitHub started the November 2026 runs around 10:30–11:40 UTC. Either way the doodle is live
+        from about day − 1 to day + 2 in UTC, which covers every time zone.
+      - **`LAUNCH_DATE`** in `src/lib/site.ts`, empty for now (an invalid value fails the build). Set at 4.2 (noted
+        there).
+      - **The doodles depend on the daily scheduled build.** If it stops (see 4.2b, GitHub's 60-day rule for public
+        repos), the doodle of the last build stays up and new ones never come.
+    - **Where:** `src/components/Doodle.astro`, at the right end of the Hero's profile-icon row at every width (`ml-auto`
+      plus at least 24px from the icons). The bubble opens below it, right-aligned, under the Hero.
+      - Dots: the Hero grid's 2px radius on a 6px pitch, `--text-muted` (the token `--hero-dot` is mixed from, at full
+        strength for WCAG 1.4.11's 3:1; `--hero-dot` itself is about 1.9:1), `--text` on hover and focus. No accent.
+      - Boxes 66–114px wide and 60–78px tall (the shape plus 6px padding), so the touch target is over 44×44.
+      - The link: `aria-label` "<day>, read about it on Wikipedia", `aria-describedby` = the bubble text, same tab.
+        The bubble ends with "Read more on Wikipedia" and `ArrowUpRightIcon` (ui.md); on touch "Tap again to read more
+        on Wikipedia".
+    - **Behavior:** a pure reducer (`src/lib/doodles/interaction.ts`).
+      - The bubble opens on hover or focus, and the animation plays only when it opens: once, never while it's
+        open, never in a loop.
+      - WCAG 1.4.13: the wrapper holds the link and the bubble, with a transparent bridge between them. Esc closes it
+        without moving focus.
+      - Touch: the first tap arms (cancels the navigation), the second follows the link, and a tap elsewhere disarms.
+      - **Reduced motion:** the shape never moves, the bubble's 150 ms fade is off, and the animation file is never
+        requested. Hover, focus, the taps and the click work the same.
+    - **Animation:** `src/lib/doodles/motion.ts` (keyframes, pure) and `play.ts` (Web Animations, `element.animate()`,
+      which the CSP's `style-src` doesn't cover, so no style attribute).
+      - 2.4 s, transform and opacity only, starting and ending in place.
+      - Opacity dips at most twice a second.
+      - Test hooks: `data-doodle-state`, `data-doodle-plays`.
+    - **Zero cost on other days:** Hero renders the Doodle only on a doodle day.
+      - Its CSS is `<style is:inline>`, not a scoped `<style>`. Deviation found by the dist test: Astro added the
+        scoped style to the homepage even on a day with no doodle. The layout rules no other component uses moved
+        there from Tailwind classes, so Tailwind doesn't generate them every day.
+      - Vite still writes the two doodle script files to `dist/_astro/` (Hero imports the component), but no page
+        references them, so nobody downloads them (tested).
+    - **Preview:** `DOODLE=<id>` (or `none`) forces a doodle (`src/lib/doodles/select.ts`; an unknown id fails the
+      build).
+      - `npm run doodle:build -- <id>` runs `astro build` alone into `dist-doodle/`, reusing the main build's outputs:
+        about 6 s locally.
+      - `npm run doodle -- <id>` also serves it at http://127.0.0.1:4323.
+      - `npm run screenshots:doodles` photographs every doodle, closed, with the bubble open, and four
+        mid-animation frames.
+      - **Visitors can never reach it:**
+        - `doodleGuard()` (`scripts/doodles/doodle-guard.mts`, in astro.config.mjs) fails any build into `dist/` while
+          `DOODLE` is set;
+        - the deploy reads `./dist` only;
+        - a test pins wrangler.jsonc, the deploy step (`npx wrangler deploy`) and no `DOODLE:` in the workflow.
+    - **CI:** a new step after Build, `npm run doodle:build` (pi-day), so `npm run check` and the e2e tests have
+      `dist-doodle/`. Playwright starts a second `wrangler dev --assets dist-doodle` on port 4323, never reused. CI
+      time before: PR 4m07s, push 4m35s, schedule 4m19s (the F.3 runs).
+    - **JS (homepage, gzipped, beacon included):**
+      - Normal day: unchanged, 12.60 KB.
+      - Doodle day: 13.39 KB. The loader is 0.79 KB, plus Vite's preload helper (about 0.9 KB) on this page.
+      - The animation is 0.96 KB, loaded on the first interaction (limits tested: loader 2.5 KB, animation 3 KB).
+    - **CSP:** a normal day's line is unchanged, 730/2000. A doodle day's build is 784/2000: one more style hash
+      for the inline style.
+    - **Tests:**
+      - `npm test`: 583 (was 542).
+      - `npm run test:e2e`: 264 (was 248).
+      - Unit (`tests/doodles.test.ts`):
+        - every date with its day before and after, and the UTC edges;
+        - day 256 in leap and non-leap years (2100 too);
+        - Hanukkah 2021–2027 with its 10-day window;
+        - the overlaps;
+        - the 2026 total;
+        - `LAUNCH_DATE` empty, set and invalid;
+        - `DOODLE` force, none and unknown;
+        - the guard;
+        - the URLs, labels and shapes;
+        - every keyframe list;
+        - the reducer for hover, focus, Esc, mouse, keyboard and touch.
+      - Dist (`tests/doodles-dist.test.ts`):
+        - dist/: no doodle markup, style or loaded code on any page (or only the day's doodle, on the homepage);
+        - dist-doodle/: the doodle on `/` only, with its link, name, description and dots;
+        - nothing unhashable, every inline block hashed;
+        - the sizes;
+        - deploy safety.
+        - It skips without `dist-doodle/` locally and fails without it in CI.
+      - e2e (`tests/e2e/doodle.spec.ts`, against dist-doodle with the real CSP, checked in the spec):
+        - the link and its name;
+        - nothing loads or moves before the first hover;
+        - hover plays once, with no replay while on it, and staying open over the bubble;
+        - Esc;
+        - focus, Tab away, Enter;
+        - click;
+        - the Hero's name, buttons and links not overlapped and on top;
+        - no console problems or CSP violations;
+        - touch: first and second tap, a tap on the bubble, a tap elsewhere;
+        - reduced motion, with mouse and with touch;
+        - 375/1280 × light/dark: no horizontal scroll, inside the column, ≥ 44px, ≥ 24px from the icons.
+        - Wikipedia is never loaded: a window click listener records whether the click was cancelled, then cancels
+          it.
+    - **Deviations:**
+      - A link and hover-to-play, instead of a `<button>` and click-to-play (decided at planning).
+      - `--text-muted` instead of `--hero-dot` for contrast (approved).
+      - The inline style (above).
+      - The launch doodle links to the "Hello, World!" article: there's no article for the site's own day.
+    - **Left open:**
+      - Not in the live run (`LIVE_SPECS`): the live site has a doodle only on doodle days.
+      - The bubble's tail sits at a fixed 40px from the right, centered under the 13-column doodles and a little
+        right of center under the wider hanukkiah.
 
 - [ ] **F.5 curl easter egg** — `curl` on the site gets a plain-text resume (User-Agent / `Accept`
   negotiation).
@@ -1742,6 +1857,14 @@ one is its own task (one at a time, plan first, tests + e2e + screenshots as usu
   - Note (from 2.16): recheck the LinkedIn share card with Post Inspector (https://www.linkedin.com/post-inspector/)
     on the domain. It couldn't connect to workers.dev.
   - Note (from 2.16): `npm run test:live` follows `site` automatically; run it after the switch.
+  - Note (from F.4): set `LAUNCH_DATE` in `src/lib/site.ts` (YYYY-MM-DD) to the launch day, which turns on the
+    launch-day doodle on that date every year.
+
+- [ ] **4.2b Keep the daily build alive** — Once the repo is public (action item #11), GitHub disables scheduled
+  workflows after 60 days without repository activity. A quiet period would then stop the daily build silently: no
+  doodles (F.4) and no project refresh. Handle it before or at launch: a check, a reminder or a keepalive, decided
+  then (from F.4).
+  - Depends on: the repo going public (#11).
 
 - [ ] **4.2a (optional) Lighthouse CI** — `@lhci/cli` in GitHub Actions with score thresholds, so a regression fails
   the build.

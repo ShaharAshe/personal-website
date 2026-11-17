@@ -59,6 +59,11 @@ jobs:
           CV_PHONE: ${{ secrets.CV_PHONE }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Build the doodle test build (dist-doodle/, never deployed)
+        # Task F.4: astro build only, with a forced doodle (pi-day), into dist-doodle/ for npm run check and the
+        # doodle e2e tests. It reuses the build above's outputs. The deploy below still reads dist/ (wrangler.jsonc).
+        run: npm run doodle:build
+
       - name: Upload resume PDF
         uses: actions/upload-artifact@v7
         with:

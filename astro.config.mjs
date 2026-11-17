@@ -4,6 +4,7 @@ import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
 import { cspHeaders } from './scripts/csp/csp.mts';
 import { ctfHeaders } from './scripts/ctf/ctf-headers.mts';
+import { doodleGuard } from './scripts/doodles/doodle-guard.mts';
 
 // https://docs.astro.build/en/reference/configuration-reference/
 export default defineConfig({
@@ -15,7 +16,8 @@ export default defineConfig({
   // cspHeaders(): after every build, hashes the inline scripts and styles in dist/ and writes the
   // Content-Security-Policy into dist/_headers (scripts/csp/csp.mts, design-doc §12). ctfHeaders() runs first: it
   // appends the CTF chain's X-Clue rule (scripts/ctf/ctf-headers.mts), so the CSP step's limits check covers it.
-  integrations: [react(), ctfHeaders(), cspHeaders()],
+  // doodleGuard(): a build into dist/ fails while DOODLE is set (scripts/doodles/doodle-guard.mts, Task F.4).
+  integrations: [react(), doodleGuard(), ctfHeaders(), cspHeaders()],
   // Self-hosted fonts (design-doc §9.3): downloaded from Fontsource at build time and served from the
   // site itself. <Font /> in BaseLayout emits the @font-face rules; global.css maps them to font-sans/mono.
   fonts: [

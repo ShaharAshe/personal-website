@@ -40,6 +40,11 @@ These npm scripts must exist and keep working (create them during scaffolding):
   (`wrangler dev` on port 4322, so the real `_headers` and CSP apply; `astro preview` sends no headers); locally
   uses the installed Edge, CI uses Playwright's Chromium
 - `npm run screenshots`: review screenshots (375px/640px/1280px, dark/light) into `screenshots/` (gitignored)
+- `npm run doodle:build -- <id>`: `astro build` alone into `dist-doodle/` (gitignored, never deployed) with that doodle
+  forced (F.4; default `pi-day`); needs `npm run build` first. `npm run test:e2e` serves it on port 4323 for
+  `tests/e2e/doodle.spec.ts`, and CI builds it before `npm run check`
+- `npm run doodle -- <id>`: the same, then served at http://127.0.0.1:4323 to look at
+- `npm run screenshots:doodles`: review screenshots of every doodle (375px/1280px, dark/light, bubble closed/open)
 - `npm run test:live`: live smoke run, a read-only subset of the e2e specs against the deployed site
   (`playwright.live.config.ts`, base URL = astro's `site`; analytics blocked by `tests/e2e/fixtures.ts`)
 - `npm run screenshots:live`: the same review screenshots, taken from the deployed site
@@ -64,6 +69,10 @@ scripts/github/             GitHub fetcher
 scripts/og/                 OG image + site icon generator (npm run og) + PNG/ICO helpers for their stale checks
 src/lib/game/               404 game (F.3): pure engine + words (unit-tested), canvas drawing, and play.ts, which
                             the 404's loader (src/components/LostPageGame.astro) imports only on Play
+src/lib/doodles/            doodles (F.4): the data (shapes, texts, Wikipedia links, priority), which doodle a date gets,
+                            the DOODLE override, the keyframes, the interaction rules (all unit-tested), and play.ts,
+                            which the loader (src/components/Doodle.astro) imports on the first hover/focus/tap
+scripts/doodles/            doodle:build / doodle / screenshots:doodles, and doodleGuard() (no DOODLE build into dist/)
 src/lib/ctf.mts             CTF chain (F.2): every clue text and answer part; the joined answer is never written out
 scripts/ctf/                ctfHeaders(): appends the X-Clue rule for /favicon.ico to dist/_headers (before cspHeaders)
 src/lib/seo.ts              absolute URLs from `site`, sitemap/robots text, Person JSON-LD, site icon paths/sizes
@@ -96,6 +105,14 @@ scripts/git/                hook installer + the pre-push logic (push-policy.ts)
 7. **Secrets** only in Cloudflare / GitHub Actions secrets. Never in code or committed files.
 8. **The email never appears as plain text in built HTML.** Components get it only from
    `getEmailParts()` (src/lib/resume.ts) for the CopyEmail button; `no-email-in-dist` enforces it.
+9. **Change files only with the Edit and Write tools**, so every change shows as a diff the user can approve.
+   Never modify files with Python, `node -e`, sed, awk, PowerShell, shell redirection (`>`, `>>`) or any other
+   script.
+   - Allowed exceptions: outputs of the project's own scripts (`npm run build` / `og` / `cv` / `doodle:build`, and
+     Prettier through `npm run format` or `npm run check`), and binary files that only a project script writes.
+   - If a change would touch many files in the same way and a script seems better, stop and ask first, saying
+     which files and why.
+   - Reading files with scripts (search, counting, checks) is fine.
 
 ## Design (details in design-doc §9)
 
@@ -117,6 +134,8 @@ scripts/git/                hook installer + the pre-push logic (push-policy.ts)
 - Not allowed: 3D/WebGL, particles, custom cursors, loading screens, animating every element on scroll.
 - Exception: the 404 game (F.3) animates a canvas after the visitor presses Play, calmer under reduced motion (no
   shake, moving background, leg animation or flashing). See design-doc §10.3. Don't "fix" it.
+- Exception: the doodles (F.4) move their dots (a burst, a spin, flickering flames) for 2–3 s, once per hover, focus
+  or first tap, transform/opacity only; with reduced motion they don't move at all. See design-doc §10.3.
 
 ## Quality targets
 
