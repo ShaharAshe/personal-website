@@ -1349,6 +1349,42 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
   - Needs design-doc §13.3 updated in the same task, since it currently says "no preview deployments".
   - Depends on: 2.17.
 
+- [x] **2.18 Docs in English** — Translate every Hebrew text in the repo to English: translation only, with the
+  same meaning, structure, lists and tables, and every section number and heading level kept.
+  - **Done (2026-11-17).**
+    - Hebrew was in two tracked files only: `docs/design-doc.md` (514 lines, rewritten in full) and one comment
+      in `tests/design-tokens.test.ts`.
+    - Headings are now in sentence case. The in-doc links use the new English anchors.
+    - The "(in Hebrew)" notes were removed from `CLAUDE.md` and `README.md`. plan.md had none.
+    - **New `tests/docs.test.ts` (4):**
+      - No tracked text file has Hebrew (U+0590–U+05FF). A failure names each file and line.
+      - Every `§N` / `§N.N` in a tracked file is a numbered heading in the design doc (175 references at the
+        time).
+      - Every `](#…)` link in the design doc points to one of its headings.
+      - A sanity check that the section list was parsed.
+    - Passages that look outdated were not changed. They're listed in 2.19.
+    - Tests: `npm test` 587 (was 583). No build or e2e change.
+
+- [ ] **2.19 Design doc refresh** — Fix the design-doc passages flagged in 2.18, in their own reviewable PR.
+  Do it before the repo goes public (action item #13).
+  - Header: still "Version 0.2", dated October 2026.
+  - §1: recruiters spend "20–60 seconds". CLAUDE.md says 30–60.
+  - §3.1: says the Copy button is "probably" an Astro component too. It is one (`CopyEmail.astro`, since 2.9).
+  - §5.1 Experience: lists a "Read the migration case study →" link as if it exists. It's added in 3.2.
+  - §6.5: the title says "the repos today" with a "proposed" topic. The descriptions and topics are already in
+    place (action item #2).
+  - §7.1: "The situation today" describes the workflow from before this repo existed.
+  - §7.3: "you see the diff, approve it and push". The flow is now branch + PR, and the user commits.
+  - §9.2: light `--accent` is "for example `#1F6FD1`". That is the chosen value (2.1). The
+    `tests/design-tokens.test.ts` row parser must keep working.
+  - §14: the tree is out of date. It's missing `src/lib/game/`, `src/lib/doodles/`, `src/lib/ctf.mts`,
+    `scripts/csp/`, `scripts/ctf/`, `scripts/doodles/`, `scripts/git/`, `.githooks/` and more. It shows
+    Milestone 3 files (MDX pages, `ArchitectureDiagram`, `ArticleLayout`, the `[slug]` pages) without marking
+    them as planned. The root is called `portfolio/`.
+  - §16: every checkbox is unchecked, though Phase 0 and Phase 1 are done (plan.md is the real tracker).
+  - §17.1: written in the future tense ("It will include"), and its rule list is shorter than CLAUDE.md's.
+  - §17.2 item 4: "Commit after every step". Claude Code never commits; the user commits through branch + PR.
+
 ## Fun (after MVP)
 
 Small extras for curious visitors, added after the MVP is live (2.16) and before Milestone 3. None of them
@@ -1753,7 +1789,13 @@ one is its own task (one at a time, plan first, tests + e2e + screenshots as usu
     `.txt` files in `dist/`). Options: a URL (e.g. the Contact section), or a `contact@<domain>` address if
     action item #14 happens and the rule is updated. `Expires:` is required; the daily build can keep it
     current.
-  - Depends on: 2.16.
+  - Decided (2026-11-17): `Contact:` will be `mailto:security@<domain>`, through Cloudflare Email Routing (it
+    forwards to the user's inbox). This needs hard rule 8 in `CLAUDE.md` updated to allow the domain address
+    while still banning the real one.
+  - Decided (2026-11-17): no PGP. A static site has nothing sensitive to report. Key upkeep and the risk of
+    losing the key outweigh the benefit. Signing would need the private key in CI, since `Expires:` changes
+    daily. Revisit only with a real need.
+  - Depends on: 4.2 and action item #14.
 
 - [ ] **F.7 Terminal view** — A second visual style for the whole site, switched by a click and remembered,
   like light/dark. Same pages, same content, same layout; only the look changes.
