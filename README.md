@@ -40,8 +40,7 @@ What the MVP contains:
   Liberation fonts, and fails if `fc-match Arial` doesn't resolve to Liberation Sans. That makes the PDF
   reproducible and pixel-identical to the original resume design.
 
-The full reasoning behind these and every other decision is in [`docs/design-doc.md`](docs/design-doc.md)
-(in Hebrew).
+The full reasoning behind these and every other decision is in [`docs/design-doc.md`](docs/design-doc.md).
 
 ## Stack
 
@@ -277,7 +276,7 @@ Without the GitHub CLI (`gh`), open the "Create a pull request" link that `git p
 
 ## Project docs
 
-- [`docs/design-doc.md`](docs/design-doc.md): the decisions and why (in Hebrew)
+- [`docs/design-doc.md`](docs/design-doc.md): the decisions and why
 - [`docs/plan.md`](docs/plan.md): the task list, with notes on what was done and how
 - [`CLAUDE.md`](CLAUDE.md) and [`.claude/rules/`](.claude/rules/): working rules for this repo. I build it with Claude Code; these files are the rules it works under, and I review every plan and commit myself.
 

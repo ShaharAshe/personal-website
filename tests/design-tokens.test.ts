@@ -60,7 +60,7 @@ test('the prefers-color-scheme: light fallback matches the light theme', () => {
 test('token values match design-doc §9.2', () => {
   const doc = fs.readFileSync(path.join(ROOT, 'docs', 'design-doc.md'), 'utf8');
   for (const token of TOKENS) {
-    // Table row: | `--token` | `#dark` | light cell (first hex in it, e.g. "... (למשל `#1F6FD1`) ...") |
+    // Table row: | `--token` | `#dark` | light cell (first hex in it, e.g. "... (for example `#1F6FD1`) ...") |
     const row = doc.match(new RegExp(`^\\| \`${token}\` \\|([^|]+)\\|([^|]+)\\|`, 'm'));
     assert.ok(row, `no ${token} row in design-doc §9.2`);
     const [dark, light] = [row[1], row[2]].map((cell) => cell.match(/#[0-9a-f]{6}/i)?.[0].toLowerCase());

@@ -4,7 +4,7 @@ Personal portfolio for a backend engineer (Java, Spring Boot, Kafka, real-time s
 Audience: recruiters (30–60 seconds), hiring managers and interviewers (a few minutes, want technical depth).
 Goal: get interviews for Backend / Software Engineer roles.
 
-All decisions and their reasoning are in `docs/design-doc.md` (written in Hebrew). Read the relevant
+All decisions and their reasoning are in `docs/design-doc.md`. Read the relevant
 section before starting a task. If a request conflicts with the design doc, point out the conflict
 and ask before proceeding.
 
