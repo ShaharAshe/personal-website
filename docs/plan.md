@@ -1365,8 +1365,28 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
     - Passages that look outdated were not changed. They're listed in 2.19.
     - Tests: `npm test` 587 (was 583). No build or e2e change.
 
-- [ ] **2.19 Design doc refresh** — Fix the design-doc passages flagged in 2.18, in their own reviewable PR.
+- [x] **2.19 Design doc refresh** — Fix the design-doc passages flagged in 2.18, in their own reviewable PR.
   Do it before the repo goes public (action item #13).
+  - **Done (2026-11-17).**
+    - Principle: the design doc keeps decisions and their reasons. Status lives in plan.md and rules in CLAUDE.md,
+      so passages that duplicated them became short pointers. No decision or reason changed.
+    - Header: Version 1.0, November 2026. The status line points to plan.md.
+    - §1: 20–60 seconds kept (user's call). CLAUDE.md's audience line changed from 30–60 to match.
+    - §3.1: states that the theme toggle and Copy button are Astro components, and the first React island is
+      planned with the contact form (3.3). The `react()` integration is installed and registered but no island
+      uses it yet; it stays.
+    - §4 and §5.1: the project/case-study routes and the case-study link are marked as planned.
+    - §6.5: renamed "The repos and their topics", the "Proposed topic" column is "Topic", and "(optional)" dropped
+      for Cryptography_modules (all seven repos checked with `gh`: topics as in the table).
+    - §7.1: renamed "Before this site", past tense. §7.3: the real flow (edit YAML, `npm run cv`, branch + PR) with a
+      pointer to CLAUDE.md. §7.4: a line that the real file and schema are the source.
+    - §9.2: light `--accent` is `#1F6FD1`, no "for example".
+    - Extras (approved): §10.1 notes the page transitions, section entrance and card hover are planned (3.4).
+      §17.3 points to §7.3 and CLAUDE.md.
+    - §14: a short top-level tree (one line per folder, planned folders marked) with a pointer to CLAUDE.md's
+      directory map. §16: the phases as prose, no checkboxes, pointing to plan.md. §17.1/§17.2: the real flow in
+      brief with a pointer to CLAUDE.md.
+    - Tests: `npm test` 587 (unchanged). No build or e2e change.
   - Header: still "Version 0.2", dated October 2026.
   - §1: recruiters spend "20–60 seconds". CLAUDE.md says 30–60.
   - §3.1: says the Copy button is "probably" an Astro component too. It is one (`CopyEmail.astro`, since 2.9).

@@ -1,7 +1,7 @@
 # Shahar Asher – Portfolio Site
 
 Personal portfolio for a backend engineer (Java, Spring Boot, Kafka, real-time systems).
-Audience: recruiters (30–60 seconds), hiring managers and interviewers (a few minutes, want technical depth).
+Audience: recruiters (20–60 seconds), hiring managers and interviewers (a few minutes, want technical depth).
 Goal: get interviews for Backend / Software Engineer roles.
 
 All decisions and their reasoning are in `docs/design-doc.md`. Read the relevant
