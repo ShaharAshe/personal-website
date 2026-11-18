@@ -490,7 +490,7 @@ Sections 9.1–9.4 describe the site's one look. **Terminal view** (F.7) is a se
 - **The same rules as the regular look:**
   - WCAG AA: tested like 9.2, and also against the glow at its strongest.
   - `prefers-contrast: more` removes the glow.
-  - Switching is instant (no transition), so `prefers-reduced-motion` has nothing to turn off.
+  - Switching crossfades the whole page like the theme switch (10.1, opacity only, 200ms), and is instant with `prefers-reduced-motion` or in a browser without View Transitions.
   - **Print always uses the print stylesheet:** every terminal rule is inside `@media screen`.
 
 | Token | Terminal | Contrast on `--bg` |
@@ -509,14 +509,18 @@ Sections 9.1–9.4 describe the site's one look. **Terminal view** (F.7) is a se
 
 | Element | Animation | Tool |
 |---|---|---|
-| Moving between pages | View Transitions | Built into Astro |
-| Project cards | Hover: a slight lift + a blue border | CSS |
-| Section entrance | Fade + a small slide (8–16px), **once** | CSS + IntersectionObserver |
-| Theme toggle | The colors switch at once (no transition, since only `transform` and `opacity` may be animated); only the new icon rotates and fades in (200ms), and only after a click, not on load | CSS animation |
+| Moving between pages | A 200ms crossfade of the whole page (`ease-out`, opacity only) | The browser's native cross-document View Transitions, CSS only (`@view-transition`), not Astro's `<ClientRouter />` |
+| Project cards | Hover: a 2px lift (`transform`, 200ms `ease-out`), only on devices that can hover | CSS |
+| Section entrance | The four homepage sections after the Hero (never the Hero itself, the LCP): fade + a 12px slide, 500ms `ease-out`, **once**, the first time each scrolls into view | CSS + IntersectionObserver |
+| Theme toggle | The page crossfades to the new colors (the same 200ms crossfade as between pages, through `document.startViewTransition()`); the new icon also rotates and fades in (200ms), and only after a click, not on load | CSS + a few lines in the toggle's script |
 | Copy button | An instant swap to a check icon and "Copied" | CSS |
-| Terminal view switch (9.5) | None: the style switches at once, like the theme's colors | CSS |
+| Terminal view switch (9.5) | The same 200ms crossfade as the theme toggle | Same |
 
-The theme toggle and the Copy button are built as described. The page transitions, the section entrance and the card hover are planned (task 3.4).
+All of it was built in task 3.4. How:
+- **Page transitions without a router.** Every navigation is still a full page load, so the `<head>` script, the console greeting, the game and doodle loaders and the analytics beacon run on every page as before. A browser without cross-document View Transitions just navigates. Only the root snapshots' opacity animates: the root group's own animation is turned off (its size and position never change).
+- **The section entrance never hides content by itself.** The HTML has only a bare `data-reveal` marker that no CSS matches. A small script (`src/components/SectionReveal.astro`, rules in `src/lib/reveal.ts`) hides a section only if it's entirely below the screen when the page loads, and never the target of the URL's hash (`/#contact`). So without JS, in print and with reduced motion, everything is simply there. The section's children move, never the section: its box stays put, so a jump to `/#projects` lands exactly on it (a browser scrolls to an element's transformed box).
+- **No blue border on card hover** (planned earlier): only `transform` and `opacity` may animate (10.3), and accent means clickable (`.claude/rules/ui.md`), while the card itself isn't a link, only the links inside it.
+- **No layout shift:** only `transform` and `opacity`; the e2e tests measure zero layout shift on every page once the web fonts are in, while scrolling to the bottom. The font swap before that (a hair of shift on Linux, where the size-adjusted fallbacks' local fonts are missing) belongs to task 3.4a (font loading).
 
 ### 10.2 What's out
 - ❌ Three.js / 3D / WebGL
@@ -528,7 +532,7 @@ The theme toggle and the Copy button are built as described. The page transition
 ### 10.3 Rules
 - **Duration:** 150–300ms for micro-interactions, up to ~600ms for entrances.
 - **Easing:** `ease-out`.
-- **`prefers-reduced-motion`:** all animations are turned off. Required.
+- **`prefers-reduced-motion`:** all animations are turned off. Required. That includes the page transitions (the `@view-transition` rule is inside a `prefers-reduced-motion: no-preference` query), the theme and terminal view crossfade (the script checks first), the section entrance and the card hover.
 - Only `transform` and `opacity` (no layout shifts).
 - **Exception: the 404 game (F.3, `src/components/LostPageGame.astro`, `src/lib/game/`).** The game is continuous motion on a `<canvas>`, and it's a deliberate exception to the two rules above:
   - **Nothing moves before the visitor presses Play** (or touches the game, or presses Space / Enter when the focus is on the page itself or on the game, like Chrome's dinosaur), for anyone. There's no autostart. A key pressed on a link, a button or a field keeps its usual job (Space on "Back to home" doesn't start a game).
@@ -608,7 +612,7 @@ The theme toggle and the Copy button are built as described. The page transition
 `default-src 'self'; script-src 'self' https://static.cloudflareinsights.com/beacon.min.js <hashes>; style-src 'self' <hashes>; img-src 'self'; font-src 'self'; connect-src 'self' https://cloudflareinsights.com; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`.
 No `'unsafe-inline'` and no `'unsafe-eval'`, neither for scripts nor for styles.
 
-**The only third party: Cloudflare Web Analytics** ([§15](#15-analytics)). `script-src` has the full path of the beacon file, not the whole host (the form in Cloudflare's FAQ; it works because the URL returns 200 with no redirect), and `connect-src` has the origin it sends to (`https://cloudflareinsights.com/cdn-cgi/rum`). The token is in an attribute (`data-cf-beacon`) of a script with a `src`, not in an inline script, so no hash is needed. The console greeting (F.1, `src/lib/console-greeting.ts`) is one more inline script, whose hash the build adds like all the others (one hash, since the text is the same on every page). The CSP line is 730 of 2,000 characters.
+**The only third party: Cloudflare Web Analytics** ([§15](#15-analytics)). `script-src` has the full path of the beacon file, not the whole host (the form in Cloudflare's FAQ; it works because the URL returns 200 with no redirect), and `connect-src` has the origin it sends to (`https://cloudflareinsights.com/cdn-cgi/rum`). The token is in an attribute (`data-cf-beacon`) of a script with a `src`, not in an inline script, so no hash is needed. The console greeting (F.1, `src/lib/console-greeting.ts`) is one more inline script, whose hash the build adds like all the others (one hash, since the text is the same on every page). The CSP line is 784 of 2,000 characters (838 on a doodle day).
 
 **How the hashes are generated:** Astro inlines a few scripts and styles into the HTML: the anti-flash script (must stay the first inline script in `<head>`), the scripts of the theme button and the copy button (smaller than Vite's inline limit), components' `<style>`, and the `@font-face` of `<Font />`. Their content changes with every code change, so the hashes aren't written by hand: a small integration (`scripts/csp/csp.mts`, registered in `astro.config.mjs`) runs at the end of every `astro build`, computes a SHA-256 for every inline `<script>` and `<style>` in every page in `dist/`, and writes the policy to `dist/_headers` in place of a placeholder line. The placeholder in `public/_headers` is `default-src 'none'`: if the step doesn't run, the site breaks visibly instead of going live without a CSP. The build fails if the HTML has something a hash can't allow (`style="..."`, `onclick=` and the like, `javascript:`), or if `_headers` goes over Cloudflare's limits (2,000 characters per line, 100 rules).
 
@@ -627,6 +631,7 @@ No `'unsafe-inline'` and no `'unsafe-eval'`, neither for scripts nor for styles.
 - **`X-Clue` on `/favicon.ico`:** not a security header. A clue in the CTF chain (F.2). The text comes from `src/lib/ctf.mts`, so it isn't written in `public/_headers`: a small integration (`scripts/ctf/ctf-headers.mts`) adds the rule to `dist/_headers` and runs before the CSP step, so the check of Cloudflare's limits covers it too. The `/*` rule still applies to the file. The extra line in the console greeting (clue 1) changed its hash but not the length of the CSP line (still 730 of 2,000).
 - **The 404 game (F.3)** didn't change the policy: the loader and the game file are JS files in `/_astro/` (covered by `'self'`), with no inline script and no `style` attributes, and the colors are read from the tokens in JS. The line stayed at 730 of 2,000.
 - **The doodles (F.4)** change the policy only on a doodle day: the loader and the animation file are JS files in `/_astro/`, and their styling is a `<style is:inline>` that appears only when the doodle is shown, so it gets one more hash in that day's build (the line is 784 of 2,000; on other days 730). The animation uses the Web Animations API, which isn't subject to `style-src`, so there are no `style` attributes.
+- **Motion (task 3.4)** added one inline script, the homepage's section entrance, so one more hash: the line went from 730 to 784 of 2,000 (from 784 to 838 on a doodle day). The rest is CSS in the site's stylesheet (covered by `'self'`) and a few lines in the theme toggle's existing script. No `style` attributes: the script only sets a `data-reveal` value, and the View Transitions aren't subject to `style-src`.
 
 #### Testing
 - `tests/csp.test.ts` checks on `dist/` that every inline script and style on every page (including 404) has a hash in the policy, and that the anti-flash script's hash is recomputed from `themeInitScript`.

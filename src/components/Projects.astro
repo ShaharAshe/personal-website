@@ -6,7 +6,8 @@
 // Tiers (.claude/rules/github-projects.md), each in projects.json order: featured → wide card(s) at the top;
 // portfolio → "More projects" grid; practice → "Algorithm practice" link row. An empty tier renders nothing
 // (no heading over an empty block). If all are empty, the section stays (Hero and nav link to #projects)
-// with one line linking to the GitHub profile. No accent fill, no motion (→ Task 3.4).
+// with one line linking to the GitHub profile. No accent fill. Motion (Task 3.4, global.css): the section's entrance
+// (data-reveal, src/components/SectionReveal.astro) and the cards' hover lift.
 import { getCollection } from 'astro:content';
 import ArrowUpRightIcon from './ArrowUpRightIcon.astro';
 import GitHubIcon from './GitHubIcon.astro';
@@ -25,7 +26,7 @@ const { featured, portfolio, practice, isEmpty } = projectsSection(getProjects()
 const profileUrl = isEmpty ? githubProfileUrl(getResume().basics.profiles) : null;
 ---
 
-<section id="projects" aria-labelledby="projects-title" data-projects>
+<section id="projects" aria-labelledby="projects-title" data-projects data-reveal>
   <div class="mx-auto max-w-[720px] px-4 pt-(--section-gap)">
     <h2 id="projects-title" class="text-xl font-semibold tracking-tight">
       Projects

@@ -8,6 +8,11 @@ import { readIco } from '../../scripts/og/ico.ts';
 import { SITE_ICONS } from '../../src/lib/seo.ts';
 import { LOOKS, styleToggle, themeToggle, useLook } from './helpers.ts';
 
+// Reduced motion for every shot: a full-page screenshot doesn't scroll, so the homepage sections below the fold would
+// still be waiting for their entrance (Task 3.4), hidden. With reduced motion they show in their final state, exactly
+// as they end up after the entrance. Motion itself is checked by tests/e2e/motion.spec.ts.
+test.use({ reducedMotion: 'reduce' });
+
 // 640px is sm, where the nav first shows the home link and the layout changes most (Task 2.16).
 const WIDTHS = [375, 640, 1280];
 const OUT_DIR = 'screenshots';

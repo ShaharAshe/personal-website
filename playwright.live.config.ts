@@ -32,6 +32,10 @@ export const LIVE_SPECS = [
   'ctf.spec.ts',
   // The 404 game (F.3): loads only on Play, plays, ends, restarts; no game on / or /resume; no CSP violation.
   'game.spec.ts',
+  // Motion (Task 3.4): the section entrance (and nothing hidden without JS, in print or for a /#hash), the card hover,
+  // the theme/terminal crossfade and the page transition, nothing with reduced motion, no layout shift, all under the
+  // real CSP.
+  'motion.spec.ts',
 ];
 
 const channel = base.projects?.[0]?.use?.channel;

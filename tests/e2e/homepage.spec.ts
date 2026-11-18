@@ -6,7 +6,7 @@
 import { type Locator, type Page } from '@playwright/test';
 import { expect, test } from './fixtures.ts';
 import { THEMES } from '../../src/lib/theme.ts';
-import { expectTheme } from './helpers.ts';
+import { expectTheme, revealAll } from './helpers.ts';
 
 const SECTION_IDS = ['experience', 'projects', 'skills', 'contact'];
 const SECTION_GAP: Record<number, number> = { 375: 64, 1280: 96 };
@@ -203,6 +203,8 @@ for (const width of [375, 1280]) {
 
       test('one gap between sections: previous section bottom to next <h2>', async ({ page }) => {
         await page.goto('/');
+        // The headings move during their section's entrance (Task 3.4): measure the final layout.
+        await revealAll(page);
         const previous = ['[data-hero]', '#experience', '#projects', '#skills'];
         for (const [i, id] of SECTION_IDS.entries()) {
           const before = await boxOf(page.locator(previous[i]));

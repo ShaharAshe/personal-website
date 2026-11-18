@@ -3,7 +3,8 @@
 // and only its featured highlights. All text comes from resume.yaml via src/lib/experience.ts. Ships no JS.
 //
 // Dates read exactly like the PDF (src/lib/resume-dates.ts). No accent-filled button here: the full-resume
-// link is a plain text link. The case study link is added in Task 3.2.
+// link is a plain text link. The case study link is added in Task 3.2. data-reveal: the section's entrance (Task 3.4,
+// src/components/SectionReveal.astro).
 import DateRange from './DateRange.astro';
 import { experienceContent } from '../lib/experience';
 import { getResume } from '../lib/resume';
@@ -11,7 +12,7 @@ import { getResume } from '../lib/resume';
 const roles = experienceContent(getResume());
 ---
 
-<section id="experience" aria-labelledby="experience-title" data-experience>
+<section id="experience" aria-labelledby="experience-title" data-experience data-reveal>
   <div class="mx-auto max-w-[720px] px-4 pt-(--section-gap)">
     <h2 id="experience-title" class="text-xl font-semibold tracking-tight">
       Experience

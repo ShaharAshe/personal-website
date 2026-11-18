@@ -309,6 +309,65 @@
 }
 
 /*
+ * Motion (Task 3.4, design-doc §10). Only transform and opacity, ease-out, and nothing at all with
+ * prefers-reduced-motion: reduce (every rule here is inside a no-preference query). The 404 game (F.3) and the doodles
+ * (F.4) keep their own rules.
+ *
+ * Page transitions: the browser's native cross-document View Transitions, CSS only (not Astro's <ClientRouter />), so
+ * every navigation is still a full page load. Browsers without support navigate as before. The theme toggle and the
+ * terminal view switch use the same root crossfade through document.startViewTransition() (ThemeToggle.astro). The
+ * root group doesn't animate (its size and position never change), so only the old and new snapshots' opacity moves.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+
+  ::view-transition-group(root) {
+    animation: none;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 200ms;
+    animation-timing-function: ease-out;
+  }
+}
+
+/*
+ * Section entrance: the homepage sections after the Hero fade and slide in once (src/lib/reveal.ts, SectionReveal.astro).
+ * The HTML has a bare data-reveal, which matches nothing here: only the script sets "pending" and then "done", so
+ * without JS, in print (screen only) and with reduced motion every section is simply visible. The section's children
+ * move, never the section: its own box stays put, so a jump to /#projects lands exactly on it (a browser scrolls to the
+ * transformed box) and the observer measures where it really is.
+ *
+ * Project card hover: a 2px lift, on devices that can hover. A transform only: no border or shadow change, since the
+ * card itself isn't a link (accent means clickable, .claude/rules/ui.md).
+ */
+@media screen and (prefers-reduced-motion: no-preference) {
+  [data-reveal='pending'] > * {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  [data-reveal='done'] > * {
+    transition:
+      opacity 500ms ease-out,
+      transform 500ms ease-out;
+  }
+
+  @media (hover: hover) {
+    [data-project-card] {
+      transition: transform 200ms ease-out;
+    }
+
+    [data-project-card]:hover {
+      transform: translateY(-2px);
+    }
+  }
+}
+
+/*
  * Print (design-doc §7.6). Unlayered, so these win over Tailwind's utilities, and last in the file, because
  * tests/design-tokens.test.ts reads the first match of each token selector above. Plain black and white in every
  * theme state, so dark theme never reaches paper.

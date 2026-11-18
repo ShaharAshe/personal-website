@@ -9,7 +9,8 @@
 //
 // Chips wrap, and a long item wraps inside its chip instead of overflowing ([overflow-wrap:anywhere]).
 // role="list" keeps list semantics in Safari/VoiceOver, which drops them for `list-style: none`. No accent in
-// this section; no motion (→ Task 3.4).
+// this section. On the homepage (layout="card") the section gets the entrance (Task 3.4, data-reveal,
+// src/components/SectionReveal.astro); /resume has no entrance.
 import TechChip from './TechChip.astro';
 import { skillsContent, type SkillCategory } from '../lib/skills';
 import { getResume } from '../lib/resume';
@@ -22,7 +23,7 @@ interface Props {
 const { categories = skillsContent(getResume()), layout = 'card' } = Astro.props;
 ---
 
-<section id="skills" aria-labelledby="skills-title" data-skills>
+<section id="skills" aria-labelledby="skills-title" data-skills data-reveal={layout === 'card' ? '' : undefined}>
   <div class="mx-auto max-w-[720px] px-4 pt-(--section-gap)">
     <h2 id="skills-title" class="text-xl font-semibold tracking-tight">
       Skills

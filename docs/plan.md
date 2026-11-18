@@ -1920,9 +1920,38 @@ one is its own task (one at a time, plan first, tests + e2e + screenshots as usu
   - Verify: Submitting works end-to-end to a real inbox; spam paths rejected correctly.
   - Depends on: 1.5, 2.9; needs action item #8.
 
-- [ ] **3.4 Motion polish** — Section entrance (once), card hover, theme-switch transition, View Transitions, `prefers-reduced-motion` disables all of it.
+- [x] **3.4 Motion polish** — Section entrance (once), card hover, theme-switch transition, View Transitions, `prefers-reduced-motion` disables all of it.
   - Files: `src/styles/global.css`, relevant components, `astro.config.mjs`.
   - Depends on: 2.16.
+  - Done (design-doc §10.1 rewritten as built):
+    - Page transitions: native cross-document View Transitions in CSS (`@view-transition { navigation: auto }` inside a
+      `prefers-reduced-motion: no-preference` query), not Astro's `<ClientRouter />`: every navigation is still a full
+      page load. A 200ms `ease-out` crossfade of the root snapshots (opacity, plus the UA's plus-lighter blend); the root
+      group's animation is off. `astro.config.mjs` unchanged.
+    - Theme toggle and terminal view switch: the same crossfade through `document.startViewTransition()` in the toggle's
+      existing script; instant without the API or with reduced motion. Decided with the owner: terminal view crossfades
+      too (§9.5 updated; it was instant in F.7).
+    - Section entrance: Experience, Projects, Skills (homepage only) and Contact, never the Hero. 500ms `ease-out`,
+      opacity + translateY(12px), once (`src/lib/reveal.ts`, `src/components/SectionReveal.astro`, an IntersectionObserver).
+      The HTML has a bare `data-reveal`; only the script sets `pending`/`done`, and only for a section entirely below the
+      screen that isn't the URL's hash target, so nothing is hidden without JS, in print or with reduced motion.
+      Deviation from the first plan: the section's **children** move, not the section. A browser scrolls to an element's
+      transformed box, so a nav jump to a waiting section landed 12px off (caught by homepage.spec's nav test).
+    - Card hover: project cards lift 2px (`transform`, 200ms `ease-out`), only with `(hover: hover)`. Decided with the
+      owner: no blue border (§10.3 allows only transform/opacity; accent means clickable and the card isn't a link).
+    - Numbers: homepage JS 12.76 → 13.23 KB gzipped (site 1.76 → 2.23 KB + beacon 11 KB; 14.02 KB on a doodle day).
+      CSP line 730 → 784/2000 (784 → 838 on a doodle day): one more inline script hash. Layout shift 0 on /, /resume and
+      the 404 in dark, light and terminal, counted once the web fonts are in: on CI (Linux) the font swap itself shifted
+      the page by 0.00007–0.003 (the size-adjusted fallbacks use local Arial/Courier New, which the runner lacks), which
+      task 3.4a covers.
+    - Cross-document View Transitions are best-effort (the browser may skip one), so the e2e test checks a transition
+      is opacity-only when one runs, and the opt-in rule deterministically.
+    - Tests: `npm test` 628 → 639 (`tests/reveal.test.ts`: the pure rules, the markers in dist/, every motion rule inside
+      a no-preference query). e2e 332 → 359 (`tests/e2e/motion.spec.ts`, also added to `LIVE_SPECS`). Existing specs:
+      terminal-view's "switching starts no animation" now allows only the root crossfade with no-preference (still none
+      with reduce); the Copy-swap helper and homepage's section-gap test wait for the entrance to finish (new helpers
+      `waitForStill`, `revealAll`) instead of switching to reduced motion, so no check runs only with motion off. The
+      review screenshots use reduced motion (a full-page shot doesn't scroll; the final state is the same).
 
 - [ ] **3.5 Depth deploy + verification** — Same screenshot/Lighthouse pass as 2.16, plus new pages and contact form tested live.
   - Depends on: 3.1–3.4.

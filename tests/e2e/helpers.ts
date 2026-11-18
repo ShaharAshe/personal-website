@@ -64,6 +64,49 @@ export async function expectToggleFor(page: Page, theme: Theme): Promise<void> {
   await expect(page.locator(`[data-theme-icon="${theme}"]`)).toBeHidden();
 }
 
+/**
+ * Waits until every section in `sections` (elements with data-reveal) is in its final state after the entrance
+ * (Task 3.4): data-reveal bare or "done", and every child at opacity 1 with no transform. It checks the final state
+ * itself, not "no animation running": between data-reveal becoming "done" and the style recalc that starts the
+ * transitions, nothing animates yet, but the content is still 12px down. Reading computed styles forces that recalc,
+ * so this can't pass early. No sections (e.g. /resume) passes at once.
+ *
+ * Clock-safe: no timers or requestAnimationFrame in the page, which page.clock.install() fakes (expect.poll waits on the
+ * Node side). The entrance itself uses neither: an IntersectionObserver and CSS transitions, which the fake clock
+ * doesn't touch.
+ */
+export async function waitForRevealed(sections: Locator): Promise<void> {
+  await expect
+    .poll(() =>
+      sections.evaluateAll((elements) =>
+        elements.every((section) => {
+          const state = section.getAttribute('data-reveal');
+          if (state !== '' && state !== 'done') return false;
+          return [...section.children].every((child) => {
+            const { opacity, transform } = getComputedStyle(child);
+            return opacity === '1' && transform === 'none';
+          });
+        }),
+      ),
+    )
+    .toBe(true);
+}
+
+/**
+ * Brings in every homepage section's entrance (Task 3.4): scrolls each section into view in turn, waits until all are
+ * in their final state, then goes back to the top. Layout checks then measure the final layout with motion on, as a
+ * visitor sees it. Clock-safe, like waitForRevealed.
+ */
+export async function revealAll(page: Page): Promise<void> {
+  // One section at a time, each waited for: the observer only reports a section that crosses into view, so jumping past
+  // one in a single step would leave it waiting.
+  for (const section of await page.locator('[data-reveal]').all()) {
+    await section.evaluate((el) => el.scrollIntoView({ behavior: 'instant', block: 'start' }));
+    await waitForRevealed(section);
+  }
+  await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+}
+
 /** Asserts the element is focused by keyboard and draws a visible outline. */
 export async function expectFocusRing(locator: Locator): Promise<void> {
   await expect(locator).toBeFocused();
@@ -90,6 +133,15 @@ export async function expectCopyIconSwap(page: Page, button: Locator, address: s
   const checkIcon = button.locator('svg[data-icon="check"]');
   await expect(copyIcon).toBeVisible();
   await expect(checkIcon).toBeHidden();
+  // In view and in its final place first: scrolling to it starts its section's entrance (Task 3.4), which moves it.
+  await button.scrollIntoViewIfNeeded();
+  // From the button up, not page.locator(...).filter({ has: button }): `has` matches the button's selector inside the
+  // section, and the contact button's selector starts with the section itself ([data-contact]), so it matched nothing
+  // and the wait passed at once.
+  const section = button.locator('xpath=ancestor::*[@data-reveal]');
+  // An empty match would pass the wait at once: on a page with entrances (the homepage), the button must be in one.
+  if ((await page.locator('[data-reveal]').count()) > 0) await expect(section).toHaveCount(1);
+  await waitForRevealed(section);
   // In page coordinates: the click scrolls the button into view, which changes boundingBox()'s viewport-relative y.
   const box = () =>
     button.evaluate((el) => {
