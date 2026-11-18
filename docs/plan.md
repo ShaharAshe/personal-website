@@ -1941,7 +1941,11 @@ one is its own task (one at a time, plan first, tests + e2e + screenshots as usu
       owner: no blue border (§10.3 allows only transform/opacity; accent means clickable and the card isn't a link).
     - Numbers: homepage JS 12.76 → 13.23 KB gzipped (site 1.76 → 2.23 KB + beacon 11 KB; 14.02 KB on a doodle day).
       CSP line 730 → 784/2000 (784 → 838 on a doodle day): one more inline script hash. Layout shift 0 on /, /resume and
-      the 404 in dark, light and terminal.
+      the 404 in dark, light and terminal, counted once the web fonts are in: on CI (Linux) the font swap itself shifted
+      the page by 0.00007–0.003 (the size-adjusted fallbacks use local Arial/Courier New, which the runner lacks), which
+      task 3.4a covers.
+    - Cross-document View Transitions are best-effort (the browser may skip one), so the e2e test checks a transition
+      is opacity-only when one runs, and the opt-in rule deterministically.
     - Tests: `npm test` 628 → 639 (`tests/reveal.test.ts`: the pure rules, the markers in dist/, every motion rule inside
       a no-preference query). e2e 332 → 359 (`tests/e2e/motion.spec.ts`, also added to `LIVE_SPECS`). Existing specs:
       terminal-view's "switching starts no animation" now allows only the root crossfade with no-preference (still none

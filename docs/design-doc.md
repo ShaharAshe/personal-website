@@ -520,7 +520,7 @@ All of it was built in task 3.4. How:
 - **Page transitions without a router.** Every navigation is still a full page load, so the `<head>` script, the console greeting, the game and doodle loaders and the analytics beacon run on every page as before. A browser without cross-document View Transitions just navigates. Only the root snapshots' opacity animates: the root group's own animation is turned off (its size and position never change).
 - **The section entrance never hides content by itself.** The HTML has only a bare `data-reveal` marker that no CSS matches. A small script (`src/components/SectionReveal.astro`, rules in `src/lib/reveal.ts`) hides a section only if it's entirely below the screen when the page loads, and never the target of the URL's hash (`/#contact`). So without JS, in print and with reduced motion, everything is simply there. The section's children move, never the section: its box stays put, so a jump to `/#projects` lands exactly on it (a browser scrolls to an element's transformed box).
 - **No blue border on card hover** (planned earlier): only `transform` and `opacity` may animate (10.3), and accent means clickable (`.claude/rules/ui.md`), while the card itself isn't a link, only the links inside it.
-- **No layout shift:** only `transform` and `opacity`; the e2e tests measure zero layout shift on every page.
+- **No layout shift:** only `transform` and `opacity`; the e2e tests measure zero layout shift on every page once the web fonts are in, while scrolling to the bottom. The font swap before that (a hair of shift on Linux, where the size-adjusted fallbacks' local fonts are missing) belongs to task 3.4a (font loading).
 
 ### 10.2 What's out
 - ❌ Three.js / 3D / WebGL
