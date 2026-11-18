@@ -128,6 +128,12 @@ Then open http://127.0.0.1:4323. The ids are `launch`, `new-year`, `pi-day`, `tu
 With `npm run dev`, set `DOODLE` first (cmd: `set DOODLE=halloween&& npm run dev`, PowerShell: `$env:DOODLE='halloween';
 npm run dev`). A build into `dist/` fails while `DOODLE` is set, so a forced doodle can't reach the live site.
 
+**Motion** (design-doc §10): a short crossfade between pages (the browser's native cross-document View Transitions,
+CSS only: every navigation is still a full page load) and on switching the theme or terminal view; the homepage
+sections after the Hero fade in once as they scroll into view (`src/components/SectionReveal.astro`,
+`src/lib/reveal.ts`); project cards lift 2px on hover. Only `transform` and `opacity`, and none of it with reduced
+motion. Nothing is hidden in the HTML: without JS, in print and with reduced motion every section is simply there.
+
 In CI, every pull request goes through build → `npm run check` → Playwright e2e. After it's merged, the
 same run on `main` repeats them and then deploys to Cloudflare (see [Contributing and deploy flow](#contributing-and-deploy-flow)).
 
@@ -221,7 +227,7 @@ nothing. To run the same check by hand: `npm run check:staged`.
   CSP: a test fails on any CSP violation, and one checks that an injected inline script is blocked. Every spec takes
   `test` from `tests/e2e/fixtures.ts`, which blocks Cloudflare Web Analytics requests, so test runs send no visits.
 - **`npm run test:live`** (Playwright, run by hand after a deploy): reuses the CSP and headers, analytics, SEO, 404,
-  Hero, resume, console greeting, CTF and 404 game specs against the live URL (`site` in `astro.config.mjs`, so it follows a domain change). It
+  Hero, resume, console greeting, CTF, 404 game and motion specs against the live URL (`site` in `astro.config.mjs`, so it follows a domain change). It
   checks status codes, every header from `public/_headers`, that the console has no CSP or header errors, the theme
   toggle, Copy, the PDF download, the OG image and icons, `sitemap.xml` and `robots.txt`. Nothing is started
   locally and no build is needed. Analytics requests are blocked as in every e2e run, so it sends no Web Analytics

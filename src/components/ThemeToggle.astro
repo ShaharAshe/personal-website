@@ -71,7 +71,7 @@
   }
 
   /*
-   * Colors switch instantly; only the new icon turns in. data-animate is set on the first click, so
+   * The colors crossfade with the whole page (the script's View Transition, Task 3.4); the new icon also turns in. data-animate is set on the first click, so
    * nothing plays on page load. Each click displays the other <svg>, which restarts the animation.
    * No rule at all under prefers-reduced-motion: reduce.
    */
@@ -102,24 +102,39 @@
   } from '../lib/theme';
 
   const root = document.documentElement;
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
+  // Both switches crossfade the whole page (Task 3.4): a View Transition whose root snapshots only fade (global.css),
+  // 200ms. Instant where the browser has no startViewTransition, and with reduced motion. Only the change to <html> goes
+  // in the callback; saving, the label and aria-pressed follow right away.
+  const withFade = (update: () => void) => {
+    if ('startViewTransition' in document && !reduceMotion.matches) document.startViewTransition(update);
+    else update();
+  };
 
   // The footer's terminal view switch (src/components/StyleToggle.astro) is wired here, so the site keeps one inline
-  // script for both choices. Instant, like the theme's colors: no transition, so nothing to turn off for reduced motion.
+  // script for both choices.
   for (const button of document.querySelectorAll<HTMLButtonElement>('[data-style-toggle]')) {
-    const updatePressed = () =>
-      button.setAttribute('aria-pressed', String(currentStyle(root.dataset.style) === TERMINAL));
-    updatePressed();
+    // The style on screen, kept here rather than read back from <html>: with the fade, <html> changes a frame later, and
+    // a quick second click must still toggle back.
+    let style = currentStyle(root.dataset.style);
+    button.setAttribute('aria-pressed', String(style === TERMINAL));
 
     button.addEventListener('click', () => {
-      const next = nextStyle(currentStyle(root.dataset.style));
-      if (next === TERMINAL) root.dataset.style = next;
-      else delete root.dataset.style;
+      const next = nextStyle(style);
+      style = next;
+      withFade(() => {
+        if (next === TERMINAL) root.dataset.style = next;
+        else delete root.dataset.style;
+      });
       saveStyle(next, () => localStorage);
-      updatePressed();
+      button.setAttribute('aria-pressed', String(next === TERMINAL));
     });
   }
   const osLight = matchMedia('(prefers-color-scheme: light)');
-  const read = () => currentTheme(root.dataset.theme, osLight.matches);
+  // The saved choice, ahead of <html> while a fade is starting (see the style switch above); else what <html> says.
+  let chosen: string | undefined;
+  const read = () => currentTheme(chosen ?? root.dataset.theme, osLight.matches);
 
   for (const button of document.querySelectorAll<HTMLButtonElement>('[data-theme-toggle]')) {
     const updateLabel = () => button.setAttribute('aria-label', toggleLabel(read()));
@@ -127,7 +142,10 @@
 
     button.addEventListener('click', () => {
       const next = nextTheme(read());
-      root.dataset.theme = next;
+      chosen = next;
+      withFade(() => {
+        root.dataset.theme = next;
+      });
       saveTheme(next, () => localStorage);
       updateLabel();
       button.dataset.animate = '';

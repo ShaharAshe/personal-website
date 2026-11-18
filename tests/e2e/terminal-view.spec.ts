@@ -15,6 +15,7 @@ import {
   expectFocusRing,
   expectTheme,
   NAV_LINKS,
+  revealAll,
   saveStyleBeforeLoad,
   styleToggle,
   themeToggle,
@@ -426,13 +427,24 @@ test.describe('in terminal view', () => {
     expect(await cssOf(profile, 'content', '::after')).toContain('http');
   });
 
+  // Since Task 3.4 the switch crossfades the whole page (a View Transition: the root snapshots' opacity, checked in
+  // tests/e2e/motion.spec.ts), and nothing on the page itself animates or transitions. With reduced motion, nothing at
+  // all.
   for (const reducedMotion of ['reduce', 'no-preference'] as const) {
-    test(`switching starts no animation or transition (prefers-reduced-motion: ${reducedMotion})`, async ({ page }) => {
+    test(`switching animates no element, only the page crossfade (prefers-reduced-motion: ${reducedMotion})`, async ({
+      page,
+    }) => {
       await page.emulateMedia({ reducedMotion });
       await page.goto('/');
+      // Clicking the footer's switch scrolls there, which would start the sections' entrance: get it over with first.
+      await revealAll(page);
       await styleToggle(page).click();
       await expectTerminal(page, false);
-      expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+      const animated = await page.evaluate(() =>
+        document.getAnimations().map((a) => (a.effect as KeyframeEffect).pseudoElement ?? 'an element'),
+      );
+      if (reducedMotion === 'reduce') expect(animated).toEqual([]);
+      else for (const target of animated) expect(target).toMatch(/^::view-transition-(old|new)\(root\)$/);
       expect(await cssOf(page.locator('body'), 'transition-duration')).toBe('0s');
     });
   }

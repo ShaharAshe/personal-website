@@ -3,7 +3,7 @@
 // equal cards, Email (CopyEmail: address, the section's one accent-filled button, a mailto: link) and
 // LinkedIn, then a GitHub link. Profile URLs come from basics.profiles (src/lib/contact.ts). The email
 // only reaches the page as parts, joined in the browser by CopyEmail's script (design-doc §8.3).
-// Links open in the same tab.
+// Links open in the same tab. data-reveal: the section's entrance (Task 3.4, src/components/SectionReveal.astro).
 import CopyEmail from './CopyEmail.astro';
 import GitHubIcon from './GitHubIcon.astro';
 import LinkedInIcon from './LinkedInIcon.astro';
@@ -18,6 +18,7 @@ const linkClass = 'inline-flex min-h-10 items-center gap-2 font-medium text-acce
   id="contact"
   aria-labelledby="contact-title"
   data-contact
+  data-reveal
   class="mx-auto max-w-[720px] px-4 py-(--section-gap)"
 >
   <h2 id="contact-title" class="text-xl font-semibold tracking-tight">

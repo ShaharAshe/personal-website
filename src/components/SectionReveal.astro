@@ -1,0 +1,32 @@
+---
+// Section entrance (Task 3.4, design-doc §10.1): no markup, one small script for the homepage. Each section marked
+// data-reveal fades and slides in once, the first time it scrolls into view. The rules are in src/lib/reveal.ts, the
+// styles in global.css.
+//
+// Rendered by src/pages/index.astro after the last section, so no section ships a script. Its own inline module: it
+// doesn't import src/lib/theme.ts, so the bundler doesn't split a shared chunk off the theme toggle's script.
+//
+// Nothing happens with reduced motion or without IntersectionObserver, and nothing is hidden before this script runs:
+// without JS, in print and with reduced motion every section is simply there.
+---
+
+<script>
+  import { DONE, OBSERVER_OPTIONS, PENDING, REVEAL_ATTR, revealsNow, startsPending } from '../lib/reveal';
+
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches && 'IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!revealsNow({ isIntersecting: entry.isIntersecting, bottom: entry.boundingClientRect.bottom })) continue;
+        entry.target.setAttribute(REVEAL_ATTR, DONE);
+        observer.unobserve(entry.target);
+      }
+    }, OBSERVER_OPTIONS);
+
+    for (const section of document.querySelectorAll<HTMLElement>(`[${REVEAL_ATTR}]`)) {
+      const { top } = section.getBoundingClientRect();
+      if (!startsPending({ top, id: section.id }, innerHeight, location.hash)) continue;
+      section.setAttribute(REVEAL_ATTR, PENDING);
+      observer.observe(section);
+    }
+  }
+</script>

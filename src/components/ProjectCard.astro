@@ -5,7 +5,8 @@
 // featured: the card at the top, title <h3>. portfolio: a "More projects" card, title <h4> (under the
 // "More projects" <h3>). Both look the same, so their text lines up. Accent means "clickable": the links are accent text links (never chips, which
 // are never accent), in the same tab, each with an aria-label that names the project; icons/arrows are
-// aria-hidden. No whole-card link, so no nested links. No accent fill, no motion (hover lift → Task 3.4).
+// aria-hidden. No whole-card link, so no nested links. No accent fill. On hover the card lifts 2px (Task 3.4, a
+// transform only, in global.css keyed on data-project-card; no border change, since the card itself isn't a link).
 import ArrowUpRightIcon from './ArrowUpRightIcon.astro';
 import GitHubIcon from './GitHubIcon.astro';
 import TechChip from './TechChip.astro';

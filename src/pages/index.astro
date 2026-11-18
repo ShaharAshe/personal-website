@@ -5,6 +5,7 @@ import Contact from '../components/Contact.astro';
 import Experience from '../components/Experience.astro';
 import Hero from '../components/Hero.astro';
 import Projects from '../components/Projects.astro';
+import SectionReveal from '../components/SectionReveal.astro';
 import Skills from '../components/Skills.astro';
 import { CTF_COMMENT_HTML } from '../lib/ctf.mts';
 import { getResume } from '../lib/resume';
@@ -28,4 +29,6 @@ const jsonLd = jsonLdScript(personJsonLd(resume, Astro.site));
   <Projects />
   <Skills />
   <Contact />
+  {/* The sections' entrance (Task 3.4): after the last one, so no section ships a script. */}
+  <SectionReveal />
 </BaseLayout>
