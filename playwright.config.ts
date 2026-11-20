@@ -22,7 +22,8 @@ const channel = isCI ? undefined : 'msedge';
 export default defineConfig({
   testDir: 'tests/e2e',
   // One browser at a time: measured locally, 1 worker runs the suite in ~11s vs ~31s with 4 (parallel
-  // Edge instances slow each other down). CI's 2-core runner gets 1 worker by default anyway.
+  // Edge instances slow each other down). It applies everywhere, CI included (Playwright's half-the-cores default only
+  // applies when this is unset), and npm run test:e2e:linux inherits it so its timing matches CI's.
   workers: 1,
   forbidOnly: isCI,
   // A flaky test should be fixed, not retried until it passes.
