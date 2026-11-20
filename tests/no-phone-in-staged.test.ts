@@ -18,7 +18,7 @@ import {
   parseNameStatus,
   stagedPhonePattern,
 } from '../scripts/checks/staged.ts';
-import { HOOKS_PATH, decideHookInstall } from '../scripts/git/hooks.ts';
+import { HOOKS_PATH, decideHookInstall, skipHookInstall } from '../scripts/git/hooks.ts';
 
 const FAKE_LOCAL = '055-555-0199';
 const FAKE_INTL = '+972 55-555-0199';
@@ -127,6 +127,27 @@ test('decideHookInstall: sets core.hooksPath only on a local checkout without on
   const other = decideHookInstall({ ...base, currentHooksPath: '.husky' });
   assert.equal(other.action, 'warn');
   assert.match(other.message, /NOT active/);
+});
+
+test('skipHookInstall: only SKIP_GIT_HOOKS=1 skips', () => {
+  assert.match(skipHookInstall({ SKIP_GIT_HOOKS: '1' }) ?? '', /git not run/);
+  assert.equal(skipHookInstall({}), null);
+  assert.equal(skipHookInstall({ SKIP_GIT_HOOKS: '0' }), null);
+  assert.equal(skipHookInstall({ SKIP_GIT_HOOKS: 'true' }), null);
+});
+
+test('install-hooks.ts with SKIP_GIT_HOOKS=1 exits 0 before any git call', () => {
+  // A PATH with no git on it: had the script run git, it would print "git not found" instead of the skip message.
+  const emptyBin = fs.mkdtempSync(path.join(os.tmpdir(), 'no-git-'));
+  const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => key.toUpperCase() !== 'PATH'));
+  const result = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'git', 'install-hooks.ts')], {
+    env: { ...env, PATH: emptyBin, SKIP_GIT_HOOKS: '1' },
+    encoding: 'utf8',
+  });
+  fs.rmSync(emptyBin, { recursive: true, force: true });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /SKIP_GIT_HOOKS=1: git hooks not installed \(git not run\)/);
+  assert.doesNotMatch(result.stdout + result.stderr, /git not found|Warning/);
 });
 
 // --- the hook file ---

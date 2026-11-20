@@ -13,6 +13,8 @@
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"tests/**/*.test.ts\"",
     "test:update-golden": "node -e \"process.env.UPDATE_GOLDEN = '1'; const r = require('node:child_process').spawnSync('npm', ['test'], { stdio: 'inherit', shell: true }); process.exit(r.status ?? 1);\"",
     "test:e2e": "playwright test --project=e2e",
+    "test:e2e:linux": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/e2e-linux/run.ts",
+    "test:e2e:linux:clean": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/e2e-linux/clean.ts",
     "screenshots": "playwright test --project=screenshots",
     "doodle": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/doodles/preview.ts",
     "doodle:build": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/doodles/build.ts",

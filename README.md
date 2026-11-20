@@ -199,6 +199,8 @@ nothing. To run the same check by hand: `npm run check:staged`.
 | `npm test` | Unit and integration tests (`node:test`, `tests/**/*.test.ts`) |
 | `npm run test:update-golden` | Re-record the golden Word files that pin the resume design (only after an intended design change) |
 | `npm run test:e2e` | Playwright end-to-end tests against the existing builds (`wrangler dev` with the real headers: `dist/` on port 4322, `dist-doodle/` on 4323, so run `npm run doodle:build` first) |
+| `npm run test:e2e:linux` | The same e2e suite on Linux in Docker, as close to CI as practical, against the existing `dist/` and `dist-doodle/` (Docker Desktop must be running; see [Linux e2e](#linux-e2e-docker)). Extra args go to Playwright: `npm run test:e2e:linux -- tests/e2e/motion.spec.ts --repeat-each=10` |
+| `npm run test:e2e:linux:clean` | Remove this project's e2e Docker image(s) and its Linux `node_modules` volume (the next run rebuilds them) |
 | `npm run screenshots` | Review screenshots (375px, 640px and 1280px, dark, light and terminal view, plus header clips, the `/resume` print preview, the OG image and the icons) into `screenshots/` |
 | `npm run doodle -- <id>` | Build `dist-doodle/` with that doodle forced (after `npm run build`), then serve it at http://127.0.0.1:4323 with the real headers |
 | `npm run doodle:build -- <id>` | Only build `dist-doodle/` with that doodle (default `pi-day`): `astro build` alone, reusing the main build's outputs. CI runs it for the tests; it's never deployed |
@@ -208,7 +210,7 @@ nothing. To run the same check by hand: `npm run check:staged`.
 | `npm run check` | On an existing build: `astro check` → lint → `npm test` → site checks → format check |
 | `npm run check:site` | Site checks: no phone in `dist/` or tracked files, phone present in the published PDF, no email in `dist/` |
 | `npm run check:staged` | The pre-commit check: no `CV_PHONE` number in staged changes (fails if `CV_PHONE` isn't set) |
-| `npm run prepare` | Runs on `npm ci`/`npm install`: installs the git hooks (`core.hooksPath` → `.githooks`); does nothing in CI |
+| `npm run prepare` | Runs on `npm ci`/`npm install`: installs the git hooks (`core.hooksPath` → `.githooks`); does nothing in CI, or with `SKIP_GIT_HOOKS=1` (set by `test:e2e:linux`'s container, so git never runs there) |
 | `npm run lint` | ESLint |
 | `npm run format` | Prettier, writing the fixes |
 | `npm run format:check` | Prettier, check only |
@@ -232,6 +234,7 @@ nothing. To run the same check by hand: `npm run check:staged`.
   toggle, Copy, the PDF download, the OG image and icons, `sitemap.xml` and `robots.txt`. Nothing is started
   locally and no build is needed. Analytics requests are blocked as in every e2e run, so it sends no Web Analytics
   visits. Results go to `test-results/live/` and `playwright-report/live/`.
+- **`npm run test:e2e:linux`**: see [Linux e2e](#linux-e2e-docker) below.
 - **Site checks** (part of `npm run check`): see `check:site` above. The resume being one page and every
   shown repo having a description are checked during the build itself.
 
@@ -240,6 +243,34 @@ The workflow (`.github/workflows/deploy.yml`) runs on pull requests, on pushes t
 builds `dist-doodle/` (`npm run doodle:build`) for the doodle tests; the deploy reads `dist/` only. **Any failing step blocks the
 deploy:** the Liberation Sans font check, the build, `npm run check` or the e2e tests. The deploy step
 only runs on `main`, so pull requests are built and checked but never deployed.
+
+### Linux e2e (Docker)
+
+Fonts and text layout differ between Windows and CI's Linux runner (no Arial or Courier New on Linux, whole-pixel text
+layout), so e2e can pass on Windows and fail in CI. `npm run test:e2e:linux` runs the same suite on Linux first, as
+close to CI's e2e step as practical. CI is unchanged and stays the gate.
+
+- **Needs Docker Desktop running** (it says so and stops if Docker isn't found or isn't running), and an existing build:
+  `npm run build` and `npm run doodle:build`. It reuses `dist/` and `dist-doodle/` from your machine (static files,
+  the same on any OS) and fails with the usual "run npm run build first" message if one is missing.
+- **What runs:** a container from the official Playwright image at the lockfile's `@playwright/test` version, with
+  Node from `.nvmrc` and CI's `fonts-liberation` (`scripts/e2e-linux/Dockerfile`). Inside it, `CI=true` and
+  `npm run test:e2e`, exactly CI's command: `wrangler dev` with the real headers, Playwright's Chromium, and
+  `playwright.config.ts`'s worker count (1, as on CI).
+- **Arguments** go to Playwright: `npm run test:e2e:linux -- tests/e2e/motion.spec.ts --repeat-each=10`, `-g`,
+  `--workers=2` (fits in the container's 3 GB cap: about 1.6 GB at peak). Windows paths (`tests\e2e\…`) work too.
+- **Results** land in the usual `test-results/` and `playwright-report/`.
+- **What stays on disk:** the container is removed after every run. The image (`personal-website-e2e:…`, about
+  3.8 GB, of which 3.6 GB is shared with the `mcr.microsoft.com/playwright` base image) and the Linux `node_modules`
+  volume (`personal-website-e2e-node-modules`, about 0.7 GB) are kept, so later runs start in seconds. Your own
+  `node_modules` is never touched. `npm ci` runs in the container only when `package-lock.json` (or the image)
+  changed, with `SKIP_GIT_HOOKS=1` so the `prepare` script never runs git on your checkout.
+- **Timing** (measured on 2026-11-20, 359 tests): first run about 13 minutes (image build, `npm ci`, the suite), later
+  runs about 6 minutes, like `npm run test:e2e` on Windows.
+- **Cleanup:** a Playwright upgrade builds a new image and removes this project's old one automatically.
+  `npm run test:e2e:linux:clean` removes this project's image(s) and volume on demand, and nothing else. The base
+  image (`mcr.microsoft.com/playwright:v<version>-noble`) and Docker's build cache aren't this project's alone, so they
+  stay: remove them yourself with `docker image rm` and `docker builder prune` if nothing else uses them.
 
 ## Contributing and deploy flow
 

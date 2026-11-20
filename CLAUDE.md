@@ -39,6 +39,11 @@ These npm scripts must exist and keep working (create them during scaffolding):
 - `npm run test:e2e`: Playwright end-to-end tests (`tests/e2e/*.spec.ts`) against the existing build
   (`wrangler dev` on port 4322, so the real `_headers` and CSP apply; `astro preview` sends no headers); locally
   uses the installed Edge, CI uses Playwright's Chromium
+- `npm run test:e2e:linux`: the same suite on Linux in Docker (Task 2.20; Docker Desktop must be running), against
+  the existing `dist/` and `dist-doodle/`: the Playwright image at the lockfile's version, CI's fonts, `CI=true`, the
+  config's worker count. Extra args go to Playwright (`-- tests/e2e/motion.spec.ts --repeat-each=10`). Linux
+  `node_modules` live in a Docker volume; the image and volume are kept between runs
+- `npm run test:e2e:linux:clean`: remove this project's e2e image(s) and its `node_modules` volume
 - `npm run screenshots`: review screenshots (375px/640px/1280px, dark/light) into `screenshots/` (gitignored)
 - `npm run doodle:build -- <id>`: `astro build` alone into `dist-doodle/` (gitignored, never deployed) with that doodle
   forced (F.4; default `pi-day`); needs `npm run build` first. `npm run test:e2e` serves it on port 4323 for
@@ -66,6 +71,7 @@ scripts/cv/                 resume generator (create_cv.js) + PDF page check
 tests/                      node:test tests (npm test); fixtures/ holds test inputs and golden files
 tests/e2e/                  Playwright tests (npm run test:e2e) + review-screenshots.ts (npm run screenshots)
 scripts/github/             GitHub fetcher
+scripts/e2e-linux/          npm run test:e2e:linux(:clean): Dockerfile, the docker commands (docker.ts, unit-tested)
 scripts/og/                 OG image + site icon generator (npm run og) + PNG/ICO helpers for their stale checks
 src/lib/game/               404 game (F.3): pure engine + words (unit-tested), canvas drawing, and play.ts, which
                             the 404's loader (src/components/LostPageGame.astro) imports only on Play
@@ -158,6 +164,9 @@ scripts/git/                hook installer + the pre-push logic (push-policy.ts)
   needs a real browser only (what the built HTML shows is checked by `npm test`). Before saying a UI
   task is done, run `npm run screenshots` (375px and 1280px, both themes, into `screenshots/`) and
   look at them.
+- Passing on Windows isn't enough. For changes that touch layout, fonts, CSS, motion or timing, run
+  npm run test:e2e:linux before reporting done, and repeat new or changed specs (--repeat-each=10). CI's Linux run
+  stays the gate.
 - Never run `git commit`, `git push`, or `git add` — the user makes all commits themselves. At the end
   of each task, propose a Conventional Commits message (`feat:`, `fix:`, `chore:`, `docs:`, `test:`) and
   the exact git commands to run, then stop. Read-only git commands (`status`, `diff`, `log`) are fine.
@@ -198,6 +207,8 @@ A task is done only when all of these pass:
 - `npm run build` succeeds
 - `npm run check` succeeds (types, lint, and site checks)
 - `npm run test:e2e` passes (for UI changes)
+- `npm run test:e2e:linux` passes, with new or changed specs repeated (`--repeat-each=10`), for changes that touch
+  layout, fonts, CSS, motion or timing
 - README.md updated if commands, setup or architecture changed
 - Site checks: resume PDF is one page; phone number not found anywhere in `dist/`;
   every featured/portfolio repo has a description

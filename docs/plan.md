@@ -1405,11 +1405,56 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
   - §17.1: written in the future tense ("It will include"), and its rule list is shorter than CLAUDE.md's.
   - §17.2 item 4: "Commit after every step". Claude Code never commits; the user commits through branch + PR.
 
+- [x] **2.20 Linux e2e locally** — `npm run test:e2e:linux` runs the e2e suite on Linux in Docker before a push,
+  as close to CI's e2e step as practical. Why: twice e2e passed on Windows and failed on CI's Linux runner (a wrapped
+  link in terminal view, then a font-swap layout shift), each costing a push and a ~6-minute CI run; fonts and text
+  layout differ (no Arial or Courier New on Linux, whole-pixel text layout). CI is unchanged and stays the gate.
+  - Depends on: 3.4 (the layout-shift test). 3.4a depends on this.
+  - Files: `scripts/e2e-linux/` (`Dockerfile`, `docker.ts`, `docker-cli.ts`, `run.ts`, `clean.ts`),
+    `tests/e2e-linux.test.ts`, `scripts/git/hooks.ts` + `install-hooks.ts` (`SKIP_GIT_HOOKS`), `package.json`,
+    `playwright.config.ts` (a comment), README, CLAUDE.md, design-doc §13.
+  - **Done (2026-11-20).**
+    - How: the official Playwright image at the lockfile's `@playwright/test` version (read from
+      `package-lock.json`, never hard-coded), plus Node from `.nvmrc` (the image ships Node 26; CI uses 22) and CI's
+      `fonts-liberation` with its `fc-match Arial` check. The tag also carries a hash of the Dockerfile. The repo is
+      bind-mounted; `dist/` and `dist-doodle/` built on Windows are reused. Linux `node_modules` live in the volume
+      `personal-website-e2e-node-modules`, refilled by `npm ci` only when the lockfile or the image changes. Inside:
+      `CI=true` and `npm run test:e2e`, CI's own command. `docker run --rm`; the image and volume stay; a new
+      Playwright version removes this project's old image.
+    - Workers: no flag added. `playwright.config.ts` sets `workers: 1` everywhere (CI included: Playwright's
+      half-the-cores default only applies when it's unset), so the mirror inherits CI's count.
+    - The `prepare` script: `SKIP_GIT_HOOKS=1` makes `install-hooks.ts` exit before any git call (it used to run
+      `git rev-parse` even in CI). Install scripts still run (no `--ignore-scripts`: esbuild and workerd need them).
+      `run.ts` hashes `.git/config` before and after each run and fails if it changed; it can't be an `npm test` test
+      (that would need Docker). By hand: `git config --local --list` identical before and after.
+    - Tests: `npm test` 639 → 658 (`tests/e2e-linux.test.ts`, and `SKIP_GIT_HOOKS` in
+      `tests/no-phone-in-staged.test.ts`, including a run of `install-hooks.ts` with no git on `PATH`).
+    - Runs: full suite 359 passed on Linux (first run 12.6 min with the image build and a 1-minute `npm ci`; warm run
+      5.7 min), 359 passed on Windows (6.1 min). `tests/e2e/motion.spec.ts --repeat-each=5`: 135 passed (3.5 min).
+      `--workers=2`: 359 passed in 4.4 min. Peak memory 1.55 GiB with 1 or 2 workers (cap 3 GB). The self-hosted
+      font tests (`base-layout.spec.ts`, Inter and JetBrains Mono) pass on Linux.
+    - No test behaved differently on Linux than on Windows in these runs. The font-swap layout shift CI saw (3.4)
+      didn't show here: the test measures once the web fonts are in, which is the same on both. 3.4a is where it's
+      tackled.
+    - Disk: the image is 3.8 GB, 3.6 GB of it shared with the Playwright base image (our layers add about 191 MB).
+      The volume is 0.7 GB. `npm run test:e2e:linux:clean` removed both and a rebuild took 109 s (base cached).
+    - Checked by hand: a missing `dist-doodle/` fails with the doodle:build message before Docker is touched.
+      Docker stopped: not tested live (the message is in `docker-cli.ts`).
+
+- [ ] **2.21 Favicon that follows the browser theme** — An SVG favicon with `prefers-color-scheme` inside it: it sits
+  on the browser's tab bar, whose color follows the browser or OS theme, not the site's toggle. `favicon.ico` stays as
+  the fallback (Safari doesn't use SVG favicons).
+  - Keep F.2's `X-Clue` header on `/favicon.ico` working (`scripts/ctf/`), and update the icon stale check
+    (`npm run og`, `tests/site-icons.test.ts`) and the icon links in `src/lib/seo.ts`.
+  - Depends on: 2.13a.
+
 ## Fun (after MVP)
 
 Small extras for curious visitors, added after the MVP is live (2.16) and before Milestone 3. None of them
 is part of the recruiter path: the homepage, `/resume` and the PDF work exactly the same without them. Each
 one is its own task (one at a time, plan first, tests + e2e + screenshots as usual). Decided on 2026-11-12.
+
+Note: maybe: a `>_` favicon while terminal view is on (a JS swap), just for fun.
 
 - [x] **F.1 Console greeting** — A friendly message for people who open DevTools: an ASCII "SA", an "Open to
   work" line with a link to LinkedIn, and a line with a link to the GitHub profile (the repo is still private, so

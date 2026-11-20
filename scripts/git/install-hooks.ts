@@ -7,9 +7,16 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { HOOKS_PATH, decideHookInstall } from './hooks.ts';
+import { HOOKS_PATH, decideHookInstall, skipHookInstall } from './hooks.ts';
 
 const packageRoot = path.join(import.meta.dirname, '..', '..');
+
+// Before any git call: the npm ci in npm run test:e2e:linux's container sets SKIP_GIT_HOOKS=1.
+const skip = skipHookInstall(process.env);
+if (skip) {
+  console.log(skip);
+  process.exit(0);
+}
 
 function git(args: string[]) {
   return spawnSync('git', args, { cwd: packageRoot, encoding: 'utf8' });

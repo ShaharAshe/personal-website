@@ -692,6 +692,8 @@ No `'unsafe-inline'` and no `'unsafe-eval'`, neither for scripts nor for styles.
 
 **The daily build:** scheduled for 03:17 UTC, but GitHub sometimes starts it hours later (in November 2026 at about 11:00 UTC). The doodles are shown from the day before to the day after, so the delay doesn't miss them. **The 60-day rule:** on a public repo GitHub turns off scheduled workflows after 60 days with no activity in the repo, so a quiet period would silently stop the daily build (no doodles and no project updates); this will be handled before or at launch (Task 4.2b in plan.md).
 
+**The e2e step locally on Linux (Task 2.20):** `npm run test:e2e:linux` runs step 8 in Docker (the official Playwright image at the project's version, CI's fonts, `CI=true`) against the build made on Windows, because fonts and text layout differ between the two systems and a Linux-only failure used to cost a push and a CI run. It's a local mirror, not a replacement: CI's Linux run stays the gate.
+
 **The doodle build (F.4):** after the build, an extra step (`npm run doodle:build`) runs `astro build` alone with a forced doodle (`DOODLE=pi-day`) into the `dist-doodle/` folder, for the tests (`npm run check` and the e2e). It uses the main build's outputs and takes seconds. The deploy reads only `dist/` (`wrangler.jsonc`), and a build into `dist/` fails when `DOODLE` is set, so a forced doodle can't reach the site.
 
 **Pull Requests:** run build and checks only (including `fc-match`), with no deploy and no preview deployment,
