@@ -29,6 +29,13 @@
 # src/lib/ctf.mts, written by scripts/ctf/ctf-headers.mts). Don't add a /favicon.ico rule here; the build fails if
 # one exists.
 #
+# Long-lived cache for Astro's build output only (Task 3.4a): every file under /_astro/ (fonts, CSS, JS) has a content
+# hash in its name, so a change is a new URL and the old one never needs revalidating. Nothing else gets this: the
+# pages, resume.pdf, og-image.png, favicon.ico and apple-touch-icon.png keep their names across changes, so they keep
+# Cloudflare's default (revalidate every time). tests/cache-headers.test.ts checks both directions.
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
 # Opens in the browser; saving it uses the published file name. The "Download Resume" buttons use the
 # <a download> attribute to download instead.
 /resume.pdf

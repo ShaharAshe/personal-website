@@ -74,7 +74,8 @@ flowchart LR
    writing them to `src/data/projects.json` (generated, not committed). The build fails if a shown
    repo has no description or the API call fails.
 3. **Site:** `astro build` produces static HTML in `dist/`. Fonts are downloaded at build time and
-   served from the site itself. It also writes `sitemap.xml` and `robots.txt` (small endpoints in
+   served from the site itself, preloaded, with size-adjusted local fallbacks (`src/lib/font-fallbacks.mts`, the
+   `@font-face` rules in `src/styles/global.css`). It also writes `sitemap.xml` and `robots.txt` (small endpoints in
    `src/pages/`). Every absolute URL (canonical, Open Graph, sitemap) comes from `site` in
    `astro.config.mjs`, so moving to another domain is a one-line change.
 4. **Security headers:** `public/_headers` holds the response headers Cloudflare sends with every page and file.
@@ -82,7 +83,8 @@ flowchart LR
    integration (`scripts/csp/csp.mts`) hashes every inline `<script>` and `<style>` in `dist/` and writes the real
    policy into `dist/_headers` (no `'unsafe-inline'`). It fails the build on anything a hash can't allow (a
    `style="..."` attribute, an `onclick=` handler, a `javascript:` URL), or if the file would break Cloudflare's limits
-   (2,000 characters per line, 100 rules). Hashes are never edited by hand.
+   (2,000 characters per line, 100 rules). Hashes are never edited by hand. Files under `/_astro/` (content-hashed
+   names) are cached for a year (`Cache-Control: public, max-age=31536000, immutable`); nothing else is.
 
 **The Open Graph image and the site icons** are generated from `resume.yaml` and the design tokens, and committed:
 `public/og-image.png` (1200×630: name, title, tagline), `public/favicon.ico` (16, 32 and 48 px) and

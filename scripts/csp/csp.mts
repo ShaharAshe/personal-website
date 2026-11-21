@@ -168,6 +168,22 @@ export function parseHeaders(text: string): HeadersRule[] {
   return rules;
 }
 
+/**
+ * Whether a _headers rule's path pattern matches a URL path, as Cloudflare matches it: the whole path, where `*` (a
+ * splat) matches any run of characters, `/` included, and `:name` (a placeholder) matches one path segment.
+ */
+export function headersRuleMatches(pattern: string, urlPath: string): boolean {
+  const source = pattern
+    .split(/(\*|:[A-Za-z]\w*)/)
+    .map((part) => {
+      if (part === '*') return '.*';
+      if (/^:[A-Za-z]\w*$/.test(part)) return '[^/]+';
+      return part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    })
+    .join('');
+  return new RegExp(`^${source}$`).test(urlPath);
+}
+
 /** Cloudflare's limits, as readable errors (empty when the file is fine). Comment lines aren't rules or headers. */
 export function checkHeadersLimits(text: string, label = '_headers'): string[] {
   const errors: string[] = [];

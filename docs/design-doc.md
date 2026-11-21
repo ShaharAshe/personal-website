@@ -466,6 +466,20 @@ The structure is based on the open [JSON Resume](https://jsonresume.org/schema) 
 | `display` | 2.25rem on mobile up to 3rem on desktop (`clamp()`) | The Hero title and the `<h1>` of `/resume` only |
 
 - The fonts are hosted on the site itself (self-host), for performance and privacy.
+- **How they load (Task 3.4a):** `font-display: swap`. Every page preloads the four faces its first screen uses
+  (Inter 400/500/600, JetBrains Mono 400; `src/lib/font-preloads.ts`), each with `crossorigin` (without it the preload
+  is wasted and the font downloads twice). JetBrains Mono is a plain `<link rel="preload">`. Terminal view never uses
+  Inter, so the Inter preloads sit in an inert `<template>` before the no-flash head script, which moves them into
+  `<head>` unless terminal view is on: no unused download and no "preloaded but not used" warning there. Without JS
+  there are no Inter preloads; the CSS still loads the fonts. `/_astro/*` is cached immutable (§12), so a second page
+  view takes the fonts from the cache with no request.
+- **Fallbacks:** until a web font arrives, a local font scaled to its metrics (Capsize's formula: `size-adjust` and
+  ascent/descent/line-gap overrides), so the swap barely moves anything. Inter: Arial or Liberation Sans (one face; they
+  share metrics), then Roboto (Android), then DejaVu Sans; weight 600 uses the bold face. JetBrains Mono: Courier New or
+  Liberation Mono, then DejaVu Sans Mono, then Droid Sans Mono. The metrics come from the font files themselves
+  (`src/lib/font-fallbacks.mts`, with each file's source and version); the rules are in `global.css`, and a test fails
+  if they differ. Astro's own fallbacks are off: they knew only Arial and Courier New, with no bold for 600. With every
+  font held back until after first paint, the swap shifts a page by at most 0.01 (an e2e test).
 
 ### 9.4 Layout
 - One 720px-wide column for all the sections, the navigation and the Footer, so the headings and edges line up. The project cards are in one column at every width, and each card takes the whole column.
@@ -511,7 +525,7 @@ Sections 9.1–9.4 describe the site's one look. **Terminal view** (F.7) is a se
 |---|---|---|
 | Moving between pages | A 200ms crossfade of the whole page (`ease-out`, opacity only) | The browser's native cross-document View Transitions, CSS only (`@view-transition`), not Astro's `<ClientRouter />` |
 | Project cards | Hover: a 2px lift (`transform`, 200ms `ease-out`), only on devices that can hover | CSS |
-| Section entrance | The four homepage sections after the Hero (never the Hero itself, the LCP): fade + a 12px slide, 500ms `ease-out`, **once**, the first time each scrolls into view | CSS + IntersectionObserver |
+| Section entrance | The four homepage sections after the Hero (never the Hero itself, the LCP): fade + a 12px slide, 500ms `ease-out`, **once**, the first time each scrolls into view | A CSS `@keyframes` animation + IntersectionObserver |
 | Theme toggle | The page crossfades to the new colors (the same 200ms crossfade as between pages, through `document.startViewTransition()`); the new icon also rotates and fades in (200ms), and only after a click, not on load | CSS + a few lines in the toggle's script |
 | Copy button | An instant swap to a check icon and "Copied" | CSS |
 | Terminal view switch (9.5) | The same 200ms crossfade as the theme toggle | Same |
@@ -519,8 +533,9 @@ Sections 9.1–9.4 describe the site's one look. **Terminal view** (F.7) is a se
 All of it was built in task 3.4. How:
 - **Page transitions without a router.** Every navigation is still a full page load, so the `<head>` script, the console greeting, the game and doodle loaders and the analytics beacon run on every page as before. A browser without cross-document View Transitions just navigates. Only the root snapshots' opacity animates: the root group's own animation is turned off (its size and position never change).
 - **The section entrance never hides content by itself.** The HTML has only a bare `data-reveal` marker that no CSS matches. A small script (`src/components/SectionReveal.astro`, rules in `src/lib/reveal.ts`) hides a section only if it's entirely below the screen when the page loads, and never the target of the URL's hash (`/#contact`). So without JS, in print and with reduced motion, everything is simply there. The section's children move, never the section: its box stays put, so a jump to `/#projects` lands exactly on it (a browser scrolls to an element's transformed box).
+- **The entrance is a keyframes animation, not a transition (Task 3.4a).** A CSS transition starts only from a before-change style, and once the fonts were preloaded (§9.3) Chrome sometimes had none when the section flipped to `done`: no transition ran and the section just appeared (it failed 4 of 20 runs on Linux with plain preloads, and 18–19 of 20 on Windows Edge with the preloads inserted by script). `@keyframes reveal-in` (from opacity 0 and `translateY(12px)`, 500ms `ease-out`, `backwards` so nothing flashes before it starts) starts whenever its rule applies, and runs once: `data-reveal` stays `done`, so scrolling back or switching the theme or terminal view doesn't replay it.
 - **No blue border on card hover** (planned earlier): only `transform` and `opacity` may animate (10.3), and accent means clickable (`.claude/rules/ui.md`), while the card itself isn't a link, only the links inside it.
-- **No layout shift:** only `transform` and `opacity`; the e2e tests measure zero layout shift on every page once the web fonts are in, while scrolling to the bottom. The font swap before that (a hair of shift on Linux, where the size-adjusted fallbacks' local fonts are missing) belongs to task 3.4a (font loading).
+- **No layout shift:** only `transform` and `opacity`; the e2e tests measure zero layout shift on every page from first paint to the bottom, the font swap included (Task 3.4a: preloads and size-adjusted fallbacks, §9.3).
 
 ### 10.2 What's out
 - ❌ Three.js / 3D / WebGL
@@ -563,6 +578,7 @@ All of it was built in task 3.4. How:
 | CLS | < 0.05 |
 | JS on the homepage | < 30KB (gzipped) |
 | Images | AVIF/WebP, lazy loading, set dimensions |
+| Caching | `/_astro/*` (content-hashed names) cached for a year, `immutable`; everything else revalidates (§12) |
 
 ### Accessibility
 - Semantic HTML (`<nav>`, `<main>`, `<section>`, headings in the right order).
@@ -628,6 +644,7 @@ No `'unsafe-inline'` and no `'unsafe-eval'`, neither for scripts nor for styles.
 - **X-Frame-Options: DENY:** duplicates `frame-ancestors 'none'`, for old browsers. It costs nothing.
 - **Strict-Transport-Security: max-age=31536000:** on workers.dev it adds nothing (the whole `.dev` suffix is on the HSTS preload list), but it matters if the domain is `.com`. No `includeSubDomains` and `preload` until the domain is decided (Task 4.2).
 - Kept: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, and `X-Robots-Tag: noindex` until the move to a domain.
+- **`Cache-Control: public, max-age=31536000, immutable` on `/_astro/*` (Task 3.4a):** not a security header. Astro puts a content hash in the name of every file there (fonts, CSS, JS), so a change is a new URL and the old one never needs revalidating; before, every page view revalidated all four fonts. Nothing else gets it: the pages, `resume.pdf`, `og-image.png`, `favicon.ico` and `apple-touch-icon.png` keep their names across changes, so they keep Cloudflare's default (revalidate every time). `tests/cache-headers.test.ts` checks both directions in `dist/_headers`; `tests/e2e/fonts.spec.ts` checks the served headers, locally and live. Font loading didn't change the CSP: still 784 of 2,000 (838 on a doodle day).
 - **`X-Clue` on `/favicon.ico`:** not a security header. A clue in the CTF chain (F.2). The text comes from `src/lib/ctf.mts`, so it isn't written in `public/_headers`: a small integration (`scripts/ctf/ctf-headers.mts`) adds the rule to `dist/_headers` and runs before the CSP step, so the check of Cloudflare's limits covers it too. The `/*` rule still applies to the file. The extra line in the console greeting (clue 1) changed its hash but not the length of the CSP line (still 730 of 2,000).
 - **The 404 game (F.3)** didn't change the policy: the loader and the game file are JS files in `/_astro/` (covered by `'self'`), with no inline script and no `style` attributes, and the colors are read from the tokens in JS. The line stayed at 730 of 2,000.
 - **The doodles (F.4)** change the policy only on a doodle day: the loader and the animation file are JS files in `/_astro/`, and their styling is a `<style is:inline>` that appears only when the doodle is shown, so it gets one more hash in that day's build (the line is 784 of 2,000; on other days 730). The animation uses the Web Animations API, which isn't subject to `style-src`, so there are no `style` attributes.

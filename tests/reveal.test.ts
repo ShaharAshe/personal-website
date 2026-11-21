@@ -152,6 +152,11 @@ test(
   () => {
     const css = linkedCss('index.html');
     const rules = uses(css, /\[data-reveal=(pending|done)\][^{]*\{|\[data-project-card\](:hover)?\{/);
+    // The entrance's keyframes may change only opacity and transform.
+    for (const [, body = ''] of css.matchAll(/@keyframes reveal-in\{(.*?\})\}/g)) {
+      const properties = [...body.matchAll(/([a-z-]+):/g)].map(([, name]) => name).sort();
+      assert.deepEqual([...new Set(properties)], ['opacity', 'transform'], body);
+    }
     assert.equal(rules.length, 4, JSON.stringify(rules));
     for (const { text, atRules } of rules) {
       assert.ok(
@@ -165,7 +170,15 @@ test(
     }
     // The children move, never the section itself: its box is what a /#hash jump scrolls to and what the observer sees.
     assert.match(css, /\[data-reveal=pending\]>\*\{opacity:0;transform:translateY\(12px\)\}/);
-    assert.match(css, /\[data-reveal=done\]>\*\{transition:opacity \.5s ease-out,transform \.5s ease-out\}/);
+    // A keyframes animation, not a transition (Task 3.4a: a transition needs a before-change style, which early font
+    // loading can leave Chrome without). backwards: the first keyframe holds from the start, so nothing flashes.
+    assert.match(css, /\[data-reveal=done\]>\*\{animation:\.5s ease-out backwards reveal-in\}/);
+    const keyframes = uses(css, /@keyframes reveal-in\{0%\{opacity:0;transform:translateY\(12px\)\}\}/);
+    assert.equal(keyframes.length, 1, 'the reveal-in keyframes, opacity and transform only');
+    assert.ok(
+      keyframes[0]!.atRules.some((prelude) => /screen/.test(prelude) && NO_PREFERENCE.test(prelude)),
+      `@keyframes reveal-in is inside ${JSON.stringify(keyframes[0]!.atRules)}`,
+    );
     assert.doesNotMatch(css, /\[data-reveal=(pending|done)\]\{/);
     assert.match(css, /\[data-project-card\]\{transition:transform \.2s ease-out\}/);
     assert.match(css, /\[data-project-card\]:hover\{transform:translateY\(-2px\)\}/);

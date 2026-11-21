@@ -36,6 +36,9 @@ export const LIVE_SPECS = [
   // the theme/terminal crossfade and the page transition, nothing with reduced motion, no layout shift, all under the
   // real CSP.
   'motion.spec.ts',
+  // Font loading (Task 3.4a): /_astro/* cached immutable and nothing unhashed; fonts ready at first render with a warm
+  // cache; no unused preload in either style; the fallbacks and the forced swap's layout shift.
+  'fonts.spec.ts',
 ];
 
 const channel = base.projects?.[0]?.use?.channel;

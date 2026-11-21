@@ -34,8 +34,16 @@ test('the theme script runs before any stylesheet or style in <head>', { skip },
   const firstStyle = head.search(/<style|<link[^>]*rel="stylesheet"/);
   assert.notEqual(firstStyle, -1, 'no stylesheet in <head>');
   assert.ok(script < firstStyle, 'theme script comes after a stylesheet');
-  // Only the charset and viewport metas may come before it.
-  assert.deepEqual(head.slice(0, script).match(/<[a-z]+/g), ['<head', '<meta', '<meta']);
+  // Only the charset and viewport metas, and the inert Inter preload template it reads (Task 3.4a), come before it.
+  assert.deepEqual(head.slice(0, script).match(/<[a-z]+/g), [
+    '<head',
+    '<meta',
+    '<meta',
+    '<template',
+    '<link',
+    '<link',
+    '<link',
+  ]);
 });
 
 test('every page has a title and meta description', { skip }, () => {
@@ -57,11 +65,11 @@ test('the nav has the home link (the name) and the four section links, and there
   assert.match(body, /<footer\b/);
 });
 
-test('fonts are self-hosted and Inter 400 is preloaded', { skip }, () => {
+// Which faces are preloaded, and how: tests/font-preloads.test.ts.
+test('fonts are self-hosted', { skip }, () => {
   const urls = [...head.matchAll(/url\("([^"]+)"\)|href="([^"]+\.woff2)"/g)].map(([, a, b]) => a ?? b);
   assert.ok(urls.length > 0, 'no font URLs in <head>');
   for (const url of urls) assert.match(url, /^\/_astro\/fonts\/[\w-]+\.woff2$/);
-  assert.equal([...head.matchAll(/<link rel="preload"[^>]*as="font"/g)].length, 1);
   assert.match(head, /font-family:Inter-/);
   assert.match(head, /font-family:"JetBrains Mono-/);
 });
