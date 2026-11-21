@@ -2,7 +2,7 @@
 // Shared page shell: <head> (no-flash theme script, title/description, canonical, Open Graph, fonts), skip link,
 // nav (with the home link), footer. Every absolute URL comes from `site` in astro.config.mjs (src/lib/seo.ts).
 // Page-specific head tags (the homepage's JSON-LD) go in the "head" slot.
-import { Font } from 'astro:assets';
+import { Font, fontData } from 'astro:assets';
 import Footer from '../components/Footer.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
 import { analyticsBeacon } from '../lib/analytics';
@@ -10,6 +10,7 @@ import { consoleGreeting, consoleGreetingScript } from '../lib/console-greeting'
 import { CTF_CONSOLE_LINE } from '../lib/ctf.mts';
 import { getResume } from '../lib/resume';
 import { OPEN_TO_WORK } from '../lib/site';
+import { INTER_PRELOAD_WEIGHTS, MONO_PRELOAD_WEIGHTS } from '../lib/font-preloads';
 import { OG_IMAGE, SITE_ICONS, absoluteUrl, iconSizesAttr, ogImageAlt } from '../lib/seo';
 import { themeInitScript } from '../lib/theme';
 import '../styles/global.css';
@@ -45,6 +46,16 @@ const ogImage = absoluteUrl(OG_IMAGE.path, Astro.site);
 const beacon = analyticsBeacon(import.meta.env.PROD);
 // Dev and production alike (unlike the beacon). Inline, so the CSP build step hashes it (scripts/csp/csp.mts). Its last
 // line is the CTF chain's clue 1 (src/lib/ctf.mts).
+// The woff2 URL of each Inter face the template preloads, from Astro's font data (the same files <Font /> declares). A
+// missing face fails the build rather than shipping a preload to nowhere.
+const interPreloads = INTER_PRELOAD_WEIGHTS.map((weight) => {
+  const url = fontData['--font-inter']
+    ?.find((face) => face.weight === weight && face.style === 'normal')
+    ?.src.find((source) => source.url.endsWith('.woff2'))?.url;
+  if (!url) throw new Error(`No woff2 file for Inter ${weight}`);
+  return url;
+});
+
 const greetingScript = greet
   ? consoleGreetingScript(consoleGreeting({ profiles, openToWork: OPEN_TO_WORK, clue: CTF_CONSOLE_LINE }))
   : null;
@@ -54,6 +65,13 @@ const greetingScript = greet
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {/* The Inter preloads, inert until the script below moves them into <head>, which it skips in terminal view (no
+        Inter there). Before the script, so it can find them (src/lib/font-preloads.ts). */}
+    <template data-font-preloads>
+      {interPreloads.map((href) => (
+        <link rel="preload" href={href} as="font" type="font/woff2" crossorigin />
+      ))}
+    </template>
     {/* Must stay before any stylesheet: sets data-theme and data-style before first paint (src/lib/theme.ts). */}
     <script is:inline set:html={themeInitScript} />
     <title>{title}</title>
@@ -79,9 +97,9 @@ const greetingScript = greet
     <meta property="og:image:alt" content={ogImageAlt(name, label)} />
     <meta name="twitter:card" content="summary_large_image" />
     <slot name="head" />
-    {/* Preload only body text (Inter 400); other weights load on demand. */}
-    <Font cssVariable="--font-inter" preload={[{ weight: 400 }]} />
-    <Font cssVariable="--font-jetbrains-mono" />
+    {/* The @font-face rules; JetBrains Mono's preload too (Inter's are in the template above, src/lib/font-preloads.ts). */}
+    <Font cssVariable="--font-inter" />
+    <Font cssVariable="--font-jetbrains-mono" preload={MONO_PRELOAD_WEIGHTS.map((weight) => ({ weight }))} />
   </head>
   <body class="flex min-h-screen flex-col">
     {/* The footer's Back to top target: following the link scrolls here and moves focus here, so the next

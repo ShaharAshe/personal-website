@@ -212,6 +212,151 @@
 }
 
 /*
+ * Font fallbacks (Task 3.4a, design-doc §9.3): local fonts scaled to Inter's and JetBrains Mono's metrics, drawn until
+ * the web fonts arrive, so the swap barely moves anything. astro.config.mjs lists these family names after each web
+ * font (optimizedFallbacks: false; Astro's own covered only Arial and Courier New, with no bold for 600).
+ *   - Inter: Arial or Liberation Sans (metric-compatible, so one face), then Roboto (Android), then DejaVu Sans (Linux
+ *     without Liberation). 400 and 500 use the regular face sized to Inter 400, 600 the bold one sized to Inter 600
+ *     (why 500 isn't sized to Inter 500: src/lib/font-fallbacks.mts).
+ *   - JetBrains Mono: Courier New or Liberation Mono, then DejaVu Sans Mono, then Droid Sans Mono (Android).
+ * Don't edit the numbers by hand: they're computed from the font metrics in src/lib/font-fallbacks.mts (Capsize's
+ * formula), and tests/font-fallbacks.test.ts fails when a rule here differs. A family whose local fonts are all missing
+ * is skipped.
+ */
+@font-face {
+  font-family: 'Inter fallback';
+  src: local('Arial'), local('ArialMT'), local('Liberation Sans'), local('LiberationSans');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 107.1194%;
+  ascent-override: 90.4365%;
+  descent-override: 22.518%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Inter fallback';
+  src: local('Arial'), local('ArialMT'), local('Liberation Sans'), local('LiberationSans');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 107.1194%;
+  ascent-override: 90.4365%;
+  descent-override: 22.518%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Inter fallback';
+  src: local('Arial Bold'), local('Arial-BoldMT'), local('Liberation Sans Bold'), local('LiberationSans-Bold');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 101.5259%;
+  ascent-override: 95.419%;
+  descent-override: 23.7586%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Inter fallback Roboto';
+  src: local('Roboto'), local('Roboto-Regular');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 107.3546%;
+  ascent-override: 90.2384%;
+  descent-override: 22.4686%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Inter fallback Roboto';
+  src: local('Roboto'), local('Roboto-Regular');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 107.3546%;
+  ascent-override: 90.2384%;
+  descent-override: 22.4686%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Inter fallback Roboto';
+  src: local('Roboto Bold'), local('Roboto-Bold');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 107.6591%;
+  ascent-override: 89.9831%;
+  descent-override: 22.4051%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Inter fallback DejaVu';
+  src: local('DejaVu Sans'), local('DejaVuSans');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 93.9481%;
+  ascent-override: 103.1154%;
+  descent-override: 25.6749%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Inter fallback DejaVu';
+  src: local('DejaVu Sans'), local('DejaVuSans');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 93.9481%;
+  ascent-override: 103.1154%;
+  descent-override: 25.6749%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Inter fallback DejaVu';
+  src: local('DejaVu Sans Bold'), local('DejaVuSans-Bold');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 84.8639%;
+  ascent-override: 114.1533%;
+  descent-override: 28.4233%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'JetBrains Mono fallback';
+  src: local('Courier New'), local('CourierNewPSMT'), local('Liberation Mono'), local('LiberationMono');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 99.9837%;
+  ascent-override: 102.0166%;
+  descent-override: 30.0049%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'JetBrains Mono fallback DejaVu';
+  src: local('DejaVu Sans Mono'), local('DejaVuSansMono');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 99.6594%;
+  ascent-override: 102.3486%;
+  descent-override: 30.1025%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'JetBrains Mono fallback Droid';
+  src: local('Droid Sans Mono'), local('DroidSansMono');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 99.9837%;
+  ascent-override: 102.0166%;
+  descent-override: 30.0049%;
+  line-gap-override: 0%;
+}
+
+/*
  * Tailwind utilities: bg-bg, bg-surface, text-text, text-text-muted, text-accent, border-border, ...
  * `inline` makes them use var(--bg) etc. directly, so they follow the theme switch.
  * The default palette is removed so components can only use these tokens, never raw colors.
@@ -350,10 +495,19 @@
     transform: translateY(12px);
   }
 
+  /* A keyframes animation, not a transition (Task 3.4a): a transition starts only from a before-change style, which
+     Chrome doesn't always have when the web fonts load early (preloads), and then the section just appears. An animation
+     starts whenever the rule applies. backwards: the first keyframe holds from the moment it applies, so nothing flashes
+     at full opacity first. It runs once: data-reveal stays "done", and nothing changes the animation property later. */
   [data-reveal='done'] > * {
-    transition:
-      opacity 500ms ease-out,
-      transform 500ms ease-out;
+    animation: reveal-in 500ms ease-out backwards;
+  }
+
+  @keyframes reveal-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
   }
 
   @media (hover: hover) {

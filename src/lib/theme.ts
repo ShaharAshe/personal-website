@@ -11,6 +11,11 @@
 // saved, any other value, or blocked storage sets nothing, so global.css follows the OS setting
 // (prefers-color-scheme) in the regular style. It can't be an imported module: that would defer it and bring the
 // flash back. One script for both choices, so the CSP (Task 2.14) needs one hash of it as it appears in the built HTML.
+//
+// The same script starts the Inter preloads (Task 3.4a, src/lib/font-preloads.ts): unless terminal view is on, it moves
+// the links in BaseLayout's inert <template data-font-preloads> into <head>, which starts their downloads.
+
+import { FONT_PRELOADS_ATTR } from './font-preloads.ts';
 
 /** localStorage key holding the visitor's saved theme choice. Absent = follow the OS setting. */
 export const THEME_STORAGE_KEY = 'theme';
@@ -45,6 +50,14 @@ export const themeInitScript = `(function () {
     }
   } catch {
     // Storage blocked: the regular style.
+  }
+  try {
+    if (document.documentElement.dataset.style !== ${JSON.stringify(TERMINAL)}) {
+      const preloads = document.querySelector(${JSON.stringify(`template[${FONT_PRELOADS_ATTR}]`)});
+      if (preloads) document.head.append(preloads.content);
+    }
+  } catch {
+    // No preloads: the CSS still loads the fonts.
   }
 })();`;
 

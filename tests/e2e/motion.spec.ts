@@ -224,7 +224,7 @@ for (const width of [375, 1280]) {
   test.describe(`section entrance at ${width}px`, () => {
     test.use({ reducedMotion: 'no-preference', viewport: { width, height: 800 } });
 
-    test('a section below the fold enters once, with opacity and transform only', async ({ page }) => {
+    test('a section below the fold enters once (a keyframes animation), never replayed', async ({ page }) => {
       await page.goto('/');
       const skills = page.locator('#skills');
       // The section's own box never moves (a /#hash jump scrolls to it); its children wait hidden, 12px down.
@@ -233,19 +233,19 @@ for (const width of [375, 1280]) {
         transform: 'none | matrix(1, 0, 0, 1, 0, 12)',
         state: 'pending',
       });
-      // Every transition that starts in the section, as "<child index>:<property>" (-1 = the section itself).
+      // Every animation or transition that starts in the section, as "<child index>:<name>" (-1 = the section itself).
       await skills.evaluate((el) => {
         const runs: string[] = [];
-        el.addEventListener('transitionrun', (e) => {
+        const record = (e: Event, name: string) => {
           const index = e.target === el ? -1 : [...el.children].indexOf(e.target as Element);
-          runs.push(`${index}:${(e as TransitionEvent).propertyName}`);
-        });
+          runs.push(`${index}:${name}`);
+        };
+        el.addEventListener('animationstart', (e) => record(e, (e as AnimationEvent).animationName));
+        el.addEventListener('transitionrun', (e) => record(e, (e as TransitionEvent).propertyName));
         (el as HTMLElement & { runs?: string[] }).runs = runs;
       });
       const runs = () => skills.evaluate((el) => [...((el as HTMLElement & { runs?: string[] }).runs ?? [])].sort());
-      const expected = await skills.evaluate((el) =>
-        [...el.children].flatMap((_, i) => [`${i}:opacity`, `${i}:transform`]).sort(),
-      );
+      const expected = await skills.evaluate((el) => [...el.children].map((_, i) => `${i}:reveal-in`).sort());
 
       await skills.evaluate((el) => el.scrollIntoView({ behavior: 'instant', block: 'start' }));
       await expect(skills).toHaveAttribute('data-reveal', 'done');
@@ -256,6 +256,16 @@ for (const width of [375, 1280]) {
       // Away and back: no second entrance.
       await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
       await page.waitForTimeout(200);
+      await skills.evaluate((el) => el.scrollIntoView({ behavior: 'instant', block: 'start' }));
+      await page.waitForTimeout(700);
+      expect(await runs()).toEqual(expected);
+      expect(await visibilityOf(page, 'skills')).toEqual({ opacity: '1', transform: 'none', state: 'done' });
+
+      // A later style change (the theme, terminal view on and off) doesn't replay it either: the entrance is a keyframes
+      // animation (Task 3.4a), which would restart only if its animation property changed.
+      await themeToggle(page).click();
+      await styleToggle(page).click();
+      await styleToggle(page).click();
       await skills.evaluate((el) => el.scrollIntoView({ behavior: 'instant', block: 'start' }));
       await page.waitForTimeout(700);
       expect(await runs()).toEqual(expected);
@@ -399,13 +409,12 @@ for (const look of LOOKS) {
   test.describe(`layout shift, ${look.name}`, () => {
     test.use({ reducedMotion: 'no-preference', colorScheme: look.colorScheme, viewport: { width: 375, height: 800 } });
 
-    // What 3.4 adds (the entrance, the card hover) must shift nothing at all, so this counts only the shifts after the
-    // web fonts are in: from document.fonts.ready plus two rendering updates (the swap's own layout) to the bottom of the
-    // page. The font swap before that is not 3.4's: on CI (Linux, no Arial or Courier New for the size-adjusted
-    // fallbacks) it shifts the page by a hair. That swap, and CLS from the first paint, are covered by task 3.4a (font
-    // loading). Every shift is recorded with its time and sources, so a failure says what moved.
+    // Nothing shifts from the first paint to the bottom of the page: the entrance and the card hover (3.4), and the
+    // font swap on a normal first visit (cold cache), which the preloads (Task 3.4a) bring in before first paint. The
+    // swap forced after first paint, which measures the fallbacks themselves, is in tests/e2e/fonts.spec.ts. Every shift
+    // is recorded with its time and sources, so a failure says what moved.
     for (const path of ['/', '/resume', NOT_FOUND]) {
-      test(`${path}: no layout shift once the fonts are in, while scrolling to the bottom`, async ({ page }) => {
+      test(`${path}: no layout shift from first paint, while scrolling to the bottom`, async ({ page }) => {
         await useLook(page, look);
         await page.addInitScript(() => {
           const shifts: Shift[] = [];
@@ -428,20 +437,17 @@ for (const look of LOOKS) {
           }).observe({ type: 'layout-shift', buffered: true });
         });
         await page.goto(path);
-        const cutoff = await page.evaluate(async () => {
+        await page.evaluate(async () => {
           await document.fonts.ready;
           const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
           await frame();
           await frame();
-          return performance.now();
         });
         await scrollThrough(page);
         const shifts = await page.evaluate(() => (window as Window & { __shifts?: Shift[] }).__shifts ?? []);
-        const beforeFonts = shifts.filter(({ time }) => time < cutoff);
-        if (beforeFonts.length > 0) {
-          test.info().annotations.push({ type: 'font swap (task 3.4a)', description: JSON.stringify(beforeFonts) });
-        }
-        expect(shifts.filter(({ time }) => time >= cutoff)).toEqual([]);
+        const total = shifts.reduce((sum, { value }) => sum + value, 0);
+        test.info().annotations.push({ type: 'layout shift from first paint', description: total.toFixed(5) });
+        expect(shifts).toEqual([]);
       });
     }
   });

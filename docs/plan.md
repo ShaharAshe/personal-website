@@ -1998,6 +1998,65 @@ Note: maybe: a `>_` favicon while terminal view is on (a JS swap), just for fun.
       `waitForStill`, `revealAll`) instead of switching to reduced motion, so no check runs only with motion off. The
       review screenshots use reduced motion (a full-page shot doesn't scroll; the final state is the same).
 
+- [x] **3.4a Font loading** — The fonts swapped in after first paint and every view revalidated them. Findings (from 3.4):
+  `/_astro/fonts/*.woff2` was served `max-age=0, must-revalidate`; only Inter 400 was preloaded, so Inter 500/600 and
+  JetBrains Mono arrived after first paint; Astro's weight-600 fallback was regular Arial declared as 600 (no bold); and
+  Linux and Android have no Arial or Courier New (Chrome's `local()` ignores fontconfig aliases), so on CI the swap
+  shifted the layout (0.00007–0.003 as 3.4 measured it after `fonts.ready`; up to 0.155 from first paint).
+  - Depends on: 3.4, 2.20.
+  - **Done (2026-11-21).** Design-doc §9.3, §10.1, §11, §12 updated; README too.
+    - **Caching:** `public/_headers` gets `/_astro/*` → `Cache-Control: public, max-age=31536000, immutable`. Nothing
+      else (pages, `resume.pdf`, `og-image.png`, `favicon.ico`, `apple-touch-icon.png` keep Cloudflare's default).
+      `headersRuleMatches()` (Cloudflare's splat/placeholder matching) is new in `scripts/csp/csp.mts`.
+    - **Preloads** (`src/lib/font-preloads.ts`): Inter 400/500/600 and JetBrains Mono 400 on /, /resume and the 404, all
+      with `crossorigin`. Mono is a plain preload (`<Font preload>`); the Inter ones sit in an inert
+      `<template data-font-preloads>` before the no-flash script, which moves them into `<head>` unless terminal view is
+      on, so terminal view requests no Inter at all. Still one inline script: the CSP line stays 784/2000 (838 on a
+      doodle day).
+    - **Fallbacks:** Astro's `optimizedFallbacks` off; our own size-adjusted faces in `global.css`, names and metrics in
+      `src/lib/font-fallbacks.mts` (each row: source file and version, read with `@capsizecss/unpack`, which Astro
+      already ships). Inter: Arial/Liberation Sans (metric-compatible, one face) → Roboto → DejaVu Sans; 600 uses the bold
+      faces sized to Inter 600. JetBrains Mono: Courier New/Liberation Mono → DejaVu Sans Mono → Droid Sans Mono.
+      Deviation from the plan: weight 500 is sized to Inter 400's width, not Inter 500's (1% wider): at Inter 500's,
+      Arial made the Hero buttons 4px too wide for 375px, so the row wrapped until the swap (forced-swap shift 0.106).
+    - **The section entrance (3.4) is now a `@keyframes` animation** (`reveal-in`, same 500ms `ease-out`, opacity +
+      `translateY(12px)`, `backwards`, once). Why: a CSS transition starts only from a before-change style, and with the
+      fonts loading earlier Chrome sometimes had none, so the section just appeared. Bisected (the 3.4 test "a section
+      below the fold enters once", runs passed): HEAD 80/80 Windows Edge, 20/20 Linux; Inter preloads by script +
+      transition 1–2/20 Edge, 20/20 Linux; plain preloads + transition 10/10 Edge, 16/20 Linux; no Inter preloads 10/10
+      Edge. Not the cause: font-load timing at the flip (still failed 1 s after load), the new local fallback faces,
+      `importNode` instead of moving the template's nodes, flipping one frame later. With keyframes: plain preloads 50/50
+      Edge and Linux; template 50/50 Edge and Linux, then 100/100 each. The motion test counts `animationstart` now, and
+      also checks the theme and terminal switches don't replay it.
+    - **Numbers:** homepage HTML 9433 → 9348 bytes gz (Astro's own fallback faces left the inline style); CSS 5661 → 6099
+      gz (the 12 fallback faces, the keyframes). No JS change. The fonts are the same 4 files (93.6 KB); the preloads
+      only start 500/600/Mono earlier. CLS from first paint, normal load (`motion.spec.ts`, now without a cutoff): before
+      0 on Windows; on Linux 0.0162 (/, /resume dark/light), 0.155 / 0.042 / 0.039 (terminal) → after 0 everywhere.
+      Forced swap (`fonts.spec.ts`, every font held until after first paint, threshold 0.01): before Windows
+      0.00002–0.00009, Linux up to 0.155 (11 of 18 over 0.01) → after Windows 0.00002–0.00009, Linux 0.00002–0.0002.
+    - Tests: `npm test` 658 → 685 (`cache-headers`, `font-preloads`, `font-fallbacks`, the template cases in
+      `theme-init`, `reveal`'s keyframes checks). e2e 359 → 407 (all passed on Windows and on Linux; `fonts.spec.ts` and
+      `motion.spec.ts` `--repeat-each=10`: 750/750 Linux, 749/750 Windows, the one being the Edge stall below). New
+      `tests/e2e/fonts.spec.ts` (also in `LIVE_SPECS`): the served
+      cache headers both ways; the Hero's fonts ready at its first render on a slow network with a warm cache; Inter
+      requested before first paint, never in terminal view, and all four fonts without JS; no unused preload 5 s after
+      load in either style; first-screen faces = preloads at 375px and 1280px; the fallbacks resolve (Arial on Windows,
+      Liberation on Linux), 600 is bold, widths within 5%; the forced swap.
+    - Chrome's "preloaded but not used" warning isn't reported to Playwright (console or CDP Log/Audits) by the Edge or
+      Chromium used here, checked headless and headed on a build that did preload unused Inter; the test checks the
+      same condition directly (every preload's FontFace is loaded).
+  - **Left open:**
+    - Roboto and Droid Sans Mono (Android) and DejaVu (the Linux image has none) are checked only by their numbers,
+      from the official font files; no device or image here has them.
+    - The live cache-header check runs after the deploy (`npm run test:live`).
+    - Once, in 210 Windows runs of the entrance test with the switches, Edge's renderer stopped answering for 110 s
+      (a plain `evaluate` hung; test timeout). Not seen on Linux (750 runs). Watch for it.
+    - Once in 80 Windows runs (plain preloads + keyframes, before the template came back) the observer never flipped
+      a section to `done`; not seen again in 300 runs of the chosen setup (150 per system).
+    - The 3.4 entrance turned out to be timing-sensitive: if it ever misbehaves again, start from the bisect above.
+  - Note (not done here): consider `workers: 2` in `playwright.config.ts` (CI 6.7 min → ~4.5 min; 1.55 GiB peak). Prove
+    it with the full suite `--repeat-each=5` on Linux first.
+
 - [ ] **3.5 Depth deploy + verification** — Same screenshot/Lighthouse pass as 2.16, plus new pages and contact form tested live.
   - Depends on: 3.1–3.4.
 

@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { cspHeaders } from './scripts/csp/csp.mts';
 import { ctfHeaders } from './scripts/ctf/ctf-headers.mts';
 import { doodleGuard } from './scripts/doodles/doodle-guard.mts';
+import { INTER_FALLBACK_STACK, MONO_FALLBACK_STACK } from './src/lib/font-fallbacks.mts';
 
 // https://docs.astro.build/en/reference/configuration-reference/
 export default defineConfig({
@@ -20,6 +21,8 @@ export default defineConfig({
   integrations: [react(), doodleGuard(), ctfHeaders(), cspHeaders()],
   // Self-hosted fonts (design-doc §9.3): downloaded from Fontsource at build time and served from the
   // site itself. <Font /> in BaseLayout emits the @font-face rules; global.css maps them to font-sans/mono.
+  // Fallbacks (Task 3.4a): our own size-adjusted local faces, declared in global.css and named in
+  // src/lib/font-fallbacks.mts. Astro's optimizedFallbacks is off: it knows only Arial and Courier New, with no bold 600.
   fonts: [
     {
       provider: fontProviders.fontsource(),
@@ -28,7 +31,8 @@ export default defineConfig({
       weights: [400, 500, 600],
       styles: ['normal'],
       subsets: ['latin'],
-      fallbacks: ['sans-serif'],
+      fallbacks: INTER_FALLBACK_STACK,
+      optimizedFallbacks: false,
     },
     {
       provider: fontProviders.fontsource(),
@@ -37,7 +41,8 @@ export default defineConfig({
       weights: [400],
       styles: ['normal'],
       subsets: ['latin'],
-      fallbacks: ['monospace'],
+      fallbacks: MONO_FALLBACK_STACK,
+      optimizedFallbacks: false,
     },
   ],
   vite: {
