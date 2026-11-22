@@ -3,7 +3,7 @@
 // view, no horizontal scroll, sitemap.xml
 // parsing as XML, and the OG image being served. The built head tags are checked in tests/seo-dist.test.ts.
 
-import { type Page } from '@playwright/test';
+import { type APIRequestContext, type Page } from '@playwright/test';
 import { expect, test } from './fixtures.ts';
 import { getResume } from '../../src/lib/resume.ts';
 import { expectFocusRing, expectTheme, LOOKS, themeToggle, useLook } from './helpers.ts';
@@ -155,8 +155,8 @@ test('/og-image.png is served as a PNG', async ({ request }) => {
   expect(response.headers()['content-type']).toBe('image/png');
 });
 
-// The site icons (Task 2.13a).
-const ICON_PATHS = ['/favicon.ico', '/apple-touch-icon.png'];
+// The site icons (Task 2.13a; favicon.svg from Task 2.21).
+const ICON_PATHS = ['/favicon.ico', '/favicon.svg', '/apple-touch-icon.png'];
 const isIcon = (url: string) => ICON_PATHS.includes(new URL(url).pathname);
 
 for (const iconPath of ICON_PATHS) {
@@ -197,6 +197,67 @@ for (const path of PAGES) {
     }
     await page.waitForLoadState('networkidle');
     expect(failed).toEqual([]);
+  });
+}
+
+// Task 2.21: the SVG is a plain static file. Only the /* rule applies: no X-Clue (that's favicon.ico's, F.2) and no
+// long cache (its name has no content hash). favicon.ico's X-Clue is checked by tests/e2e/ctf.spec.ts.
+test('/favicon.svg answers 200 as image/svg+xml, without X-Clue or a long cache', async ({ request }) => {
+  const svg = await request.get('/favicon.svg');
+  expect(svg.status()).toBe(200);
+  expect(svg.headers()['content-type']).toBe('image/svg+xml');
+  expect(svg.headers()['x-clue']).toBeUndefined();
+  const cacheControl = svg.headers()['cache-control'] ?? '';
+  expect(cacheControl).not.toContain('immutable');
+  expect(cacheControl).not.toMatch(/max-age=[1-9]/);
+});
+
+// The colors really switch with the browser's color scheme, in an image context like the tab bar's, under the site's
+// real CSP (the /* rule's style-src has no hash for the SVG's own <style>; in image context it doesn't apply). Each
+// scheme gets its own context, so no decoded image is shared. Sampled at 64×64: a tile pixel above the letters and one
+// inside the A's crossbar (viewBox 22, 18.6). The expected colors come from the served file (dark: the attributes,
+// light: the media query); tests/site-icons.test.ts ties those to the tokens.
+async function svgColors(request: APIRequestContext) {
+  const text = await (await request.get('/favicon.svg')).text();
+  const pick = (re: RegExp) => text.match(re)?.[1] ?? 'missing';
+  return {
+    dark: {
+      bg: pick(/<rect class="bg" [^>]*fill="(#[0-9a-f]{6})"/),
+      fg: pick(/<path class="fg" fill="(#[0-9a-f]{6})"/),
+    },
+    light: { bg: pick(/\.bg\{fill:(#[0-9a-f]{6})\}/), fg: pick(/\.fg\{fill:(#[0-9a-f]{6})\}/) },
+  };
+}
+const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+const near = (actual: number[], hex: string) => actual.slice(0, 3).every((v, i) => Math.abs(v - rgb(hex)[i]) <= 6);
+
+for (const scheme of ['dark', 'light'] as const) {
+  test.describe(`favicon.svg under prefers-color-scheme: ${scheme}`, () => {
+    test.use({ colorScheme: scheme });
+
+    test(`shows the ${scheme} colors as an image`, async ({ page, request }) => {
+      const colors = await svgColors(request);
+      const expected = colors[scheme];
+      // The two variants differ, so a pass in both schemes means the colors switched.
+      const other = colors[scheme === 'dark' ? 'light' : 'dark'];
+      expect(expected.bg).not.toBe(other.bg);
+      expect(expected.fg).not.toBe(other.fg);
+      await page.goto('/');
+      const { tile, letter } = await page.evaluate(async () => {
+        const image = new Image();
+        image.src = '/favicon.svg';
+        await image.decode();
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = 64;
+        const context = canvas.getContext('2d')!;
+        context.drawImage(image, 0, 0, 64, 64);
+        const pixel = (x: number, y: number) => [...context.getImageData(x, y, 1, 1).data];
+        return { tile: pixel(32, 4), letter: pixel(44, 37) };
+      });
+      expect(near(tile, expected.bg), `tile ${tile} vs ${expected.bg}`).toBe(true);
+      expect(near(letter, expected.fg), `letter ${letter} vs ${expected.fg}`).toBe(true);
+      expect(tile[3]).toBe(255);
+    });
   });
 }
 

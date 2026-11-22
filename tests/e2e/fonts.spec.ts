@@ -109,6 +109,7 @@ test.describe('cache headers', () => {
     ...PAGES,
     '/og-image.png',
     '/favicon.ico',
+    '/favicon.svg',
     '/apple-touch-icon.png',
     '/resume.pdf',
     '/robots.txt',

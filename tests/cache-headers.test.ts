@@ -85,7 +85,14 @@ test(
     const files = urlPaths(DIST).filter((file) => !file.startsWith('/_astro/'));
     // The paths pages are served at, besides their files, and an unknown path (the 404 page).
     const served = ['/', '/resume', '/no-such-page'];
-    for (const name of ['/og-image.png', '/favicon.ico', '/apple-touch-icon.png', '/resume.pdf', '/robots.txt']) {
+    for (const name of [
+      '/og-image.png',
+      '/favicon.ico',
+      '/favicon.svg',
+      '/apple-touch-icon.png',
+      '/resume.pdf',
+      '/robots.txt',
+    ]) {
       assert.ok(files.includes(name), `${name} is not in dist/`);
     }
     for (const file of [...files, ...served]) assert.deepEqual(cacheControlFor(rules, file), [], file);
