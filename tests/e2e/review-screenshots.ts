@@ -200,7 +200,7 @@ test.describe('resume print', () => {
 
 // The site icons (Task 2.13a): every favicon.ico entry and the apple-touch-icon at real size (1×) and scaled up 8×
 // (pixelated, so each pixel shows), on a light and a dark strip like browser chrome. The entries are read from the
-// files themselves, so this shows exactly what's committed.
+// files themselves, so this shows exactly what's committed. Below them, favicon.svg in both variants (Task 2.21).
 test.describe('site icons', () => {
   test.use({ viewport: { width: 1600, height: 900 } });
 
@@ -226,11 +226,47 @@ test.describe('site icons', () => {
           )
           .join('')}
       </section>`;
+    // favicon.svg (Task 2.21), each variant forced from the committed file: dark = without the <style>, light = its
+    // media query's rules unconditionally. Each is rasterized at 16, 32 and 48 px (as a browser does for the tab) and
+    // shown 1× and 8× pixelated.
+    const svg = fs.readFileSync(`public${SITE_ICONS.svg.path}`, 'utf8');
+    const variants = {
+      dark: svg.replace(/<style>[^<]*<\/style>\n/, ''),
+      light: svg.replace(/@media \(prefers-color-scheme: light\)\{(.*)\}<\/style>/, '$1</style>'),
+    };
+    const svgStrip = (bg: string, fg: string) => `
+      <section style="background:${bg};color:${fg};padding:16px;display:flex;flex-wrap:wrap;gap:32px;align-items:flex-end">
+        ${Object.entries(variants)
+          .flatMap(([name, text]) =>
+            [16, 32, 48].map(
+              (size) =>
+                `<figure><canvas data-svg="${Buffer.from(text).toString('base64')}" data-size="${size}"></canvas>` +
+                `<figcaption>favicon.svg ${name} ${size}px</figcaption></figure>`,
+            ),
+          )
+          .join('')}
+      </section>`;
     await page.setContent(`<!doctype html><html><head><style>
         body { margin: 0; font: 13px sans-serif; }
         figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; }
-        img { image-rendering: pixelated; }
-      </style></head><body>${strip('#f1f3f4', '#202124')}${strip('#202124', '#e8eaed')}</body></html>`);
+        img, canvas { image-rendering: pixelated; }
+      </style></head><body>${strip('#f1f3f4', '#202124')}${strip('#202124', '#e8eaed')}
+      ${svgStrip('#f1f3f4', '#202124')}${svgStrip('#202124', '#e8eaed')}</body></html>`);
+    await page.evaluate(async () => {
+      for (const canvas of document.querySelectorAll<HTMLCanvasElement>('canvas[data-svg]')) {
+        const size = Number(canvas.dataset.size);
+        const image = new Image();
+        image.src = `data:image/svg+xml;base64,${canvas.dataset.svg}`;
+        await image.decode();
+        const real = Object.assign(document.createElement('canvas'), { width: size, height: size });
+        real.getContext('2d')!.drawImage(image, 0, 0, size, size);
+        canvas.width = canvas.height = size * 9;
+        const context = canvas.getContext('2d')!;
+        context.imageSmoothingEnabled = false;
+        context.drawImage(real, 0, size * 4, size, size);
+        context.drawImage(real, size, 0, size * 8, size * 8);
+      }
+    });
     await page.screenshot({ path: `${OUT_DIR}/icons.png`, fullPage: true });
   });
 });

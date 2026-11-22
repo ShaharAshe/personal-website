@@ -15,9 +15,15 @@ export const OG_IMAGE = { path: '/og-image.png', width: 1200, height: 630, type:
  * The site icons (Task 2.13a), rendered by npm run og (scripts/og/render-icons.ts) into public/. The favicon.ico holds
  * one PNG per size (Google's search results need a multiple of 48); the apple-touch-icon is opaque, since iOS fills
  * transparent pixels with black.
+ *
+ * The SVG (Task 2.21) switches its colors with prefers-color-scheme inside the file, so it follows the browser's tab
+ * bar, not the site's toggle. BaseLayout links the ICO first, with its explicit sizes (never "any", which made Chrome
+ * pick the ICO), then the SVG with its type: Chrome, Edge and Firefox take the SVG, and Safari, which has no SVG
+ * favicons, the ICO (evilmartians.com/chronicles/how-to-favicon-in-2021-six-files-that-fit-most-needs).
  */
 export const SITE_ICONS = {
   favicon: { path: '/favicon.ico', sizes: [16, 32, 48] },
+  svg: { path: '/favicon.svg', type: 'image/svg+xml' },
   appleTouch: { path: '/apple-touch-icon.png', size: 180 },
 } as const;
 

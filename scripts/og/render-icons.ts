@@ -4,10 +4,12 @@
 //
 //   public/favicon.ico           16, 32 and 48 px PNGs, rounded square with transparent corners
 //   public/apple-touch-icon.png  180 px, full opaque square (iOS rounds it and fills transparency with black)
+//   public/favicon.svg           Task 2.21: the same icon as glyph outlines, dark or light through prefers-color-scheme
+//                                (scripts/og/icon-svg.ts), no browser involved
 //
-// Each size is rendered at its real pixel size. Every PNG carries the source hash (tEXt "icon-source-sha256");
-// tests/site-icons.test.ts fails when it's stale. Before writing, it checks that JetBrains Mono loaded and the
-// initials sit inside the square with padding.
+// Each size is rendered at its real pixel size. Every PNG carries the source hash (tEXt "icon-source-sha256"), the SVG
+// its own in a comment; tests/site-icons.test.ts fails when one is stale. Before writing, it checks that JetBrains Mono
+// loaded (for the SVG: that the outlines come from it) and the initials sit inside the square with padding.
 //
 // Usage: node scripts/og/render-icons.ts
 
@@ -16,7 +18,7 @@ import path from 'node:path';
 import { chromium } from '@playwright/test';
 import { getResume } from '../../src/lib/resume.ts';
 import { SITE_ICONS } from '../../src/lib/seo.ts';
-import { ORIGIN, ROOT, browserChannel, readFontCss, routeSite } from './fonts.ts';
+import { DIST, ORIGIN, ROOT, browserChannel, readFontCss, routeSite } from './fonts.ts';
 import { writeIco } from './ico.ts';
 import {
   APPLE_TOUCH_ICON_FILE,
@@ -28,16 +30,43 @@ import {
   iconSourceHash,
   initialsOf,
 } from './icon-html.ts';
+import {
+  FAVICON_SVG_FILE,
+  SVG_GEOMETRY,
+  faviconSvg,
+  iconSvgSourceHash,
+  jetBrainsMonoFile,
+  layoutGlyphs,
+  readGlyphs,
+} from './icon-svg.ts';
 import { withPngText } from './png.ts';
-import { readDarkTokens } from './tokens.ts';
+import { readDarkTokens, readLightTokens } from './tokens.ts';
 
 const fontCss = readFontCss();
 const initials = initialsOf(getResume().basics.name);
 const tokens = readDarkTokens();
+const light = readLightTokens();
 const hash = iconSourceHash(initials, tokens);
 
 const problems: string[] = [];
 const pngs = new Map<number, Buffer>();
+
+// The SVG: outlines from the built JetBrains Mono, inside the same padding as the 32px PNG.
+const outlines = readGlyphs(jetBrainsMonoFile(fontCss, DIST), initials);
+if (!outlines.familyName.startsWith('JetBrains Mono')) {
+  problems.push(`favicon.svg: the outlines come from ${outlines.familyName}, not JetBrains Mono`);
+}
+const { box } = layoutGlyphs(outlines);
+const svgPad = Math.round(SVG_GEOMETRY.size * 0.08);
+if (
+  box.left < svgPad ||
+  box.top < svgPad ||
+  box.right > SVG_GEOMETRY.size - svgPad ||
+  box.bottom > SVG_GEOMETRY.size - svgPad
+) {
+  problems.push(`favicon.svg: the initials leave the ${svgPad}px padding (${JSON.stringify(box)})`);
+}
+const svg = faviconSvg(initials, tokens, light, outlines, iconSvgSourceHash(initials, tokens, light));
 
 // Grayscale antialiasing: LCD (subpixel) text leaves colored fringes, which show on a tiny icon.
 const browser = await chromium.launch({ channel: browserChannel, args: ['--disable-lcd-text'] });
@@ -83,9 +112,11 @@ const ico = writeIco(SITE_ICONS.favicon.sizes.map((size) => pngs.get(size)!));
 const apple = pngs.get(SITE_ICONS.appleTouch.size)!;
 fs.writeFileSync(FAVICON_FILE, ico);
 fs.writeFileSync(APPLE_TOUCH_ICON_FILE, apple);
+fs.writeFileSync(FAVICON_SVG_FILE, svg);
 for (const [file, bytes] of [
   [FAVICON_FILE, ico.length],
   [APPLE_TOUCH_ICON_FILE, apple.length],
+  [FAVICON_SVG_FILE, Buffer.byteLength(svg)],
 ] as const) {
   console.log(`Wrote ${path.relative(ROOT, file)} (${bytes} bytes).`);
 }

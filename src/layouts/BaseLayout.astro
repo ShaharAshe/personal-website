@@ -77,8 +77,9 @@ const greetingScript = greet
     <title>{title}</title>
     <meta name="description" content={description} />
     {noindex && <meta name="robots" content="noindex" />}
-    {/* Site icons (npm run og). Root-relative, so they work on any host. */}
+    {/* Site icons (npm run og). Root-relative, so they work on any host. The order matters (SITE_ICONS in seo.ts). */}
     <link rel="icon" href={SITE_ICONS.favicon.path} sizes={iconSizesAttr(SITE_ICONS.favicon.sizes)} />
+    <link rel="icon" href={SITE_ICONS.svg.path} type={SITE_ICONS.svg.type} />
     <link
       rel="apple-touch-icon"
       href={SITE_ICONS.appleTouch.path}

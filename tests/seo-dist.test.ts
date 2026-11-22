@@ -191,11 +191,37 @@ test('every page links favicon.ico, with sizes equal to the real ICO directory',
   assert.equal(sizes, '16x16 32x32 48x48');
   for (const { url, html } of PAGES) {
     const links = linksOf(html, 'icon');
-    assert.equal(links.length, 1, `${url}: one rel="icon"`);
+    assert.equal(links.length, 2, `${url}: two rel="icon" (the ICO and the SVG)`);
     assert.equal(links[0].href, '/favicon.ico', url);
     assert.equal(links[0].sizes, sizes, url);
+    assert.equal(links[0].type, undefined, url);
   }
 });
+
+// Task 2.21: the ICO first with explicit sizes (never "any"), then the SVG with its type and no sizes, then the
+// apple-touch-icon. Chrome, Edge and Firefox take the SVG, Safari the ICO (SITE_ICONS in src/lib/seo.ts).
+test(
+  'every page links the icons in this order: favicon.ico, favicon.svg (typed, no sizes), apple-touch-icon',
+  { skip },
+  () => {
+    const iconLinks = (html: string) =>
+      [...headOf(html).matchAll(/<link ([^>]*)>/g)]
+        .map(([, attrs]) => Object.fromEntries([...attrs.matchAll(/([\w-]+)="([^"]*)"/g)].map(([, k, v]) => [k, v])))
+        .filter(({ rel }) => rel === 'icon' || rel === 'apple-touch-icon');
+    assert.deepEqual(PAGES.map(({ url }) => url).sort(), ['/', '/404', '/resume']);
+    for (const { url, html } of PAGES) {
+      assert.deepEqual(
+        iconLinks(html),
+        [
+          { rel: 'icon', href: '/favicon.ico', sizes: '16x16 32x32 48x48' },
+          { rel: 'icon', href: SITE_ICONS.svg.path, type: 'image/svg+xml' },
+          { rel: 'apple-touch-icon', href: '/apple-touch-icon.png', sizes: '180x180' },
+        ],
+        url,
+      );
+    }
+  },
+);
 
 test('every page links apple-touch-icon.png at 180x180', { skip }, () => {
   for (const { url, html } of PAGES) {
@@ -208,7 +234,7 @@ test('every page links apple-touch-icon.png at 180x180', { skip }, () => {
 });
 
 test('the dist/ icons are the committed ones in public/', { skip }, () => {
-  for (const file of ['favicon.ico', 'apple-touch-icon.png']) {
+  for (const file of ['favicon.ico', 'favicon.svg', 'apple-touch-icon.png']) {
     const built = fs.readFileSync(path.join(DIST, file));
     assert.ok(built.equals(fs.readFileSync(path.join(ROOT, 'public', file))), `${file}: rebuild after npm run og`);
   }

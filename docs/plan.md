@@ -106,7 +106,7 @@ Reality check performed before this plan:
 `@astrojs/mdx` (moved from Task 2.4 to Task 3.1, where the first MDX page is written), ~~`@astrojs/sitemap`~~ (dropped in Task 2.13: a small `sitemap.xml` endpoint instead), `pdf-parse` (replaced `pdf-lib` in Task 1.2), `@types/js-yaml`
 (dev), ~~`tsx`~~ (dropped in Task 1.2: Node 22 runs the `.ts` scripts natively), `eslint` + `typescript-eslint` +
 `eslint-plugin-astro`, `prettier` + `prettier-plugin-astro` + `prettier-plugin-tailwindcss`,
-`@astrojs/check` (added in Task 1.4, needed by `astro check`), `wrangler` (dev, added in Task 1.5 for the Cloudflare deploy), `@playwright/test` (dev, added in Task 2.3a for e2e tests and review screenshots). `@astrojs/cloudflare` is added
+`@astrojs/check` (added in Task 1.4, needed by `astro check`), `wrangler` (dev, added in Task 1.5 for the Cloudflare deploy), `@playwright/test` (dev, added in Task 2.3a for e2e tests and review screenshots), `fontkitten` (dev, added in Task 2.21 to read the JetBrains Mono glyph outlines for `public/favicon.svg`; already installed as Astro's own dependency). `@astrojs/cloudflare` is added
 later, only in Milestone 3 when the contact form needs a server-rendered route.
 
 ---
@@ -1441,12 +1441,80 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
     - Checked by hand: a missing `dist-doodle/` fails with the doodle:build message before Docker is touched.
       Docker stopped: not tested live (the message is in `docker-cli.ts`).
 
-- [ ] **2.21 Favicon that follows the browser theme** — An SVG favicon with `prefers-color-scheme` inside it: it sits
+- [x] **2.21 Favicon that follows the browser theme** — An SVG favicon with `prefers-color-scheme` inside it: it sits
   on the browser's tab bar, whose color follows the browser or OS theme, not the site's toggle. `favicon.ico` stays as
   the fallback (Safari doesn't use SVG favicons).
   - Keep F.2's `X-Clue` header on `/favicon.ico` working (`scripts/ctf/`), and update the icon stale check
     (`npm run og`, `tests/site-icons.test.ts`) and the icon links in `src/lib/seo.ts`.
   - Depends on: 2.13a.
+  - Files: new `scripts/og/icon-svg.ts`, `public/favicon.svg`; `scripts/og/render-icons.ts`, `scripts/og/tokens.ts`
+    (`lightTokens`), `src/lib/seo.ts` (`SITE_ICONS.svg`), `src/layouts/BaseLayout.astro`, `package.json` +
+    lockfile (fontkitten); tests (`site-icons`, `seo-dist`, `cache-headers`, e2e `seo`, `fonts`,
+    `review-screenshots`); design-doc §11, README, CLAUDE.md.
+  - **Done (2026-11-22).**
+    - **The glyphs:** an SVG image can't load web fonts, so the initials are outlines. The new devDependency
+      `fontkitten` (approved in the plan: MIT, 352 KB, already installed as Astro's own dependency, so only
+      `package.json` and one lockfile line changed) reads the built JetBrains Mono 400 Latin woff2 (found in the
+      `<Font />` CSS of `dist/index.html`). The outlines are scaled to the 32px template's geometry (rounded square
+      `rx=6`, font size 20) and centered like the PNGs (advance widths, cap height). `favicon.svg` is 1,236 bytes:
+      one `<rect>`, one `<path>` per initial, no `<text>`, no external reference, no script, no CTF text.
+      `npm run og` refuses to write if the outlines aren't JetBrains Mono or leave the 8% padding. The existing
+      `favicon.ico`, `apple-touch-icon.png` and `og-image.png` came out byte-identical.
+    - **Colors (from the tokens, nothing typed):** dark = today's icon, `--accent` `#4f9dff` on `--bg` `#0b0d10` (the
+      dark block), as presentation attributes; light = the light block's `#1f6fd1` on `#fafafa`, inside
+      `@media (prefers-color-scheme: light)`. Author CSS beats attributes, and a browser that ignored the style would
+      show the dark icon, never a black square (the site, too, is dark when no scheme is reported). User choice: the
+      tile matches the tab bar and the letters carry the icon.
+      - Contrast (WCAG, `tests/helpers/contrast.ts`), against approximate default tab bars:
+
+        | | letters on tile | tile on light bars (`#dee1e6` / `#fff` / Firefox `#f0f0f4`) | letters on light bars | tile on dark bars (`#202124` / tab `#35363a` / Firefox `#1c1b22`) | letters on dark bars |
+        |---|---|---|---|---|---|
+        | dark variant (used on dark bars) | 7.04 | 14.84 / 19.46 / 17.12 | 2.11 / 2.76 / 2.43 | 1.21 / 1.61 / 1.14 | 5.83 / 4.37 / 6.18 |
+        | light variant (used on light bars) | 4.73 | 1.26 / 1.04 / 1.09 | 3.77 / 4.94 / 4.34 | 15.42 / 11.56 / 16.37 | 3.26 / 2.44 / 3.46 |
+
+        In the pairings that happen (dark variant on dark bars, light on light), the letters are 3.77–6.18:1 against
+        the bar and 7.04 / 4.73:1 against their tile. `npm test` keeps letters-on-tile at 4.5:1 or more in both.
+    - **Links (every page, in this order):** `<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48">`,
+      `<link rel="icon" href="/favicon.svg" type="image/svg+xml">`, then the apple-touch-icon. Source: Evil Martians,
+      "How to Favicon" (evilmartians.com/chronicles/how-to-favicon-in-2021-six-files-that-fit-most-needs, updated
+      2026): the ICO first with explicit sizes, then the SVG with its type; `sizes="any"` on the ICO made Chrome choose
+      the ICO (or download both). Safari has no SVG favicons (caniuse.com/link-icon-svg) and uses the ICO. Their
+      recipe has `sizes="32x32"`; the real list was kept, since the check below showed no difference.
+    - **Step 0, proven before building on it** (`wrangler dev`, scratch scripts outside the repo; the lasting checks
+      are the tests):
+      - Served: `/favicon.svg` 200 `image/svg+xml`, `Cache-Control: public, max-age=0, must-revalidate`, no `X-Clue`;
+        `/favicon.ico` still has it. The `/*` CSP applies to the SVG, with no hash for its `<style>`.
+      - Colors in image context (an `<img>` drawn to a canvas, pixels compared): Edge, emulated dark → tile
+        `#0b0d10`, letters `#4f9dff`; light → `#fafafa`, `#1f6fd1`. Firefox (installed with
+        `npx playwright install firefox` for this check only; not in `playwright.config.ts`, the Linux runner or CI):
+        with the OS theme pref `ui.systemUsesDarkTheme` 1 / 0, the same exact colors. Playwright's `colorScheme`
+        emulation alone gave Firefox the light colors in both schemes: it doesn't reach image documents in Firefox,
+        while the real OS setting does.
+      - **CSP:** in image context neither Edge nor Firefox applies the SVG's own response CSP to its `<style>`: the
+        colors switch, no fix needed, the page CSP untouched. **Opened directly as a document** (navigating to
+        `/favicon.svg`), both block the inline style ("Applying inline style violates … style-src"), so the file
+        shows the dark variant there. That's the designed fallback and doesn't affect the tab icon. A fix, if ever
+        wanted: a `/favicon.svg` rule that detaches the site CSP (`! Content-Security-Policy`) and sets
+        `default-src 'none'; style-src 'sha256-<its style>'`.
+      - Which icon the browser takes (headed, wrangler's request log): Edge requests only `/favicon.svg` (3 runs; with
+        `sizes="16x16 32x32 48x48"`, `sizes="32x32"` and no ICO link alike); Firefox requests `/favicon.svg` (plus
+        `/apple-touch-icon.png`, for its tiles). Chrome isn't installed on this machine: Edge shares Chromium's favicon
+        code; checking Chrome on the live site is left open. Safari: not available here; it has no SVG favicon support,
+        so it keeps the ICO.
+    - **CTF:** unchanged. `X-Clue` stays on `/favicon.ico` only (`scripts/ctf/`, `public/_headers` untouched); the SVG
+      matches only `/*`. **CSP line:** 787 characters before and after (the 784-character policy plus the header
+      name); `cspHeaders()` scans only `.html`.
+    - **Stale check:** `favicon.svg` carries `<!-- icon-source-sha256: … -->`, the hash of the template skeleton (the
+      initials, the four colors, the geometry; the outlines left out, like the PNGs' hash leaves the font out).
+      `tests/site-icons.test.ts` recomputes it from `resume.yaml` and both token blocks.
+    - Review (`screenshots/icons.png`, now with the SVG in both variants at 16/32/48 px, 1× and 8×): same design as
+      the ICO. Open: at 16px the SVG is a little thinner and dimmer than the ICO's 16px entry, which has hinting and
+      the 0.4px `text-stroke`; an SVG can't do size-specific strokes without a size media query inside it.
+    - Tests: `npm test` 685 → 696 (`site-icons.test.ts` +10, `seo-dist.test.ts` +1). e2e 407 → 412, passed on
+      Windows and on Linux (`npm run test:e2e:linux`: 412; `seo.spec.ts` + `fonts.spec.ts` `--repeat-each=10`: 1,190
+      passed) (`seo.spec.ts`: `/favicon.svg` served right, the light/dark pixel check in both schemes, the no-failed-icon-
+      request test now covers three paths; `fonts.spec.ts`: `/favicon.svg` not cached long). Both specs are in
+      `LIVE_SPECS` already.
 
 ## Fun (after MVP)
 
