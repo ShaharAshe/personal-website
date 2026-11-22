@@ -14,6 +14,11 @@
 //
 // Stale check: the file carries iconSvgSourceHash() in a comment. tests/site-icons.test.ts recomputes it from today's
 // name and tokens, so a change to either, or to this template, fails npm test until npm run og is run again.
+//
+// Task 2.21a: the fixed variants public/favicon-dark.svg and public/favicon-light.svg (fixedFaviconSvg()), the same
+// outlines in one block's two colors as attributes, with no <style>. The head script and the theme toggle point the SVG
+// icon link at one of them when the visitor has chosen a theme or terminal view (src/lib/theme.ts); with no choice it
+// stays favicon.svg. Each carries its own stale hash (fixedIconSvgSourceHash()).
 
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -23,7 +28,18 @@ import { SITE_ICONS } from '../../src/lib/seo.ts';
 import type { Tokens } from './tokens.ts';
 
 export const SVG_HASH_KEY = 'icon-source-sha256';
-export const FAVICON_SVG_FILE = path.join(import.meta.dirname, '..', '..', 'public', SITE_ICONS.svg.path.slice(1));
+const PUBLIC = path.join(import.meta.dirname, '..', '..', 'public');
+export const FAVICON_SVG_FILE = path.join(PUBLIC, SITE_ICONS.svg.path.slice(1));
+
+/** The two color schemes of the fixed variants. */
+export type Scheme = keyof typeof SITE_ICONS.svgFixed;
+export const SCHEMES = Object.keys(SITE_ICONS.svgFixed) as Scheme[];
+
+/** public/favicon-dark.svg and public/favicon-light.svg (Task 2.21a). */
+export const FIXED_SVG_FILES: Record<Scheme, string> = {
+  dark: path.join(PUBLIC, SITE_ICONS.svgFixed.dark.slice(1)),
+  light: path.join(PUBLIC, SITE_ICONS.svgFixed.light.slice(1)),
+};
 
 /** The 32px favicon's look (ICON_STYLES[32] in icon-html.ts), in viewBox units. */
 export const SVG_GEOMETRY = { size: 32, radius: 6, fontSize: 20 } as const;
@@ -115,14 +131,9 @@ export function layoutGlyphs(font: FontOutlines) {
  * covers (the template, the initials and the four colors), like the PNGs' hash leaves the font file out.
  */
 export function faviconSvg(initials: string, dark: Tokens, light: Tokens, font?: FontOutlines, hash?: string): string {
-  const chars = [...lf(initials).trim()];
-  if (chars.length === 0) throw new Error('no initials for favicon.svg');
-  if (font && font.glyphs.map((g) => g.char).join('') !== chars.join('')) {
-    throw new Error(`the outlines are for "${font.glyphs.map((g) => g.char).join('')}", not "${chars.join('')}"`);
-  }
+  const data = pathData(initials, font);
   const c = svgColors(dark, light);
   const { size, radius } = SVG_GEOMETRY;
-  const data = font ? layoutGlyphs(font).paths : chars.map((ch) => `glyph:${escapeXml(ch)}`);
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}">`,
     ...(hash ? [`<!-- ${SVG_HASH_KEY}: ${hash} -->`] : []),
@@ -134,12 +145,50 @@ export function faviconSvg(initials: string, dark: Tokens, light: Tokens, font?:
   ].join('\n');
 }
 
+/** Each initial's path data: the laid-out outlines, or without `font` a placeholder naming the letter. */
+function pathData(initials: string, font?: FontOutlines): string[] {
+  const chars = [...lf(initials).trim()];
+  if (chars.length === 0) throw new Error('no initials for favicon.svg');
+  if (font && font.glyphs.map((g) => g.char).join('') !== chars.join('')) {
+    throw new Error(`the outlines are for "${font.glyphs.map((g) => g.char).join('')}", not "${chars.join('')}"`);
+  }
+  return font ? layoutGlyphs(font).paths : chars.map((ch) => `glyph:${escapeXml(ch)}`);
+}
+
+/**
+ * A fixed variant (Task 2.21a): favicon.svg's tile and outlines in one block's --bg and --accent, as attributes, with
+ * no <style> and no class, so it looks the same whatever the browser's color scheme. `tokens` is that block's.
+ */
+export function fixedFaviconSvg(
+  initials: string,
+  tokens: Tokens,
+  scheme: Scheme,
+  font?: FontOutlines,
+  hash?: string,
+): string {
+  const data = pathData(initials, font);
+  const c = { bg: color(tokens, '--bg', scheme), fg: color(tokens, '--accent', scheme) };
+  const { size, radius } = SVG_GEOMETRY;
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}">`,
+    ...(hash ? [`<!-- ${SVG_HASH_KEY}: ${hash} -->`] : []),
+    `<rect width="${size}" height="${size}" rx="${radius}" fill="${c.bg}"/>`,
+    ...data.map((d) => `<path fill="${c.fg}" d="${d}"/>`),
+    '</svg>',
+    '',
+  ].join('\n');
+}
+
+const sha256 = (text: string) => crypto.createHash('sha256').update(lf(text), 'utf8').digest('hex');
+
 /** sha256 of the skeleton (no outlines, no hash line), with LF line endings: the same on Windows and Linux. */
 export function iconSvgSourceHash(initials: string, dark: Tokens, light: Tokens): string {
-  return crypto
-    .createHash('sha256')
-    .update(lf(faviconSvg(lf(initials), dark, light)), 'utf8')
-    .digest('hex');
+  return sha256(faviconSvg(lf(initials), dark, light));
+}
+
+/** The same for a fixed variant: its skeleton, so only the initials and that block's two colors count. */
+export function fixedIconSvgSourceHash(initials: string, tokens: Tokens, scheme: Scheme): string {
+  return sha256(fixedFaviconSvg(lf(initials), tokens, scheme));
 }
 
 /** The hash stored in a favicon.svg's comment, or undefined. */

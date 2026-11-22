@@ -6,6 +6,8 @@
 //   public/apple-touch-icon.png  180 px, full opaque square (iOS rounds it and fills transparency with black)
 //   public/favicon.svg           Task 2.21: the same icon as glyph outlines, dark or light through prefers-color-scheme
 //                                (scripts/og/icon-svg.ts), no browser involved
+//   public/favicon-dark.svg      Task 2.21a: the same outlines in the dark colors only, no <style>
+//   public/favicon-light.svg     and in the light colors only (the site's theme choice picks one, src/lib/theme.ts)
 //
 // Each size is rendered at its real pixel size. Every PNG carries the source hash (tEXt "icon-source-sha256"), the SVG
 // its own in a comment; tests/site-icons.test.ts fails when one is stale. Before writing, it checks that JetBrains Mono
@@ -32,8 +34,12 @@ import {
 } from './icon-html.ts';
 import {
   FAVICON_SVG_FILE,
+  FIXED_SVG_FILES,
+  SCHEMES,
   SVG_GEOMETRY,
   faviconSvg,
+  fixedFaviconSvg,
+  fixedIconSvgSourceHash,
   iconSvgSourceHash,
   jetBrainsMonoFile,
   layoutGlyphs,
@@ -67,6 +73,19 @@ if (
   problems.push(`favicon.svg: the initials leave the ${svgPad}px padding (${JSON.stringify(box)})`);
 }
 const svg = faviconSvg(initials, tokens, light, outlines, iconSvgSourceHash(initials, tokens, light));
+// The fixed variants (Task 2.21a): the same outlines, each scheme's tokens.
+const schemeTokens = { dark: tokens, light };
+const fixedSvgs = SCHEMES.map((scheme) => {
+  const blockTokens = schemeTokens[scheme];
+  const text = fixedFaviconSvg(
+    initials,
+    blockTokens,
+    scheme,
+    outlines,
+    fixedIconSvgSourceHash(initials, blockTokens, scheme),
+  );
+  return [FIXED_SVG_FILES[scheme], text] as const;
+});
 
 // Grayscale antialiasing: LCD (subpixel) text leaves colored fringes, which show on a tiny icon.
 const browser = await chromium.launch({ channel: browserChannel, args: ['--disable-lcd-text'] });
@@ -113,11 +132,14 @@ const apple = pngs.get(SITE_ICONS.appleTouch.size)!;
 fs.writeFileSync(FAVICON_FILE, ico);
 fs.writeFileSync(APPLE_TOUCH_ICON_FILE, apple);
 fs.writeFileSync(FAVICON_SVG_FILE, svg);
-for (const [file, bytes] of [
+for (const [file, text] of fixedSvgs) fs.writeFileSync(file, text);
+const written: [file: string, bytes: number][] = [
   [FAVICON_FILE, ico.length],
   [APPLE_TOUCH_ICON_FILE, apple.length],
   [FAVICON_SVG_FILE, Buffer.byteLength(svg)],
-] as const) {
+  ...fixedSvgs.map(([file, text]): [string, number] => [file, Buffer.byteLength(text)]),
+];
+for (const [file, bytes] of written) {
   console.log(`Wrote ${path.relative(ROOT, file)} (${bytes} bytes).`);
 }
 console.log(`Initials "${initials}". Run npm run build so dist/ gets the icons.`);

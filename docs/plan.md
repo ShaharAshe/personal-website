@@ -1479,7 +1479,9 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       "How to Favicon" (evilmartians.com/chronicles/how-to-favicon-in-2021-six-files-that-fit-most-needs, updated
       2026): the ICO first with explicit sizes, then the SVG with its type; `sizes="any"` on the ICO made Chrome choose
       the ICO (or download both). Safari has no SVG favicons (caniuse.com/link-icon-svg) and uses the ICO. Their
-      recipe has `sizes="32x32"`; the real list was kept, since the check below showed no difference.
+      recipe has `sizes="32x32"`; the real list was kept, since the check below showed no difference. **Corrected by
+      2.21a:** that check was a request log, which doesn't show which icon is displayed. With the full list Brave and
+      Edge kept the ICO in the tab; the ICO link now says `sizes="32x32"`.
     - **Step 0, proven before building on it** (`wrangler dev`, scratch scripts outside the repo; the lasting checks
       are the tests):
       - Served: `/favicon.svg` 200 `image/svg+xml`, `Cache-Control: public, max-age=0, must-revalidate`, no `X-Clue`;
@@ -1515,6 +1517,73 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       passed) (`seo.spec.ts`: `/favicon.svg` served right, the light/dark pixel check in both schemes, the no-failed-icon-
       request test now covers three paths; `fonts.spec.ts`: `/favicon.svg` not cached long). Both specs are in
       `LIVE_SPECS` already.
+
+- [x] **2.21a Favicon that also follows the site's theme choice** — User decision (2026-11-22), reversing 2.21's "not
+  the site's toggle": a saved `light`/`dark` theme shows that variant in the tab, terminal view (always dark) the dark
+  one, and every click on the theme toggle or the terminal view switch changes it at once, with no reload. No saved
+  choice (or blocked storage) keeps `/favicon.svg`, which follows the browser like the site does then. The ICO, its
+  `X-Clue`, `apple-touch-icon.png` and `og-image.png` don't change; Safari keeps the ICO. The F.7 `>_` favicon idea
+  stays out of scope (its note below is kept).
+  - Depends on: 2.21.
+  - Files: new `public/favicon-dark.svg`, `public/favicon-light.svg`; `scripts/og/icon-svg.ts` (`fixedFaviconSvg`,
+    `fixedIconSvgSourceHash`, `FIXED_SVG_FILES`), `scripts/og/render-icons.ts`, `src/lib/seo.ts`
+    (`SITE_ICONS.svgFixed`, `SITE_ICONS.favicon.linkSizes`), `src/lib/theme.ts` (`FAVICON_LINK_SELECTOR`, `faviconFor`, the head script),
+    `src/components/ThemeToggle.astro`, `src/layouts/BaseLayout.astro`; tests (`site-icons`, `theme-init`,
+    `theme-toggle`, `base-layout`, `seo-dist`, `cache-headers`, e2e `seo`, `fonts`, `review-screenshots`);
+    design-doc §11 and §12, README, CLAUDE.md.
+  - **Done (2026-11-22).**
+    - **The variants:** `npm run og` writes them from the same outlines and tokens as `favicon.svg`: one `<rect>`,
+      one `<path>` per initial, the block's `--bg`/`--accent` as attributes, no `<style>`, no class, no clue, no
+      external reference, 1,115 bytes each, each with its own stale hash (the skeleton: initials + its two colors).
+      `favicon.svg`, `favicon.ico`, `apple-touch-icon.png` and `og-image.png` came out byte-identical.
+    - **One decision:** `faviconFor(dataTheme, dataStyle)` in `src/lib/theme.ts` (terminal → dark, a valid theme →
+      its variant, else `/favicon.svg`). The head script makes the same choice from the `data-theme`/`data-style` it
+      has just set and calls `setAttribute('href', …)` on `link[rel="icon"][type="image/svg+xml"]`;
+      `tests/theme-init.test.ts` checks the two agree on every saved combination. **Deviation:** the step has its own
+      `try/catch` (the fourth), not one of the existing three: storage is still read only in the existing blocks (so
+      blocked storage leaves `/favicon.svg`), and a DOM failure here can't skip the font preloads or the reverse.
+    - **The link moved:** the head script can only find a link the parser has already seen, so BaseLayout now puts the
+      ICO and SVG `<link rel="icon">` (same order; the ICO's `sizes` changed later, see the fix below) right after the
+      viewport meta, before the preload
+      template and the script. Icon links aren't stylesheets: the script still runs before any stylesheet
+      (`tests/base-layout.test.ts` pins the new order). The apple-touch-icon stayed where it was.
+    - **The toggle script:** one shared `style` (was per switch button) and `chosen`; both click handlers call
+      `setIcon()` right away, outside the View Transition callback. Changing `href` is enough (no `<link>` replacement).
+    - **The first by-eye check failed.** In Brave and in Edge, private windows included, the tab kept the dark ICO
+      look: no light tile, and clicks changed the page but not the tab. Yet both kinds of evidence collected before
+      said the SVG was picked:
+      - `wrangler dev`'s request log: each click fetched the new variant (then `/favicon.ico`, 304).
+      - Edge's and Brave's own `Favicons` database, read from a fresh Playwright profile: the page mapped to
+        `favicon-light.svg` / `favicon-dark.svg` / `favicon.svg`, never to the ICO, at simulated scales 1, 1.5 and 2.
+      What the tab showed is what counted.
+    - **The fix: option C**, `sizes="32x32"` on the ICO link (Evil Martians' recipe; `SITE_ICONS.favicon.linkSizes`).
+      The ICO file keeps 16/32/48 (`SITE_ICONS.favicon.sizes`), the link order and the SVG link are unchanged.
+      Chromium (`components/favicon/core/favicon_handler.cc`) scores each candidate from its declared `sizes` against
+      the 16 px tab icon at every scale; an unsized SVG gets the top pre-score. A declared exact 16×16 gave the ICO a
+      perfect score too, so after the SVG it was tried and could win. "32×32" scores about 0.58, so it never beats
+      the SVG and isn't tried. Options rejected: replacing the `<link>` (same candidate list as an `href` change),
+      `sizes="any"` on the SVG (an unsized link already scores the top), removing the ICO link (Safari's fallback
+      unverified), changing the ICO link only while a choice applies (more script, same Safari risk).
+      - Second by-eye check (by the user, fresh private windows, Brave and Edge): the light state shows the
+        near-white tile, and every click switches the tab at once.
+    - **Lesson:** for icons, a request log (or a database reading) is not evidence of what's displayed; a by-eye
+      check decides. No test reads the browser's `Favicons` database. The scratch scripts stayed outside the repo.
+    - **CSP:** 787 characters before and after (only the head script's hash changed). No `data:`/`blob:`, no
+      `img-src` change. **JS:** homepage 13.34 → 13.72 KB gzipped (site 2.34 → 2.72 KB, beacon 11.00 KB).
+    - Tests: `npm test` 696 → 722 (`seo-dist`: the ICO link says `32x32`, a size the file holds, never 16×16 or
+      `any`). e2e 412 → 443 on Windows and on Linux (`npm run test:e2e:linux`: 443; `seo.spec.ts` +
+      `fonts.spec.ts` `--repeat-each=10`: 1,500 passed). The full Linux suite ran again after option C (443 passed);
+      the 10× repeat was done before option C and not repeated after it: option C changed only the ICO link's `sizes`
+      attribute, which no spec's timing depends on, and the repeat takes about 20 minutes. New e2e: on `/`, `/resume` and the 404 page,
+      the icon href for nothing saved / light / dark / terminal / terminal over light, in the first animation frame
+      (before first paint), with no CSP violation, no security console error and no failed icon request; the toggle
+      both ways; terminal on/off with a saved theme; with no saved theme, terminal on → dark and off →
+      `/favicon.svg`, each right after the click and after a reload; both variants served 200 `image/svg+xml`, no
+      `X-Clue`, no long cache.
+    - Open: the toggle bundle carries a leftover of the head script's template (the `JSON.stringify` calls, which the
+      bundler keeps as side effects), now also the whole `SITE_ICONS` object; this predates the task, and fixing it
+      (moving `themeInitScript` to its own module) is a small separate cleanup. Chrome and Firefox on the live site
+      not checked yet.
 
 ## Fun (after MVP)
 

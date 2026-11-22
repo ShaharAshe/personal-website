@@ -34,16 +34,23 @@ test('the theme script runs before any stylesheet or style in <head>', { skip },
   const firstStyle = head.search(/<style|<link[^>]*rel="stylesheet"/);
   assert.notEqual(firstStyle, -1, 'no stylesheet in <head>');
   assert.ok(script < firstStyle, 'theme script comes after a stylesheet');
-  // Only the charset and viewport metas, and the inert Inter preload template it reads (Task 3.4a), come before it.
-  assert.deepEqual(head.slice(0, script).match(/<[a-z]+/g), [
+  // Only the charset and viewport metas, the two icon links whose SVG href it sets (Task 2.21a), and the inert Inter
+  // preload template it reads (Task 3.4a), come before it.
+  const before = head.slice(0, script);
+  assert.deepEqual(before.match(/<[a-z]+/g), [
     '<head',
     '<meta',
     '<meta',
+    '<link',
+    '<link',
     '<template',
     '<link',
     '<link',
     '<link',
   ]);
+  const [ico, svg] = [...before.matchAll(/<link [^>]*>/g)].map(([tag]) => tag);
+  assert.match(ico, /rel="icon" href="\/favicon\.ico"/);
+  assert.match(svg, /rel="icon" href="\/favicon\.svg" type="image\/svg\+xml"/);
 });
 
 test('every page has a title and meta description', { skip }, () => {

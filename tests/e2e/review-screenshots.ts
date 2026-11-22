@@ -200,7 +200,7 @@ test.describe('resume print', () => {
 
 // The site icons (Task 2.13a): every favicon.ico entry and the apple-touch-icon at real size (1×) and scaled up 8×
 // (pixelated, so each pixel shows), on a light and a dark strip like browser chrome. The entries are read from the
-// files themselves, so this shows exactly what's committed. Below them, favicon.svg in both variants (Task 2.21).
+// files themselves, so this shows exactly what's committed. Below them, the SVG icon in both schemes (Tasks 2.21, 2.21a).
 test.describe('site icons', () => {
   test.use({ viewport: { width: 1600, height: 900 } });
 
@@ -226,14 +226,12 @@ test.describe('site icons', () => {
           )
           .join('')}
       </section>`;
-    // favicon.svg (Task 2.21), each variant forced from the committed file: dark = without the <style>, light = its
-    // media query's rules unconditionally. Each is rasterized at 16, 32 and 48 px (as a browser does for the tab) and
-    // shown 1× and 8× pixelated.
-    const svg = fs.readFileSync(`public${SITE_ICONS.svg.path}`, 'utf8');
-    const variants = {
-      dark: svg.replace(/<style>[^<]*<\/style>\n/, ''),
-      light: svg.replace(/@media \(prefers-color-scheme: light\)\{(.*)\}<\/style>/, '$1</style>'),
-    };
+    // The SVG icon in both schemes: the committed fixed variants (Task 2.21a), which are favicon.svg's two looks
+    // (tests/site-icons.test.ts checks the same outlines and colors). Each is rasterized at 16, 32 and 48 px (as a
+    // browser does for the tab) and shown 1× and 8× pixelated.
+    const variants = Object.fromEntries(
+      Object.values(SITE_ICONS.svgFixed).map((file) => [file.slice(1), fs.readFileSync(`public${file}`, 'utf8')]),
+    );
     const svgStrip = (bg: string, fg: string) => `
       <section style="background:${bg};color:${fg};padding:16px;display:flex;flex-wrap:wrap;gap:32px;align-items:flex-end">
         ${Object.entries(variants)
@@ -241,7 +239,7 @@ test.describe('site icons', () => {
             [16, 32, 48].map(
               (size) =>
                 `<figure><canvas data-svg="${Buffer.from(text).toString('base64')}" data-size="${size}"></canvas>` +
-                `<figcaption>favicon.svg ${name} ${size}px</figcaption></figure>`,
+                `<figcaption>${name} ${size}px</figcaption></figure>`,
             ),
           )
           .join('')}
