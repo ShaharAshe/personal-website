@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { CF_BEACON_SRC } from '../src/lib/analytics.ts';
+import { SITE_ICONS } from '../src/lib/seo.ts';
 import { BEACON_GZIP_BYTES, pageJsGzipBytes, pageScripts } from './helpers/page-js.ts';
 import {
   STYLE_STORAGE_KEY,
@@ -17,6 +18,7 @@ import {
   THEMES,
   currentStyle,
   currentTheme,
+  faviconFor,
   isStyle,
   nextStyle,
   nextTheme,
@@ -130,6 +132,29 @@ test('saving the style when accessing localStorage itself throws (storage blocke
       throw new Error('SecurityError: access denied');
     }),
   );
+});
+
+// --- The tab icon (Task 2.21a) ---
+
+test('faviconFor: no choice keeps /favicon.svg (it follows the browser)', () => {
+  assert.equal(faviconFor(undefined, undefined), SITE_ICONS.svg.path);
+  assert.equal(faviconFor(undefined, 'regular'), '/favicon.svg');
+  assert.equal(faviconFor('blue', undefined), '/favicon.svg');
+});
+
+test('faviconFor: a chosen theme gets its fixed variant', () => {
+  assert.equal(faviconFor('light', undefined), '/favicon-light.svg');
+  assert.equal(faviconFor('dark', undefined), '/favicon-dark.svg');
+  assert.equal(faviconFor('light', 'regular'), SITE_ICONS.svgFixed.light);
+});
+
+test('faviconFor: terminal view is always dark, whatever the theme', () => {
+  for (const theme of [undefined, 'light', 'dark']) assert.equal(faviconFor(theme, TERMINAL), '/favicon-dark.svg');
+});
+
+test('faviconFor: no theme, terminal on then off gives dark, then /favicon.svg again (not a fixed variant)', () => {
+  assert.equal(faviconFor(undefined, nextStyle('regular')), SITE_ICONS.svgFixed.dark);
+  assert.equal(faviconFor(undefined, nextStyle(TERMINAL)), SITE_ICONS.svg.path);
 });
 
 // --- Built homepage ---

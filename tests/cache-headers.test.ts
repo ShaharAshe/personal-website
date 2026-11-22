@@ -89,6 +89,8 @@ test(
       '/og-image.png',
       '/favicon.ico',
       '/favicon.svg',
+      '/favicon-dark.svg',
+      '/favicon-light.svg',
       '/apple-touch-icon.png',
       '/resume.pdf',
       '/robots.txt',

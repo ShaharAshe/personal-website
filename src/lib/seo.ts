@@ -16,14 +16,25 @@ export const OG_IMAGE = { path: '/og-image.png', width: 1200, height: 630, type:
  * one PNG per size (Google's search results need a multiple of 48); the apple-touch-icon is opaque, since iOS fills
  * transparent pixels with black.
  *
- * The SVG (Task 2.21) switches its colors with prefers-color-scheme inside the file, so it follows the browser's tab
- * bar, not the site's toggle. BaseLayout links the ICO first, with its explicit sizes (never "any", which made Chrome
- * pick the ICO), then the SVG with its type: Chrome, Edge and Firefox take the SVG, and Safari, which has no SVG
- * favicons, the ICO (evilmartians.com/chronicles/how-to-favicon-in-2021-six-files-that-fit-most-needs).
+ * The SVG (Task 2.21) switches its colors with prefers-color-scheme inside the file, so with no saved choice it follows
+ * the browser, like the site does. BaseLayout links the ICO first, then the SVG with its type: Chrome, Edge and Firefox
+ * should take the SVG, and Safari, which has no SVG favicons, the ICO
+ * (evilmartians.com/chronicles/how-to-favicon-in-2021-six-files-that-fit-most-needs).
+ *
+ * The ICO link says sizes="32x32" (favicon.linkSizes), not the file's real 16/32/48 (favicon.sizes), as in that recipe.
+ * Chromium scores each candidate by how well its declared sizes match the 16px tab icon at every scale: a declared
+ * exact 16x16 makes the ICO look ideal, so it can beat the SVG; "32x32" ties it at best, so the SVG keeps the tab
+ * (Task 2.21a: in Brave and Edge the tab stayed on the ICO with the full list). Never "any" on the ICO either: that
+ * made Chrome pick the ICO.
+ *
+ * svgFixed (Task 2.21a): the SVG in one scheme only. When the visitor has chosen a theme or terminal view, the head
+ * script and the theme toggle point the SVG link's href at one of these (faviconFor() in src/lib/theme.ts). They aren't
+ * linked on their own.
  */
 export const SITE_ICONS = {
-  favicon: { path: '/favicon.ico', sizes: [16, 32, 48] },
+  favicon: { path: '/favicon.ico', sizes: [16, 32, 48], linkSizes: [32] },
   svg: { path: '/favicon.svg', type: 'image/svg+xml' },
+  svgFixed: { dark: '/favicon-dark.svg', light: '/favicon-light.svg' },
   appleTouch: { path: '/apple-touch-icon.png', size: 180 },
 } as const;
 

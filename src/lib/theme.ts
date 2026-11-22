@@ -14,8 +14,14 @@
 //
 // The same script starts the Inter preloads (Task 3.4a, src/lib/font-preloads.ts): unless terminal view is on, it moves
 // the links in BaseLayout's inert <template data-font-preloads> into <head>, which starts their downloads.
+//
+// It also sets the tab icon (Task 2.21a, faviconFor()): with a saved theme or terminal view it points the SVG icon link
+// at the fixed variant for what <html> now says; with no choice (or blocked storage) the link keeps /favicon.svg, which
+// follows the browser's scheme like the site does. BaseLayout puts the icon links before this script so it can find
+// them. The theme toggle sets the icon the same way on every click.
 
 import { FONT_PRELOADS_ATTR } from './font-preloads.ts';
+import { SITE_ICONS } from './seo.ts';
 
 /** localStorage key holding the visitor's saved theme choice. Absent = follow the OS setting. */
 export const THEME_STORAGE_KEY = 'theme';
@@ -35,6 +41,20 @@ export type ViewStyle = (typeof STYLES)[number];
 
 /** The one style that sets <html data-style>; global.css keys every terminal rule on it. */
 export const TERMINAL: ViewStyle = 'terminal';
+
+/** The SVG icon link in BaseLayout's <head>, the one whose href follows the choice (Task 2.21a). */
+export const FAVICON_LINK_SELECTOR = `link[rel="icon"][type="${SITE_ICONS.svg.type}"]`;
+
+/**
+ * The SVG icon for what <html> says (Task 2.21a): terminal view is always dark, so the dark variant; a chosen theme
+ * gets its variant; otherwise /favicon.svg, which follows the browser's scheme. The head script makes the same choice
+ * (tests/theme-init.test.ts checks they agree).
+ */
+export function faviconFor(dataTheme: string | undefined, dataStyle: string | undefined): string {
+  if (dataStyle === TERMINAL) return SITE_ICONS.svgFixed.dark;
+  if (isTheme(dataTheme)) return SITE_ICONS.svgFixed[dataTheme];
+  return SITE_ICONS.svg.path;
+}
 
 /** The no-flash script's text, built from the constants above at build time. */
 export const themeInitScript = `(function () {
@@ -58,6 +78,14 @@ export const themeInitScript = `(function () {
     }
   } catch {
     // No preloads: the CSS still loads the fonts.
+  }
+  try {
+    const { theme, style } = document.documentElement.dataset;
+    const icons = ${JSON.stringify(SITE_ICONS.svgFixed)};
+    const icon = style === ${JSON.stringify(TERMINAL)} ? icons.dark : ${JSON.stringify(THEMES)}.includes(theme) ? icons[theme] : null;
+    if (icon) document.querySelector(${JSON.stringify(FAVICON_LINK_SELECTOR)}).setAttribute("href", icon);
+  } catch {
+    // No choice applied, or no icon link: /favicon.svg, which follows the browser.
   }
 })();`;
 

@@ -7,6 +7,9 @@
 // Both icons are in the markup and CSS shows the one for the theme a click switches to (sun in dark,
 // moon in light), resolved like the color tokens, so the icon is right before any JS runs. The
 // build-time aria-label is neutral; the script replaces it with "Switch to light/dark theme".
+//
+// Both switches also set the tab icon (Task 2.21a): the SVG icon link's href becomes the fixed variant for the new
+// choice (faviconFor() in src/lib/theme.ts), with no reload.
 ---
 
 <button
@@ -91,9 +94,11 @@
 
 <script>
   import {
+    FAVICON_LINK_SELECTOR,
     TERMINAL,
     currentStyle,
     currentTheme,
+    faviconFor,
     nextStyle,
     nextTheme,
     saveStyle,
@@ -103,6 +108,18 @@
 
   const root = document.documentElement;
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
+  // The choices on screen, kept here rather than read back from <html>: with the fade, <html> changes a frame later, and
+  // a quick second click must still toggle back. `chosen` is the theme saved by a click (else <html>'s data-theme).
+  let style = currentStyle(root.dataset.style);
+  let chosen: string | undefined;
+
+  // The tab icon follows every click at once (Task 2.21a): the fixed variant for the choice, as the head script does on
+  // load. Outside the fade: it doesn't depend on <html>.
+  const setIcon = () =>
+    document
+      .querySelector(FAVICON_LINK_SELECTOR)
+      ?.setAttribute('href', faviconFor(chosen ?? root.dataset.theme, style));
 
   // Both switches crossfade the whole page (Task 3.4): a View Transition whose root snapshots only fade (global.css),
   // 200ms. Instant where the browser has no startViewTransition, and with reduced motion. Only the change to <html> goes
@@ -115,9 +132,6 @@
   // The footer's terminal view switch (src/components/StyleToggle.astro) is wired here, so the site keeps one inline
   // script for both choices.
   for (const button of document.querySelectorAll<HTMLButtonElement>('[data-style-toggle]')) {
-    // The style on screen, kept here rather than read back from <html>: with the fade, <html> changes a frame later, and
-    // a quick second click must still toggle back.
-    let style = currentStyle(root.dataset.style);
     button.setAttribute('aria-pressed', String(style === TERMINAL));
 
     button.addEventListener('click', () => {
@@ -128,12 +142,11 @@
         else delete root.dataset.style;
       });
       saveStyle(next, () => localStorage);
+      setIcon();
       button.setAttribute('aria-pressed', String(next === TERMINAL));
     });
   }
   const osLight = matchMedia('(prefers-color-scheme: light)');
-  // The saved choice, ahead of <html> while a fade is starting (see the style switch above); else what <html> says.
-  let chosen: string | undefined;
   const read = () => currentTheme(chosen ?? root.dataset.theme, osLight.matches);
 
   for (const button of document.querySelectorAll<HTMLButtonElement>('[data-theme-toggle]')) {
@@ -147,6 +160,7 @@
         root.dataset.theme = next;
       });
       saveTheme(next, () => localStorage);
+      setIcon();
       updateLabel();
       button.dataset.animate = '';
     });

@@ -2,11 +2,23 @@
 // ring, the nav fitting on one row at 640px (where the link first appears) and 375px, in both themes and terminal
 // view, no horizontal scroll, sitemap.xml
 // parsing as XML, and the OG image being served. The built head tags are checked in tests/seo-dist.test.ts.
+// The site icons (2.13a, 2.21), and the SVG icon link following the saved theme, terminal view and every click (2.21a).
 
 import { type APIRequestContext, type Page } from '@playwright/test';
 import { expect, test } from './fixtures.ts';
 import { getResume } from '../../src/lib/resume.ts';
-import { expectFocusRing, expectTheme, LOOKS, themeToggle, useLook } from './helpers.ts';
+import { SITE_ICONS } from '../../src/lib/seo.ts';
+import { FAVICON_LINK_SELECTOR, STYLE_STORAGE_KEY, TERMINAL, THEME_STORAGE_KEY } from '../../src/lib/theme.ts';
+import {
+  cspViolations,
+  expectFocusRing,
+  expectTheme,
+  LOOKS,
+  styleToggle,
+  themeToggle,
+  useLook,
+  watchSecurityErrors,
+} from './helpers.ts';
 
 const NAME = getResume().basics.name;
 const PAGES = ['/', '/resume', '/no-such-page'];
@@ -201,16 +213,158 @@ for (const path of PAGES) {
 }
 
 // Task 2.21: the SVG is a plain static file. Only the /* rule applies: no X-Clue (that's favicon.ico's, F.2) and no
-// long cache (its name has no content hash). favicon.ico's X-Clue is checked by tests/e2e/ctf.spec.ts.
-test('/favicon.svg answers 200 as image/svg+xml, without X-Clue or a long cache', async ({ request }) => {
-  const svg = await request.get('/favicon.svg');
-  expect(svg.status()).toBe(200);
-  expect(svg.headers()['content-type']).toBe('image/svg+xml');
-  expect(svg.headers()['x-clue']).toBeUndefined();
-  const cacheControl = svg.headers()['cache-control'] ?? '';
-  expect(cacheControl).not.toContain('immutable');
-  expect(cacheControl).not.toMatch(/max-age=[1-9]/);
-});
+// long cache (its name has no content hash). favicon.ico's X-Clue is checked by tests/e2e/ctf.spec.ts. The fixed
+// variants (Task 2.21a) are served the same way.
+for (const svgPath of [SITE_ICONS.svg.path, SITE_ICONS.svgFixed.dark, SITE_ICONS.svgFixed.light]) {
+  test(`${svgPath} answers 200 as image/svg+xml, without X-Clue or a long cache`, async ({ request }) => {
+    const svg = await request.get(svgPath);
+    expect(svg.status()).toBe(200);
+    expect(svg.headers()['content-type']).toBe('image/svg+xml');
+    expect(svg.headers()['x-clue']).toBeUndefined();
+    const cacheControl = svg.headers()['cache-control'] ?? '';
+    expect(cacheControl).not.toContain('immutable');
+    expect(cacheControl).not.toMatch(/max-age=[1-9]/);
+  });
+}
+
+// --- The tab icon follows the site's choice (Task 2.21a) ---
+// The head script points the SVG icon link at the chosen theme's fixed variant before first paint (dark in terminal
+// view); with no choice it stays /favicon.svg. Every click on the theme toggle or the terminal view switch changes it at
+// once. Headless browsers don't fetch favicons themselves, so each test fetches the href it ends on.
+
+const iconLink = (page: Page) => page.locator(`head ${FAVICON_LINK_SELECTOR}`);
+
+/** Records the icon link's href in the first animation frame, which runs before the first paint. */
+async function recordFirstFrameIcon(page: Page): Promise<void> {
+  await page.addInitScript((selector) => {
+    requestAnimationFrame(() => {
+      (window as unknown as { __firstFrameIcon?: string | null }).__firstFrameIcon = document
+        .querySelector(selector)
+        ?.getAttribute('href');
+    });
+  }, FAVICON_LINK_SELECTOR);
+}
+const firstFrameIcon = (page: Page) =>
+  page.evaluate(() => (window as unknown as { __firstFrameIcon?: string | null }).__firstFrameIcon);
+
+/** Fails the test on any icon request that fails or answers 400+. Call before page.goto. */
+function watchIconRequests(page: Page): string[] {
+  const failed: string[] = [];
+  const isFavicon = (url: string) => /^\/favicon[\w-]*\.(svg|ico)$/.test(new URL(url).pathname);
+  page.on('requestfailed', (request) => {
+    if (isFavicon(request.url())) failed.push(`${request.url()}: ${request.failure()?.errorText}`);
+  });
+  page.on('response', (response) => {
+    if (isFavicon(response.url()) && response.status() >= 400) failed.push(`${response.url()}: ${response.status()}`);
+  });
+  return failed;
+}
+
+/** The icon link has `href`, and that file loads as an SVG. */
+async function expectIcon(page: Page, href: string): Promise<void> {
+  await expect(iconLink(page)).toHaveAttribute('href', href);
+  const result = await page.evaluate(async (url) => {
+    const response = await fetch(url);
+    return { status: response.status, type: response.headers.get('content-type') };
+  }, href);
+  expect(result, href).toEqual({ status: 200, type: SITE_ICONS.svg.type });
+}
+
+const SAVED_CASES = [
+  { name: 'nothing saved', values: {}, icon: SITE_ICONS.svg.path },
+  { name: 'a saved light theme', values: { [THEME_STORAGE_KEY]: 'light' }, icon: SITE_ICONS.svgFixed.light },
+  { name: 'a saved dark theme', values: { [THEME_STORAGE_KEY]: 'dark' }, icon: SITE_ICONS.svgFixed.dark },
+  { name: 'terminal view', values: { [STYLE_STORAGE_KEY]: TERMINAL }, icon: SITE_ICONS.svgFixed.dark },
+  {
+    name: 'terminal view over a saved light theme',
+    values: { [STYLE_STORAGE_KEY]: TERMINAL, [THEME_STORAGE_KEY]: 'light' },
+    icon: SITE_ICONS.svgFixed.dark,
+  },
+] as const;
+
+for (const path of PAGES) {
+  test.describe(`tab icon on ${path}`, () => {
+    for (const { name, values, icon } of SAVED_CASES) {
+      test(`${name}: the icon link is ${icon} before first paint, with no CSP violation`, async ({ page }) => {
+        const securityErrors = await watchSecurityErrors(page);
+        const failed = watchIconRequests(page);
+        await page.addInitScript((saved) => {
+          for (const [key, value] of Object.entries(saved)) localStorage.setItem(key, value);
+        }, values);
+        await recordFirstFrameIcon(page);
+        await page.goto(path);
+        expect(await firstFrameIcon(page)).toBe(icon);
+        await expectIcon(page, icon);
+        // The ICO link never changes (Safari's icon).
+        await expect(page.locator('head link[rel="icon"]').first()).toHaveAttribute('href', SITE_ICONS.favicon.path);
+        expect(await cspViolations(page)).toEqual([]);
+        expect(securityErrors).toEqual([]);
+        expect(failed).toEqual([]);
+      });
+    }
+
+    test('the theme toggle switches the icon both ways, at once', async ({ page }) => {
+      const failed = watchIconRequests(page);
+      await page.addInitScript((key) => {
+        if (!sessionStorage.getItem('seeded')) {
+          localStorage.setItem(key, 'light');
+          sessionStorage.setItem('seeded', '1');
+        }
+      }, THEME_STORAGE_KEY);
+      await page.goto(path);
+      await expectIcon(page, SITE_ICONS.svgFixed.light);
+      await themeToggle(page).click();
+      await expectIcon(page, SITE_ICONS.svgFixed.dark);
+      await themeToggle(page).click();
+      await expectIcon(page, SITE_ICONS.svgFixed.light);
+      expect(failed).toEqual([]);
+    });
+
+    test('with nothing saved, the first click gives the opposite theme of the OS its variant', async ({ page }) => {
+      await page.emulateMedia({ colorScheme: 'light' });
+      await page.goto(path);
+      await expectIcon(page, SITE_ICONS.svg.path);
+      await themeToggle(page).click();
+      await expectIcon(page, SITE_ICONS.svgFixed.dark);
+    });
+
+    test('a saved theme: terminal view gives the dark variant, and turning it off restores the theme', async ({
+      page,
+    }) => {
+      await page.addInitScript((key) => {
+        if (!sessionStorage.getItem('seeded')) {
+          localStorage.setItem(key, 'light');
+          sessionStorage.setItem('seeded', '1');
+        }
+      }, THEME_STORAGE_KEY);
+      await page.goto(path);
+      await styleToggle(page).click();
+      await expectIcon(page, SITE_ICONS.svgFixed.dark);
+      await styleToggle(page).click();
+      await expectIcon(page, SITE_ICONS.svgFixed.light);
+    });
+
+    test('no saved theme: terminal on gives dark, off brings back /favicon.svg, also after a reload', async ({
+      page,
+    }) => {
+      const failed = watchIconRequests(page);
+      await page.goto(path);
+      await expectIcon(page, SITE_ICONS.svg.path);
+
+      await styleToggle(page).click();
+      await expectIcon(page, SITE_ICONS.svgFixed.dark);
+      await page.reload();
+      await expectIcon(page, SITE_ICONS.svgFixed.dark);
+
+      await styleToggle(page).click();
+      await expectIcon(page, SITE_ICONS.svg.path);
+      await page.reload();
+      await expectIcon(page, SITE_ICONS.svg.path);
+      expect(await page.evaluate((key) => localStorage.getItem(key), THEME_STORAGE_KEY)).toBeNull();
+      expect(failed).toEqual([]);
+    });
+  });
+}
 
 // The colors really switch with the browser's color scheme, in an image context like the tab bar's, under the site's
 // real CSP (the /* rule's style-src has no hash for the SVG's own <style>; in image context it doesn't apply). Each

@@ -65,6 +65,10 @@ const greetingScript = greet
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {/* Site icons (npm run og). Root-relative, so they work on any host. The order matters (SITE_ICONS in seo.ts).
+        Before the script below, which points the SVG link at the chosen theme's variant (Task 2.21a). */}
+    <link rel="icon" href={SITE_ICONS.favicon.path} sizes={iconSizesAttr(SITE_ICONS.favicon.linkSizes)} />
+    <link rel="icon" href={SITE_ICONS.svg.path} type={SITE_ICONS.svg.type} />
     {/* The Inter preloads, inert until the script below moves them into <head>, which it skips in terminal view (no
         Inter there). Before the script, so it can find them (src/lib/font-preloads.ts). */}
     <template data-font-preloads>
@@ -72,14 +76,12 @@ const greetingScript = greet
         <link rel="preload" href={href} as="font" type="font/woff2" crossorigin />
       ))}
     </template>
-    {/* Must stay before any stylesheet: sets data-theme and data-style before first paint (src/lib/theme.ts). */}
+    {/* Must stay before any stylesheet: sets data-theme and data-style before first paint, and the tab icon
+        (src/lib/theme.ts). */}
     <script is:inline set:html={themeInitScript} />
     <title>{title}</title>
     <meta name="description" content={description} />
     {noindex && <meta name="robots" content="noindex" />}
-    {/* Site icons (npm run og). Root-relative, so they work on any host. The order matters (SITE_ICONS in seo.ts). */}
-    <link rel="icon" href={SITE_ICONS.favicon.path} sizes={iconSizesAttr(SITE_ICONS.favicon.sizes)} />
-    <link rel="icon" href={SITE_ICONS.svg.path} type={SITE_ICONS.svg.type} />
     <link
       rel="apple-touch-icon"
       href={SITE_ICONS.appleTouch.path}

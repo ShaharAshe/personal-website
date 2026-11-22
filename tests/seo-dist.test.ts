@@ -184,22 +184,28 @@ const linksOf = (html: string, rel: string) =>
     .map(([, attrs]) => Object.fromEntries([...attrs.matchAll(/([\w-]+)="([^"]*)"/g)].map(([, k, v]) => [k, v])))
     .filter((attrs) => attrs.rel === rel);
 
-test('every page links favicon.ico, with sizes equal to the real ICO directory', { skip }, () => {
-  const sizes = readIco(fs.readFileSync(path.join(DIST, 'favicon.ico')))
-    .map(({ width, height }) => `${width}x${height}`)
-    .join(' ');
-  assert.equal(sizes, '16x16 32x32 48x48');
+// Task 2.21a: the link says sizes="32x32" although the file holds 16, 32 and 48 (the Evil Martians recipe). Chromium
+// ranks candidates by their declared sizes against the 16px tab icon: the full list declares an exact 16x16, which
+// let the ICO beat the SVG in the tab (seen in Brave and Edge); 32x32 can only tie the SVG, so the SVG keeps the tab.
+// The declared size must still be one the file really has.
+test('every page links favicon.ico with sizes="32x32", a size the ICO really holds, but not 16x16', { skip }, () => {
+  const sizes = readIco(fs.readFileSync(path.join(DIST, 'favicon.ico'))).map(
+    ({ width, height }) => `${width}x${height}`,
+  );
+  assert.deepEqual(sizes, ['16x16', '32x32', '48x48']);
   for (const { url, html } of PAGES) {
     const links = linksOf(html, 'icon');
     assert.equal(links.length, 2, `${url}: two rel="icon" (the ICO and the SVG)`);
     assert.equal(links[0].href, '/favicon.ico', url);
-    assert.equal(links[0].sizes, sizes, url);
+    assert.equal(links[0].sizes, '32x32', url);
+    for (const size of links[0].sizes.split(' ')) assert.ok(sizes.includes(size), `${url}: the ICO has no ${size}`);
+    assert.doesNotMatch(links[0].sizes, /\b16x16\b|any/i, url);
     assert.equal(links[0].type, undefined, url);
   }
 });
 
-// Task 2.21: the ICO first with explicit sizes (never "any"), then the SVG with its type and no sizes, then the
-// apple-touch-icon. Chrome, Edge and Firefox take the SVG, Safari the ICO (SITE_ICONS in src/lib/seo.ts).
+// Task 2.21: the ICO first with explicit sizes (never "any"; "32x32" since 2.21a), then the SVG with its type and no
+// sizes, then the apple-touch-icon. Chrome, Edge and Firefox take the SVG, Safari the ICO (SITE_ICONS in src/lib/seo.ts).
 test(
   'every page links the icons in this order: favicon.ico, favicon.svg (typed, no sizes), apple-touch-icon',
   { skip },
@@ -213,7 +219,7 @@ test(
       assert.deepEqual(
         iconLinks(html),
         [
-          { rel: 'icon', href: '/favicon.ico', sizes: '16x16 32x32 48x48' },
+          { rel: 'icon', href: '/favicon.ico', sizes: '32x32' },
           { rel: 'icon', href: SITE_ICONS.svg.path, type: 'image/svg+xml' },
           { rel: 'apple-touch-icon', href: '/apple-touch-icon.png', sizes: '180x180' },
         ],
@@ -234,7 +240,7 @@ test('every page links apple-touch-icon.png at 180x180', { skip }, () => {
 });
 
 test('the dist/ icons are the committed ones in public/', { skip }, () => {
-  for (const file of ['favicon.ico', 'favicon.svg', 'apple-touch-icon.png']) {
+  for (const file of ['favicon.ico', 'favicon.svg', 'favicon-dark.svg', 'favicon-light.svg', 'apple-touch-icon.png']) {
     const built = fs.readFileSync(path.join(DIST, file));
     assert.ok(built.equals(fs.readFileSync(path.join(ROOT, 'public', file))), `${file}: rebuild after npm run og`);
   }

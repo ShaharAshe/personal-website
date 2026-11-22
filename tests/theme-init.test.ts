@@ -2,13 +2,22 @@
 // a fake document and localStorage: a saved "light"/"dark" sets <html data-theme>; nothing saved, an
 // invalid value, or blocked storage sets nothing, so global.css follows the OS setting. The same script sets
 // <html data-style="terminal"> for a saved terminal view (Task F.7), and nothing otherwise. Unless terminal view is on,
-// it also moves the Inter preload template's links into <head> (Task 3.4a).
+// it also moves the Inter preload template's links into <head> (Task 3.4a). And it points the SVG icon link at the
+// chosen theme's fixed variant (dark in terminal view), leaving /favicon.svg with no choice (Task 2.21a).
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { FONT_PRELOADS_ATTR } from '../src/lib/font-preloads.ts';
-import { STYLE_STORAGE_KEY, THEME_STORAGE_KEY, THEMES, themeInitScript as script } from '../src/lib/theme.ts';
+import { SITE_ICONS } from '../src/lib/seo.ts';
+import {
+  FAVICON_LINK_SELECTOR,
+  STYLE_STORAGE_KEY,
+  THEME_STORAGE_KEY,
+  THEMES,
+  faviconFor,
+  themeInitScript as script,
+} from '../src/lib/theme.ts';
 
 type Storage = { getItem(key: string): string | null };
 
@@ -150,7 +159,11 @@ function runPreloads(storage: Storage | (() => never), withTemplate = true) {
 
 test('regular style: the preload template is moved into <head>', () => {
   const { appended, queried, content } = runPreloads(store({ [THEME_STORAGE_KEY]: 'light' }));
-  assert.deepEqual(queried, [`template[${FONT_PRELOADS_ATTR}]`]);
+  // The icon step (Task 2.21a) looks up its link too; it's tested below.
+  assert.deepEqual(
+    queried.filter((selector) => selector !== FAVICON_LINK_SELECTOR),
+    [`template[${FONT_PRELOADS_ATTR}]`],
+  );
   assert.deepEqual(appended, [content]);
 });
 
@@ -174,6 +187,94 @@ test('terminal view: the Inter preloads stay in the template (terminal view neve
 test('no preload template on the page: nothing is appended and nothing throws', () => {
   const { appended } = runPreloads(store({}), false);
   assert.deepEqual(appended, []);
+});
+
+// --- the tab icon (Task 2.21a) ---
+
+/**
+ * Runs the script with a fake document holding the SVG icon link (or none). Returns the href the script set (undefined
+ * = left as /favicon.svg) and the resulting dataset.
+ */
+function runIcon(storage: Storage | (() => never), withLink = true) {
+  let href: string | undefined;
+  const link = {
+    setAttribute(name: string, value: string) {
+      assert.equal(name, 'href');
+      href = value;
+    },
+  };
+  const dataset: Record<string, string> = {};
+  const document = {
+    documentElement: { dataset },
+    head: { append() {} },
+    // No preload template here: only the icon link can be found.
+    querySelector: (selector: string) => (selector === FAVICON_LINK_SELECTOR && withLink ? link : null),
+  };
+  const context: Record<string, unknown> = { document };
+  if (typeof storage === 'function') Object.defineProperty(context, 'localStorage', { get: storage });
+  else context.localStorage = storage;
+  vm.runInNewContext(script, context);
+  return { href, dataset };
+}
+
+const blocked = () => {
+  throw new Error('SecurityError: access denied');
+};
+
+test('the icon link selector is the SVG icon link', () => {
+  assert.equal(FAVICON_LINK_SELECTOR, 'link[rel="icon"][type="image/svg+xml"]');
+});
+
+test('icon: nothing saved leaves the link at /favicon.svg', () => {
+  assert.equal(runIcon(store({})).href, undefined);
+});
+
+test('icon: a saved "light" or "dark" points the link at that variant', () => {
+  assert.equal(runIcon(store({ [THEME_STORAGE_KEY]: 'light' })).href, SITE_ICONS.svgFixed.light);
+  assert.equal(runIcon(store({ [THEME_STORAGE_KEY]: 'dark' })).href, SITE_ICONS.svgFixed.dark);
+  assert.deepEqual(SITE_ICONS.svgFixed, { dark: '/favicon-dark.svg', light: '/favicon-light.svg' });
+});
+
+test('icon: terminal view is always the dark variant, whatever theme is saved', () => {
+  for (const theme of [undefined, 'light', 'dark']) {
+    const values: Record<string, string> = { [STYLE_STORAGE_KEY]: 'terminal' };
+    if (theme) values[THEME_STORAGE_KEY] = theme;
+    assert.equal(runIcon(store(values)).href, SITE_ICONS.svgFixed.dark, `saved theme ${theme}`);
+  }
+});
+
+test('icon: a saved "regular" style with no theme leaves /favicon.svg (terminal turned off again)', () => {
+  assert.equal(runIcon(store({ [STYLE_STORAGE_KEY]: 'regular' })).href, undefined);
+});
+
+test('icon: an invalid saved theme leaves /favicon.svg', () => {
+  for (const value of ['blue', 'LIGHT', '', 'constructor', '__proto__']) {
+    assert.equal(runIcon(store({ [THEME_STORAGE_KEY]: value })).href, undefined, value);
+  }
+});
+
+test('icon: blocked storage leaves /favicon.svg, and nothing throws', () => {
+  assert.equal(runIcon(blocked).href, undefined);
+});
+
+test('icon: no icon link on the page throws nothing, and the theme still applies', () => {
+  assert.deepEqual(runIcon(store({ [THEME_STORAGE_KEY]: 'light' }), false), {
+    href: undefined,
+    dataset: { theme: 'light' },
+  });
+});
+
+test('icon: the head script and faviconFor() agree on every saved combination', () => {
+  for (const theme of [null, 'light', 'dark', 'blue']) {
+    for (const style of [null, 'regular', 'terminal', 'Terminal']) {
+      const values: Record<string, string> = {};
+      if (theme !== null) values[THEME_STORAGE_KEY] = theme;
+      if (style !== null) values[STYLE_STORAGE_KEY] = style;
+      const { href, dataset } = runIcon(store(values));
+      assert.equal(href ?? SITE_ICONS.svg.path, faviconFor(dataset.theme, dataset.style), JSON.stringify(values));
+    }
+  }
+  assert.equal(runIcon(blocked).href ?? SITE_ICONS.svg.path, faviconFor(undefined, undefined));
 });
 
 test('the script is self-contained (inlined as-is, so no imports or exports)', () => {

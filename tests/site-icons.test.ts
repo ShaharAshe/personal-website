@@ -5,6 +5,9 @@
 //
 // public/favicon.svg (Task 2.21): small, well-formed, both color schemes from the tokens, no external reference, no
 // CTF text, and not stale. That its colors really switch is checked in a real browser (tests/e2e/seo.spec.ts).
+//
+// public/favicon-dark.svg and favicon-light.svg (Task 2.21a): the same checks, one scheme each, no <style>, and the very
+// same outlines as favicon.svg. That the site's choice picks them is checked in tests/e2e/seo.spec.ts.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -13,8 +16,12 @@ import path from 'node:path';
 import { readIco, writeIco } from '../scripts/og/ico.ts';
 import {
   FAVICON_SVG_FILE,
+  FIXED_SVG_FILES,
+  SCHEMES,
   SVG_GEOMETRY,
   faviconSvg,
+  fixedFaviconSvg,
+  fixedIconSvgSourceHash,
   iconSvgSourceHash,
   jetBrainsMonoFile,
   layoutGlyphs,
@@ -224,14 +231,19 @@ test('favicon.svg contrast: the letters on their tile reach 4.5:1 in both scheme
 });
 
 test('favicon.svg references nothing outside itself and runs nothing', () => {
-  // The xmlns namespace is a name, not a request: it's the only URL allowed.
-  const body = svg.replace(' xmlns="http://www.w3.org/2000/svg"', '');
-  for (const pattern of [/href/i, /url\(/i, /@import/i, /https?:/i, /<script/i, /\bon[a-z]+=/i, /<text/i, /<image/i]) {
-    assert.doesNotMatch(body, pattern);
-  }
+  assertSelfContained(svg, 'favicon.svg');
 });
 
-test('favicon.svg carries no CTF clue', () => {
+/** No reference outside the file and nothing that runs: the xmlns namespace is a name, not a request. */
+function assertSelfContained(text: string, label: string) {
+  const body = text.replace(' xmlns="http://www.w3.org/2000/svg"', '');
+  for (const pattern of [/href/i, /url\(/i, /@import/i, /https?:/i, /<script/i, /\bon[a-z]+=/i, /<text/i, /<image/i]) {
+    assert.doesNotMatch(body, pattern, label);
+  }
+}
+
+/** None of the CTF chain's texts, parts or words. */
+function assertNoClue(text: string, label: string) {
   const texts = [
     ...CTF_STEPS.map((_, i) => ctfClue(i)),
     CTF_COMMENT_HTML,
@@ -239,9 +251,13 @@ test('favicon.svg carries no CTF clue', () => {
     CTF_WELL_KNOWN.body.trim(),
     ctfAnswer(),
   ];
-  for (const text of texts) assert.ok(!svg.includes(text), 'a clue text is in favicon.svg');
-  assert.doesNotMatch(svg, /clue|ctf/i);
-  for (const { part } of CTF_STEPS) assert.doesNotMatch(svg, new RegExp(`\\b${part}\\b`, 'i'));
+  for (const clue of texts) assert.ok(!text.includes(clue), `a clue text is in ${label}`);
+  assert.doesNotMatch(text, /clue|ctf/i, label);
+  for (const { part } of CTF_STEPS) assert.doesNotMatch(text, new RegExp(`\\b${part}\\b`, 'i'), label);
+}
+
+test('favicon.svg carries no CTF clue', () => {
+  assertNoClue(svg, 'favicon.svg');
 });
 
 test("favicon.svg is not stale (its hash is today's name, both token blocks and the template)", () => {
@@ -269,6 +285,87 @@ test('the SVG hash changes with the initials or any of the four colors, and is t
   assert.equal(iconSourceHash('SA', dark), iconSourceHash('SA', darkTokens(css)));
   assert.throws(() => svgColors({ ...dark, '--bg': 'red' }, light), /not a #rrggbb/);
   assert.throws(() => svgColors(dark, {}), /no --bg in its light block/);
+});
+
+// --- favicon-dark.svg and favicon-light.svg (Task 2.21a) ---
+
+const blockTokens = { dark: readDarkTokens(), light: readLightTokens() };
+const fixed = Object.fromEntries(SCHEMES.map((scheme) => [scheme, fs.readFileSync(FIXED_SVG_FILES[scheme], 'utf8')]));
+const pathsOf = (text: string) => [...text.matchAll(/ d="([^"]*)"/g)].map(([, d]) => d);
+
+test('the fixed variants are where SITE_ICONS says, one per theme', () => {
+  assert.deepEqual(SCHEMES, ['dark', 'light']);
+  assert.deepEqual(SITE_ICONS.svgFixed, { dark: '/favicon-dark.svg', light: '/favicon-light.svg' });
+  for (const scheme of SCHEMES) {
+    assert.equal(FIXED_SVG_FILES[scheme], path.join(ROOT, 'public', `favicon-${scheme}.svg`));
+  }
+});
+
+for (const scheme of SCHEMES) {
+  const label = `favicon-${scheme}.svg`;
+
+  test(`${label} is small and a well-formed SVG of only rect and path, with no <style>`, () => {
+    const text = fixed[scheme];
+    assert.ok(Buffer.byteLength(text) < 4096, `${Buffer.byteLength(text)} bytes`);
+    assert.match(text, /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" viewBox="0 0 32 32">\n/);
+    assert.match(text, /\n<\/svg>\n$/);
+    const tags = [...text.matchAll(/<(\/?)([a-z]+)\b[^>]*?(\/?)>/g)].map(([, close, name, self]) =>
+      close ? `/${name}` : self ? `${name}/` : name,
+    );
+    const letters = [...initialsOf(getResume().basics.name)].length;
+    assert.deepEqual(tags, ['svg', 'rect/', ...Array(letters).fill('path/'), '/svg']);
+    assert.doesNotMatch(text, /<style|class=|@media/);
+  });
+
+  test(`${label} uses only its own block's --bg (tile) and --accent (letters)`, () => {
+    const c = svgColors(blockTokens.dark, blockTokens.light)[scheme];
+    const text = fixed[scheme];
+    assert.match(text, new RegExp(`<rect [^>]*fill="${c.bg}"/>`));
+    const paths = [...text.matchAll(/<path [^>]*>/g)];
+    assert.ok(paths.length > 0);
+    for (const [element] of paths) assert.match(element, new RegExp(`fill="${c.fg}"`));
+    for (const [hex] of text.matchAll(/#[0-9a-f]{3,8}\b/gi)) {
+      assert.ok([c.bg, c.fg].includes(hex.toLowerCase()), `raw color ${hex}`);
+    }
+  });
+
+  test(`${label} has exactly favicon.svg's outlines`, () => {
+    assert.deepEqual(pathsOf(fixed[scheme]), pathsOf(svg));
+  });
+
+  test(`${label} references nothing outside itself, runs nothing and carries no CTF clue`, () => {
+    assertSelfContained(fixed[scheme], label);
+    assertNoClue(fixed[scheme], label);
+  });
+
+  test(`${label} is not stale (its hash is today's name, its block's two tokens and the template)`, () => {
+    const expected = fixedIconSvgSourceHash(initialsOf(getResume().basics.name), blockTokens[scheme], scheme);
+    const stored = readSvgHash(fixed[scheme]);
+    assert.ok(stored, `no hash in ${label}: ${REFRESH}`);
+    assert.equal(stored, expected, `${label} is stale: ${REFRESH}`);
+  });
+}
+
+test('a fixed variant hash changes with the initials or its two colors only, and is the same for CRLF and LF', () => {
+  const css = fs.readFileSync(GLOBAL_CSS, 'utf8').replace(/\r\n/g, '\n');
+  const crlf = css.replace(/\n/g, '\r\n');
+  const tokensOf = { dark: darkTokens, light: lightTokens };
+  for (const scheme of SCHEMES) {
+    const tokens = tokensOf[scheme](css);
+    const hash = fixedIconSvgSourceHash('SA', tokens, scheme);
+    assert.equal(fixedIconSvgSourceHash('SA', tokensOf[scheme](crlf), scheme), hash);
+    assert.equal(fixedIconSvgSourceHash('SA\r\n', tokens, scheme), hash);
+    assert.notEqual(fixedIconSvgSourceHash('SB', tokens, scheme), hash);
+    assert.notEqual(fixedIconSvgSourceHash('SA', { ...tokens, '--bg': '#000000' }, scheme), hash);
+    assert.notEqual(fixedIconSvgSourceHash('SA', { ...tokens, '--accent': '#000000' }, scheme), hash);
+    assert.equal(fixedIconSvgSourceHash('SA', { ...tokens, '--text': '#000000' }, scheme), hash);
+  }
+  // The two variants differ from each other and from favicon.svg's skeleton.
+  const [dark, light] = [darkTokens(css), lightTokens(css)];
+  assert.notEqual(fixedIconSvgSourceHash('SA', dark, 'dark'), fixedIconSvgSourceHash('SA', light, 'light'));
+  assert.notEqual(fixedIconSvgSourceHash('SA', dark, 'dark'), iconSvgSourceHash('SA', dark, light));
+  assert.throws(() => fixedFaviconSvg('SA', { ...dark, '--bg': 'red' }, 'dark'), /dark --bg is not a #rrggbb/);
+  assert.throws(() => fixedFaviconSvg('SA', {}, 'light'), /no --bg in its light block/);
 });
 
 // A square "glyph" 600 wide in a 1000-unit font, cap height 700: easy to check by hand.
@@ -310,6 +407,14 @@ test('faviconSvg uses the outlines it is given, only for the right initials, and
   assert.throws(() => faviconSvg('  ', dark, light), /no initials/);
   assert.match(faviconSvg('<&', dark, light), /d="glyph:&lt;"\/>\n<path [^>]*d="glyph:&amp;"/);
   assert.equal(readSvgHash(faviconSvg('AB', dark, light)), undefined);
+});
+
+test('fixedFaviconSvg uses the outlines it is given, only for the right initials', () => {
+  const out = fixedFaviconSvg('AB', readDarkTokens(), 'dark', BOX, 'e'.repeat(64));
+  assert.ok(out.includes('d="M4 23L16 23Q16 9 4 9C4 13 4 19 4 23Z"'));
+  assert.equal(readSvgHash(out), 'e'.repeat(64));
+  assert.throws(() => fixedFaviconSvg('XY', readDarkTokens(), 'dark', BOX), /outlines are for "AB"/);
+  assert.equal(readSvgHash(fixedFaviconSvg('AB', readDarkTokens(), 'dark')), undefined);
 });
 
 test('jetBrainsMonoFile picks the 400 normal Latin face from the <Font /> CSS', () => {
