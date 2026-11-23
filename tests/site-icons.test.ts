@@ -8,6 +8,9 @@
 //
 // public/favicon-dark.svg and favicon-light.svg (Task 2.21a): the same checks, one scheme each, no <style>, and the very
 // same outlines as favicon.svg. That the site's choice picks them is checked in tests/e2e/seo.spec.ts.
+//
+// public/favicon-terminal.svg (Task 2.21b): ">_" in the terminal block's --bg and --text, the same checks, its ink
+// centered. That terminal view picks it is checked in tests/e2e/seo.spec.ts.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -19,6 +22,8 @@ import {
   FIXED_SVG_FILES,
   SCHEMES,
   SVG_GEOMETRY,
+  TERMINAL_ICON_TEXT,
+  TERMINAL_SVG_FILE,
   faviconSvg,
   fixedFaviconSvg,
   fixedIconSvgSourceHash,
@@ -27,9 +32,12 @@ import {
   layoutGlyphs,
   readSvgHash,
   svgColors,
+  terminalColors,
+  terminalFaviconSvg,
+  terminalIconSvgSourceHash,
   type FontOutlines,
 } from '../scripts/og/icon-svg.ts';
-import { lightTokens, readLightTokens } from '../scripts/og/tokens.ts';
+import { lightTokens, readLightTokens, readTerminalTokens, terminalTokens } from '../scripts/og/tokens.ts';
 import { CTF_COMMENT_HTML, CTF_CONSOLE_LINE, CTF_STEPS, CTF_WELL_KNOWN, ctfAnswer, ctfClue } from '../src/lib/ctf.mts';
 import { contrast } from './helpers/contrast.ts';
 import {
@@ -428,4 +436,113 @@ test('jetBrainsMonoFile picks the 400 normal Latin face from the <Font /> CSS', 
   ].join('');
   assert.equal(jetBrainsMonoFile(css, 'dist'), path.join('dist', '/_astro/fonts/mono-latin.woff2'));
   assert.throws(() => jetBrainsMonoFile(face('Inter-1', 400, 'U+0000-00FF', 'inter'), 'dist'), /no JetBrains Mono/);
+});
+
+// --- favicon-terminal.svg (Task 2.21b) ---
+
+const terminal = readTerminalTokens();
+const terminalSvg = fs.readFileSync(TERMINAL_SVG_FILE, 'utf8');
+
+test('the terminal icon is where SITE_ICONS says, and shows the prompt on the terminal view switch', () => {
+  assert.equal(SITE_ICONS.svgTerminal, '/favicon-terminal.svg');
+  assert.equal(TERMINAL_SVG_FILE, path.join(ROOT, 'public', 'favicon-terminal.svg'));
+  assert.equal(TERMINAL_ICON_TEXT, '>_');
+  const toggle = fs.readFileSync(path.join(ROOT, 'src', 'components', 'StyleToggle.astro'), 'utf8');
+  assert.ok(toggle.includes(TERMINAL_ICON_TEXT.replace('>', '&gt;')), 'StyleToggle.astro no longer shows ">_"');
+});
+
+test('favicon-terminal.svg is small and a well-formed SVG of one rect and one path per glyph, with no <style>', () => {
+  assert.ok(Buffer.byteLength(terminalSvg) < 4096, `${Buffer.byteLength(terminalSvg)} bytes`);
+  assert.match(terminalSvg, /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" viewBox="0 0 32 32">\n/);
+  assert.match(terminalSvg, /\n<\/svg>\n$/);
+  const tags = [...terminalSvg.matchAll(/<(\/?)([a-z]+)\b[^>]*?(\/?)>/g)].map(([, close, name, self]) =>
+    close ? `/${name}` : self ? `${name}/` : name,
+  );
+  assert.deepEqual(tags, ['svg', 'rect/', 'path/', 'path/', '/svg']);
+  assert.doesNotMatch(terminalSvg, /<style|class=|@media/);
+  for (const d of pathsOf(terminalSvg)) assert.match(d, /^M[-\d. MLQCZ]+Z$/);
+  // Not the initials: its own outlines.
+  assert.notDeepEqual(pathsOf(terminalSvg), pathsOf(svg));
+});
+
+test('favicon-terminal.svg uses only the terminal --bg (tile) and --text (glyphs), which reach 4.5:1', () => {
+  const c = terminalColors(terminal);
+  assert.deepEqual(c, { bg: '#050805', fg: '#4fdb67' });
+  assert.match(terminalSvg, new RegExp(`<rect [^>]*fill="${c.bg}"/>`));
+  for (const [element] of terminalSvg.matchAll(/<path [^>]*>/g)) assert.match(element, new RegExp(`fill="${c.fg}"`));
+  for (const [hex] of terminalSvg.matchAll(/#[0-9a-f]{3,8}\b/gi)) {
+    assert.ok([c.bg, c.fg].includes(hex.toLowerCase()), `raw color ${hex}`);
+  }
+  assert.ok(contrast(c.fg, c.bg) >= 4.5, `${contrast(c.fg, c.bg)}`);
+});
+
+test('favicon-terminal.svg references nothing outside itself, runs nothing and carries no CTF clue', () => {
+  assertSelfContained(terminalSvg, 'favicon-terminal.svg');
+  assertNoClue(terminalSvg, 'favicon-terminal.svg');
+});
+
+test("favicon-terminal.svg is not stale (its hash is the terminal block's two tokens and the template)", () => {
+  const stored = readSvgHash(terminalSvg);
+  assert.ok(stored, `no hash in favicon-terminal.svg: ${REFRESH}`);
+  assert.equal(stored, terminalIconSvgSourceHash(terminal), `favicon-terminal.svg is stale: ${REFRESH}`);
+});
+
+test('the terminal icon hash changes with its two colors only, and is the same for CRLF and LF', () => {
+  const css = fs.readFileSync(GLOBAL_CSS, 'utf8').replace(/\r\n/g, '\n');
+  const tokens = terminalTokens(css);
+  const hash = terminalIconSvgSourceHash(tokens);
+  assert.equal(terminalIconSvgSourceHash(terminalTokens(css.replace(/\n/g, '\r\n'))), hash);
+  assert.notEqual(terminalIconSvgSourceHash({ ...tokens, '--bg': '#000000' }), hash);
+  assert.notEqual(terminalIconSvgSourceHash({ ...tokens, '--text': '#000000' }), hash);
+  assert.equal(terminalIconSvgSourceHash({ ...tokens, '--accent': '#000000' }), hash);
+  // The terminal block, not the dark one (the first :root[data-style='terminal'] block holds the six tokens).
+  assert.notEqual(tokens['--bg'], readDarkTokens()['--bg']);
+  assert.deepEqual(Object.keys(tokens).sort(), ['--accent', '--bg', '--border', '--surface', '--text', '--text-muted']);
+  assert.throws(() => terminalFaviconSvg({ ...tokens, '--text': 'lime' }), /terminal --text is not a #rrggbb/);
+  assert.throws(() => terminalFaviconSvg({}), /no --bg in its terminal block/);
+});
+
+// One glyph hanging below the baseline: y from -300 to 400 units, 600 wide.
+const HANGING: FontOutlines = {
+  familyName: 'JetBrains Mono',
+  unitsPerEm: 1000,
+  capHeight: 700,
+  glyphs: [
+    {
+      char: '_',
+      advance: 600,
+      commands: [
+        { command: 'moveTo', args: [0, -300] },
+        { command: 'lineTo', args: [600, -300] },
+        { command: 'lineTo', args: [600, 400] },
+        { command: 'closePath', args: [] },
+      ],
+    },
+  ],
+};
+
+test("layoutGlyphs 'ink' centers the box around every point; 'cap' (the default) stays on the cap height", () => {
+  // Scale 20/1000: 12 wide, x 10 to 22. Cap centering puts the baseline at 23, so y 15 to 29; ink centering moves it
+  // up 6, so y 9 to 23.
+  assert.deepEqual(layoutGlyphs(HANGING), layoutGlyphs(HANGING, 'cap'));
+  assert.deepEqual(layoutGlyphs(HANGING, 'cap'), {
+    paths: ['M10 29L22 29L22 15Z'],
+    box: { left: 10, top: 15, right: 22, bottom: 29 },
+  });
+  assert.deepEqual(layoutGlyphs(HANGING, 'ink'), {
+    paths: ['M10 23L22 23L22 9Z'],
+    box: { left: 10, top: 9, right: 22, bottom: 23 },
+  });
+  // A glyph already centered on its cap height doesn't move.
+  assert.deepEqual(layoutGlyphs(BOX, 'ink'), layoutGlyphs(BOX));
+});
+
+test('terminalFaviconSvg uses the outlines it is given, only for ">_", with its ink centered', () => {
+  const font: FontOutlines = { ...HANGING, glyphs: ['>', '_'].map((char) => ({ ...HANGING.glyphs[0], char })) };
+  const out = terminalFaviconSvg(terminal, font, 'd'.repeat(64));
+  assert.deepEqual(pathsOf(out), layoutGlyphs(font, 'ink').paths);
+  assert.equal(readSvgHash(out), 'd'.repeat(64));
+  assert.throws(() => terminalFaviconSvg(terminal, BOX), /outlines are for "AB", not ">_"/);
+  assert.match(terminalFaviconSvg(terminal), /d="glyph:&gt;"\/>\n<path [^>]*d="glyph:_"/);
+  assert.equal(readSvgHash(terminalFaviconSvg(terminal)), undefined);
 });

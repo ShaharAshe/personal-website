@@ -27,14 +27,18 @@ export const OG_IMAGE = { path: '/og-image.png', width: 1200, height: 630, type:
  * (Task 2.21a: in Brave and Edge the tab stayed on the ICO with the full list). Never "any" on the ICO either: that
  * made Chrome pick the ICO.
  *
- * svgFixed (Task 2.21a): the SVG in one scheme only. When the visitor has chosen a theme or terminal view, the head
- * script and the theme toggle point the SVG link's href at one of these (faviconFor() in src/lib/theme.ts). They aren't
+ * svgFixed (Task 2.21a): the SVG in one scheme only. When the visitor has chosen a theme, the head script and the
+ * theme toggle point the SVG link's href at one of these (faviconFor() in src/lib/theme.ts). They aren't
  * linked on their own.
+ *
+ * svgTerminal (Task 2.21b): terminal view's own icon, ">_" in the terminal tokens, set the same way. It's kept apart
+ * from svgFixed, whose keys are the two themes.
  */
 export const SITE_ICONS = {
   favicon: { path: '/favicon.ico', sizes: [16, 32, 48], linkSizes: [32] },
   svg: { path: '/favicon.svg', type: 'image/svg+xml' },
   svgFixed: { dark: '/favicon-dark.svg', light: '/favicon-light.svg' },
+  svgTerminal: '/favicon-terminal.svg',
   appleTouch: { path: '/apple-touch-icon.png', size: 180 },
 } as const;
 

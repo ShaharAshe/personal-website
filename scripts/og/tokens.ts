@@ -12,6 +12,9 @@ const DARK_SELECTOR = ":root,\n:root[data-theme='dark'] {";
 // The explicit light block (Task 2.21, the light variant of favicon.svg). Its no-data-theme copy inside
 // @media (prefers-color-scheme: light) must match it (tests/design-tokens.test.ts).
 const LIGHT_SELECTOR = "\n:root[data-theme='light'] {";
+// The terminal view tokens (Task F.7), for favicon-terminal.svg (Task 2.21b). The first block with this selector holds
+// exactly the six tokens (tests/design-tokens.test.ts); later ones hold other properties.
+const TERMINAL_SELECTOR = ":root[data-style='terminal'] {";
 
 function blockTokens(css: string, selector: string): Tokens {
   const text = css.replace(/\r\n?/g, '\n');
@@ -31,6 +34,15 @@ export function darkTokens(css: string): Tokens {
 /** Custom properties in global.css's :root[data-theme='light'] block, from the CSS text. */
 export function lightTokens(css: string): Tokens {
   return blockTokens(css, LIGHT_SELECTOR);
+}
+
+/** Custom properties in global.css's first :root[data-style='terminal'] block (the terminal view tokens). */
+export function terminalTokens(css: string): Tokens {
+  return blockTokens(css, TERMINAL_SELECTOR);
+}
+
+export function readTerminalTokens(cssPath: string = GLOBAL_CSS): Tokens {
+  return terminalTokens(fs.readFileSync(cssPath, 'utf8'));
 }
 
 export function readDarkTokens(cssPath: string = GLOBAL_CSS): Tokens {

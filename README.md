@@ -92,8 +92,9 @@ flowchart LR
 icon as JetBrains Mono outlines (read from the built font with the `fontkitten` devDependency), dark or light
 through `prefers-color-scheme` inside the file, and its fixed variants `public/favicon-dark.svg` and
 `public/favicon-light.svg`. With no saved choice the tab shows `favicon.svg` (it follows the browser); a saved theme,
-or a click on the toggle, switches the icon link to that theme's variant, and terminal view to the dark one
-(Chrome, Edge and Firefox use the SVG; Safari uses the `.ico`). They aren't rebuilt on every build. After changing one of
+or a click on the toggle, switches the icon link to that theme's variant, and terminal view to its own
+`public/favicon-terminal.svg` (a green `>_` in the terminal colors). `/resume.pdf` always shows the `.ico`: the
+browser's PDF viewer has no page `<head>` for the choice to reach (Chrome, Edge and Firefox use the SVG; Safari uses the `.ico`). They aren't rebuilt on every build. After changing one of
 those inputs, run `npm run build`, then `npm run og` (it renders with the installed Edge, or Playwright's Chromium in
 CI, using the built fonts), then `npm run build` again, and commit the new images. `npm test` fails while an image is
 stale: a hash of its inputs is stored inside each PNG (and in a comment in each SVG) and compared with the current
@@ -202,7 +203,7 @@ nothing. To run the same check by hand: `npm run check:staged`.
 | `npm run preview` | Serve the production build from `dist/` (without the `_headers` headers; `npx wrangler dev` sends them) |
 | `npm run cv` | Validate `resume.yaml`, generate the `.docx` and `.pdf` into `.generated/cv/`, check the PDF is one page |
 | `npm run projects` | Fetch the tagged GitHub repos into `src/data/projects.json` |
-| `npm run og` | Render `public/og-image.png`, `public/favicon.ico`, `public/favicon.svg` (+ `favicon-dark.svg`, `favicon-light.svg`) and `public/apple-touch-icon.png` from `resume.yaml` and the design tokens (needs a build first, for the fonts) |
+| `npm run og` | Render `public/og-image.png`, `public/favicon.ico`, `public/favicon.svg` (+ `favicon-dark.svg`, `favicon-light.svg`, `favicon-terminal.svg`) and `public/apple-touch-icon.png` from `resume.yaml` and the design tokens (needs a build first, for the fonts) |
 | `npm test` | Unit and integration tests (`node:test`, `tests/**/*.test.ts`) |
 | `npm run test:update-golden` | Re-record the golden Word files that pin the resume design (only after an intended design change) |
 | `npm run test:e2e` | Playwright end-to-end tests against the existing builds (`wrangler dev` with the real headers: `dist/` on port 4322, `dist-doodle/` on 4323, so run `npm run doodle:build` first) |

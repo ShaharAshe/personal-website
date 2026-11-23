@@ -19,6 +19,11 @@
 // outlines in one block's two colors as attributes, with no <style>. The head script and the theme toggle point the SVG
 // icon link at one of them when the visitor has chosen a theme or terminal view (src/lib/theme.ts); with no choice it
 // stays favicon.svg. Each carries its own stale hash (fixedIconSvgSourceHash()).
+//
+// Task 2.21b: public/favicon-terminal.svg (terminalFaviconSvg()), terminal view's own icon: ">_" (TERMINAL_ICON_TEXT, as
+// on the footer's switch) in the same JetBrains Mono outlines and geometry, --text on --bg from global.css's terminal
+// block, as attributes, no <style>. Its ink is centered vertically (the "_" sits below the baseline, so the initials'
+// cap-height centering would put it low). Its own stale hash: terminalIconSvgSourceHash().
 
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -40,6 +45,18 @@ export const FIXED_SVG_FILES: Record<Scheme, string> = {
   dark: path.join(PUBLIC, SITE_ICONS.svgFixed.dark.slice(1)),
   light: path.join(PUBLIC, SITE_ICONS.svgFixed.light.slice(1)),
 };
+
+/** Terminal view's icon text, the prompt on its footer switch (src/components/StyleToggle.astro). */
+export const TERMINAL_ICON_TEXT = '>_';
+
+/** public/favicon-terminal.svg (Task 2.21b). */
+export const TERMINAL_SVG_FILE = path.join(PUBLIC, SITE_ICONS.svgTerminal.slice(1));
+
+/**
+ * How the glyphs sit vertically: 'cap' centers the cap height (the initials, like the PNGs); 'ink' centers the box
+ * around every point (">_", whose "_" hangs below the baseline).
+ */
+export type GlyphAlign = 'cap' | 'ink';
 
 /** The 32px favicon's look (ICON_STYLES[32] in icon-html.ts), in viewBox units. */
 export const SVG_GEOMETRY = { size: 32, radius: 6, fontSize: 20 } as const;
@@ -93,14 +110,24 @@ function num(n: number): string {
 
 /**
  * Each glyph's outline moved into the viewBox: scaled to the font size, y flipped, centered like the PNGs (on the
- * advance widths horizontally, on the cap height vertically, as `text-box: trim-both cap alphabetic` does).
+ * advance widths horizontally, on the cap height vertically, as `text-box: trim-both cap alphabetic` does). With
+ * `align` 'ink', the baseline then moves so the box around every point is centered vertically instead.
  * Returns the path data per glyph and the box around every point (control points included).
  */
-export function layoutGlyphs(font: FontOutlines) {
+export function layoutGlyphs(font: FontOutlines, align: GlyphAlign = 'cap') {
+  const { size, fontSize } = SVG_GEOMETRY;
+  const scale = fontSize / font.unitsPerEm;
+  const capBaseline = (size + font.capHeight * scale) / 2;
+  const capped = placeGlyphs(font, capBaseline);
+  if (align === 'cap') return capped;
+  return placeGlyphs(font, capBaseline + size / 2 - (capped.box.top + capped.box.bottom) / 2);
+}
+
+/** The glyphs centered on their advance widths, on `baseline`. */
+function placeGlyphs(font: FontOutlines, baseline: number) {
   const { size, fontSize } = SVG_GEOMETRY;
   const scale = fontSize / font.unitsPerEm;
   const width = font.glyphs.reduce((sum, g) => sum + g.advance, 0) * scale;
-  const baseline = (size + font.capHeight * scale) / 2;
   const box = { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity };
   let pen = (size - width) / 2;
   const paths = font.glyphs.map((glyph) => {
@@ -145,14 +172,14 @@ export function faviconSvg(initials: string, dark: Tokens, light: Tokens, font?:
   ].join('\n');
 }
 
-/** Each initial's path data: the laid-out outlines, or without `font` a placeholder naming the letter. */
-function pathData(initials: string, font?: FontOutlines): string[] {
-  const chars = [...lf(initials).trim()];
+/** Each character's path data: the laid-out outlines, or without `font` a placeholder naming the character. */
+function pathData(text: string, font?: FontOutlines, align: GlyphAlign = 'cap'): string[] {
+  const chars = [...lf(text).trim()];
   if (chars.length === 0) throw new Error('no initials for favicon.svg');
   if (font && font.glyphs.map((g) => g.char).join('') !== chars.join('')) {
     throw new Error(`the outlines are for "${font.glyphs.map((g) => g.char).join('')}", not "${chars.join('')}"`);
   }
-  return font ? layoutGlyphs(font).paths : chars.map((ch) => `glyph:${escapeXml(ch)}`);
+  return font ? layoutGlyphs(font, align).paths : chars.map((ch) => `glyph:${escapeXml(ch)}`);
 }
 
 /**
@@ -179,6 +206,29 @@ export function fixedFaviconSvg(
   ].join('\n');
 }
 
+/** The terminal icon's two colors (Task 2.21b): the terminal --bg (tile) and --text (glyphs). */
+export function terminalColors(tokens: Tokens) {
+  return { bg: color(tokens, '--bg', 'terminal'), fg: color(tokens, '--text', 'terminal') };
+}
+
+/**
+ * Terminal view's icon (Task 2.21b): ">_" on the same tile, in the terminal block's colors as attributes, with no
+ * <style> and no class. The glyphs' ink is centered. `tokens` is the terminal block's.
+ */
+export function terminalFaviconSvg(tokens: Tokens, font?: FontOutlines, hash?: string): string {
+  const data = pathData(TERMINAL_ICON_TEXT, font, 'ink');
+  const c = terminalColors(tokens);
+  const { size, radius } = SVG_GEOMETRY;
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}">`,
+    ...(hash ? [`<!-- ${SVG_HASH_KEY}: ${hash} -->`] : []),
+    `<rect width="${size}" height="${size}" rx="${radius}" fill="${c.bg}"/>`,
+    ...data.map((d) => `<path fill="${c.fg}" d="${d}"/>`),
+    '</svg>',
+    '',
+  ].join('\n');
+}
+
 const sha256 = (text: string) => crypto.createHash('sha256').update(lf(text), 'utf8').digest('hex');
 
 /** sha256 of the skeleton (no outlines, no hash line), with LF line endings: the same on Windows and Linux. */
@@ -189,6 +239,11 @@ export function iconSvgSourceHash(initials: string, dark: Tokens, light: Tokens)
 /** The same for a fixed variant: its skeleton, so only the initials and that block's two colors count. */
 export function fixedIconSvgSourceHash(initials: string, tokens: Tokens, scheme: Scheme): string {
   return sha256(fixedFaviconSvg(lf(initials), tokens, scheme));
+}
+
+/** The same for the terminal icon: its skeleton, so only the template and the terminal --bg and --text count. */
+export function terminalIconSvgSourceHash(tokens: Tokens): string {
+  return sha256(terminalFaviconSvg(tokens));
 }
 
 /** The hash stored in a favicon.svg's comment, or undefined. */

@@ -228,9 +228,12 @@ test.describe('site icons', () => {
       </section>`;
     // The SVG icon in both schemes: the committed fixed variants (Task 2.21a), which are favicon.svg's two looks
     // (tests/site-icons.test.ts checks the same outlines and colors). Each is rasterized at 16, 32 and 48 px (as a
-    // browser does for the tab) and shown 1× and 8× pixelated.
+    // browser does for the tab) and shown 1× and 8× pixelated. Terminal view's ">_" icon (Task 2.21b) comes last.
     const variants = Object.fromEntries(
-      Object.values(SITE_ICONS.svgFixed).map((file) => [file.slice(1), fs.readFileSync(`public${file}`, 'utf8')]),
+      [...Object.values(SITE_ICONS.svgFixed), SITE_ICONS.svgTerminal].map((file) => [
+        file.slice(1),
+        fs.readFileSync(`public${file}`, 'utf8'),
+      ]),
     );
     const svgStrip = (bg: string, fg: string) => `
       <section style="background:${bg};color:${fg};padding:16px;display:flex;flex-wrap:wrap;gap:32px;align-items:flex-end">

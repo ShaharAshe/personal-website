@@ -31,7 +31,8 @@ These npm scripts must exist and keep working (create them during scaffolding):
 - `npm run cv`: generate the resume `.docx` and `.pdf` from `resume.yaml`, then check the PDF is exactly one page
 - `npm run projects`: fetch public repos from GitHub into `src/data/projects.json`
 - `npm run og`: render the committed `public/og-image.png`, `public/favicon.ico`, `public/favicon.svg` (and its fixed
-  variants `favicon-dark.svg` / `favicon-light.svg`, picked by the site's theme choice) and
+  variants `favicon-dark.svg` / `favicon-light.svg`, picked by the site's theme choice, and `favicon-terminal.svg`,
+  the `>_` icon for terminal view) and
   `public/apple-touch-icon.png` from `resume.yaml` and the tokens (after a build; `npm test` fails while one is stale)
 - `npm test`: unit + integration tests (`node:test`, `tests/**/*.test.ts`); LibreOffice tests skip if `soffice` isn't found
 - `npm run check`: `astro check` + lint + `npm test` + the site checks (see "Definition of done")

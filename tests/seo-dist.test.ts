@@ -240,7 +240,14 @@ test('every page links apple-touch-icon.png at 180x180', { skip }, () => {
 });
 
 test('the dist/ icons are the committed ones in public/', { skip }, () => {
-  for (const file of ['favicon.ico', 'favicon.svg', 'favicon-dark.svg', 'favicon-light.svg', 'apple-touch-icon.png']) {
+  for (const file of [
+    'favicon.ico',
+    'favicon.svg',
+    'favicon-dark.svg',
+    'favicon-light.svg',
+    'favicon-terminal.svg',
+    'apple-touch-icon.png',
+  ]) {
     const built = fs.readFileSync(path.join(DIST, file));
     assert.ok(built.equals(fs.readFileSync(path.join(ROOT, 'public', file))), `${file}: rebuild after npm run og`);
   }

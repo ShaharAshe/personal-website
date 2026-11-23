@@ -148,13 +148,23 @@ test('faviconFor: a chosen theme gets its fixed variant', () => {
   assert.equal(faviconFor('light', 'regular'), SITE_ICONS.svgFixed.light);
 });
 
-test('faviconFor: terminal view is always dark, whatever the theme', () => {
-  for (const theme of [undefined, 'light', 'dark']) assert.equal(faviconFor(theme, TERMINAL), '/favicon-dark.svg');
+test('faviconFor: terminal view gets its own ">_" icon, whatever the theme (Task 2.21b)', () => {
+  for (const theme of [undefined, 'light', 'dark', 'blue']) {
+    assert.equal(faviconFor(theme, TERMINAL), '/favicon-terminal.svg', `theme ${theme}`);
+  }
+  assert.equal(SITE_ICONS.svgTerminal, '/favicon-terminal.svg');
 });
 
-test('faviconFor: no theme, terminal on then off gives dark, then /favicon.svg again (not a fixed variant)', () => {
-  assert.equal(faviconFor(undefined, nextStyle('regular')), SITE_ICONS.svgFixed.dark);
+test('faviconFor: no theme, terminal on then off gives the terminal icon, then /favicon.svg again', () => {
+  assert.equal(faviconFor(undefined, nextStyle('regular')), SITE_ICONS.svgTerminal);
   assert.equal(faviconFor(undefined, nextStyle(TERMINAL)), SITE_ICONS.svg.path);
+});
+
+test('faviconFor: a saved theme, terminal on then off gives the terminal icon, then that theme again', () => {
+  for (const theme of ['light', 'dark'] as const) {
+    assert.equal(faviconFor(theme, nextStyle('regular')), SITE_ICONS.svgTerminal);
+    assert.equal(faviconFor(theme, nextStyle(TERMINAL)), SITE_ICONS.svgFixed[theme]);
+  }
 });
 
 // --- Built homepage ---

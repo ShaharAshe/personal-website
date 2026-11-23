@@ -1585,13 +1585,67 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       (moving `themeInitScript` to its own module) is a small separate cleanup. Chrome and Firefox on the live site
       not checked yet.
 
+- [x] **2.21b A `>_` tab icon for terminal view, and the /resume.pdf icon note** — Terminal view gets its own fixed
+  SVG icon instead of borrowing `favicon-dark.svg`: `>_`, the prompt on the footer switch, in the terminal colors. A
+  theme or no choice stays exactly as in 2.21a. Replaces the F.7 "maybe: a `>_` favicon" note.
+  - Depends on: 2.21a, F.7.
+  - Files: new `public/favicon-terminal.svg`; `scripts/og/icon-svg.ts` (`TERMINAL_ICON_TEXT`, `TERMINAL_SVG_FILE`,
+    `terminalColors`, `terminalFaviconSvg`, `terminalIconSvgSourceHash`, `layoutGlyphs(font, align)`),
+    `scripts/og/render-icons.ts`, `scripts/og/tokens.ts` (`terminalTokens`, `readTerminalTokens`), `src/lib/seo.ts`
+    (`SITE_ICONS.svgTerminal`), `src/lib/theme.ts` (`faviconFor`, the head script), a comment in
+    `src/components/ThemeToggle.astro`; tests (`site-icons`, `theme-init`, `theme-toggle`, `seo-dist`, `cache-headers`,
+    e2e `seo`, `fonts`, `review-screenshots`); design-doc §9.5, §11, §12, README, CLAUDE.md.
+  - **Done (2026-11-23).**
+    - **The look (user choice):** `>` and `_` as JetBrains Mono 400 outlines from the built woff2 (same `readGlyphs`,
+      font size 20, 32-unit tile with `rx` 6, as the SA SVGs). Both glyphs in the terminal `--text` `#4fdb67` on the
+      terminal `--bg` `#050805`, read from global.css's first `:root[data-style='terminal']` block, as attributes. No
+      `<style>`, no class, no clue, no external reference, 483 bytes, with its own stale hash (the skeleton: template,
+      placeholders, the two colors). Options not taken: both glyphs in `--accent` `#a6f5b3` (mirrors the SA icons, but
+      pale), or a two-tone `>` `--text` / `_` `--accent`.
+    - **Vertical placement (user choice):** the ink is centered (y 9.05–22.95, x 5.7–26.8). The initials' cap-height
+      centering put `>_` 2.35 units low, since `_` hangs below the baseline. `layoutGlyphs` got an `align` option
+      (`'cap'` default, unchanged; `'ink'` moves the baseline so the box is centered). `npm run og` refuses to write if
+      the outlines aren't JetBrains Mono or leave the 8% padding. `favicon.ico`, `favicon.svg`, `favicon-dark.svg`,
+      `favicon-light.svg`, `apple-touch-icon.png` and `og-image.png` came out byte-identical.
+    - **Contrast** (WCAG, against the approximate tab bars of 2.21):
+
+      | | on tile | tile on light bars (`#dee1e6` / `#fff` / `#f0f0f4`) | glyphs on dark bars (`#202124` / `#35363a` / `#1c1b22`) |
+      |---|---|---|---|
+      | `>_` `#4fdb67` on `#050805` | 11.18 | 15.35 / 20.13 / 17.71 | 8.94 / 6.70 / 9.49 |
+
+      On dark bars the tile blends in (1.25 / 1.67 / 1.18), like the dark SA icon; the glyphs carry it. `npm test`
+      keeps glyphs-on-tile at 4.5:1 or more.
+    - **The choice:** `faviconFor(dataTheme, dataStyle)` returns `SITE_ICONS.svgTerminal` in terminal view, whatever the
+      theme; the head script's terminal branch writes the same path. `svgTerminal` is its own key, not in `svgFixed`
+      (whose keys are the two themes). The toggle script was unchanged: it already calls `faviconFor`.
+    - **By-eye check (the 2.21a lesson), by the user, fresh private windows, Brave and Edge, on `wrangler dev`:** `>_`
+      appears at once on turning terminal view on from light and from dark, stays after a reload and on `/resume` and
+      the 404 page; turning it off restores the SA icon; readable at tab size, strokes unchanged. `/resume.pdf` shows
+      the dark ICO.
+    - **Known limitation, not fixed:** `/resume.pdf` opens in the browser's PDF viewer, which has no `<head>`, so its
+      tab always shows `/favicon.ico` (dark); the site's choice lives in `localStorage` and can't reach it. A possible
+      Worker-based improvement is noted under 3.3, to decide then.
+    - **CSP:** 787 characters before and after (only the head script's hash changed). No `img-src` change, no `data:`
+      or `blob:`. **JS:** homepage 13.72 → 13.74 KB gzipped (site 2.72 → 2.74 KB, beacon 11.00 KB).
+    - Tests: `npm test` 722 → 732 (`site-icons` +8: file, look, colors and contrast, self-contained, no clue, stale
+      hash, `align` 'ink' vs 'cap', `>_` still on StyleToggle; `theme-toggle` +1; `theme-init` +1). e2e 443 → 451 on
+      Windows and on Linux (`npm run test:e2e:linux`: 451; `seo.spec.ts` `--repeat-each=5`: 530 passed; `fonts.spec.ts`
+      not repeated, by user decision: only a path was added to its list). New or changed e2e (`seo.spec.ts`, in
+      `LIVE_SPECS`): terminal view, alone and over a saved light or dark theme, gives `/favicon-terminal.svg` before
+      first paint on `/`, `/resume` and the 404 page, with no CSP violation and no failed icon request; the footer
+      switch gives it at once, and turning it off restores the saved theme's variant (light and dark), or
+      `/favicon.svg` with no saved theme, also after a reload; the file is served 200 `image/svg+xml`, without `X-Clue`
+      or a long cache. `screenshots/icons.png` shows the terminal icon at 16/32/48 px on both strips.
+    - Open: Chrome and Firefox on the live site not checked by eye (as in 2.21a). The toggle bundle's leftover copy of
+      the head script's template (2.21a's open item) is still there.
+
 ## Fun (after MVP)
 
 Small extras for curious visitors, added after the MVP is live (2.16) and before Milestone 3. None of them
 is part of the recruiter path: the homepage, `/resume` and the PDF work exactly the same without them. Each
 one is its own task (one at a time, plan first, tests + e2e + screenshots as usual). Decided on 2026-11-12.
 
-Note: maybe: a `>_` favicon while terminal view is on (a JS swap), just for fun.
+Note: the `>_` favicon for terminal view was done as Task 2.21b.
 
 - [x] **F.1 Console greeting** — A friendly message for people who open DevTools: an ASCII "SA", an "Open to
   work" line with a link to LinkedIn, and a line with a link to the GitHub profile (the repo is still private, so
@@ -2101,6 +2155,11 @@ Note: maybe: a `>_` favicon while terminal view is on (a JS swap), just for fun.
     hashes.
   - Verify: Submitting works end-to-end to a real inbox; spam paths rejected correctly.
   - Depends on: 1.5, 2.9; needs action item #8.
+  - Optional note (from 2.21b, to decide then): once a Worker serves routes, it could vary `/favicon.ico` on the
+    `Sec-CH-Prefers-Color-Scheme` client hint, so `/resume.pdf`'s tab (the PDF viewer has no `<head>`, so it always
+    shows the dark ICO) follows the browser's scheme. Limits: Chromium only (the hint needs `Accept-CH` and arrives
+    only on later requests); the Worker must keep the CTF's `X-Clue` on `/favicon.ico`; browsers cache favicons hard,
+    so a switch may not show until the cache expires. The site's own choice (localStorage) still can't reach it.
 
 - [x] **3.4 Motion polish** — Section entrance (once), card hover, theme-switch transition, View Transitions, `prefers-reduced-motion` disables all of it.
   - Files: `src/styles/global.css`, relevant components, `astro.config.mjs`.
