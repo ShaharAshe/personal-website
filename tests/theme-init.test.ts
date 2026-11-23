@@ -3,7 +3,8 @@
 // invalid value, or blocked storage sets nothing, so global.css follows the OS setting. The same script sets
 // <html data-style="terminal"> for a saved terminal view (Task F.7), and nothing otherwise. Unless terminal view is on,
 // it also moves the Inter preload template's links into <head> (Task 3.4a). And it points the SVG icon link at the
-// chosen theme's fixed variant (dark in terminal view), leaving /favicon.svg with no choice (Task 2.21a).
+// chosen theme's fixed variant, leaving /favicon.svg with no choice (Task 2.21a), and at the ">_" icon in terminal view
+// (Task 2.21b).
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -235,12 +236,23 @@ test('icon: a saved "light" or "dark" points the link at that variant', () => {
   assert.deepEqual(SITE_ICONS.svgFixed, { dark: '/favicon-dark.svg', light: '/favicon-light.svg' });
 });
 
-test('icon: terminal view is always the dark variant, whatever theme is saved', () => {
-  for (const theme of [undefined, 'light', 'dark']) {
+test('icon: terminal view is the ">_" icon, whatever theme is saved (Task 2.21b)', () => {
+  for (const theme of [undefined, 'light', 'dark', 'blue']) {
     const values: Record<string, string> = { [STYLE_STORAGE_KEY]: 'terminal' };
     if (theme) values[THEME_STORAGE_KEY] = theme;
-    assert.equal(runIcon(store(values)).href, SITE_ICONS.svgFixed.dark, `saved theme ${theme}`);
+    assert.equal(runIcon(store(values)).href, SITE_ICONS.svgTerminal, `saved theme ${theme}`);
   }
+  assert.equal(SITE_ICONS.svgTerminal, '/favicon-terminal.svg');
+});
+
+test('icon: terminal view with blocked theme storage is still the ">_" icon', () => {
+  const themeThrows: Storage = {
+    getItem(key) {
+      if (key === THEME_STORAGE_KEY) throw new Error('SecurityError');
+      return key === STYLE_STORAGE_KEY ? 'terminal' : null;
+    },
+  };
+  assert.equal(runIcon(themeThrows).href, SITE_ICONS.svgTerminal);
 });
 
 test('icon: a saved "regular" style with no theme leaves /favicon.svg (terminal turned off again)', () => {

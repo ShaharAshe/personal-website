@@ -112,6 +112,7 @@ test.describe('cache headers', () => {
     '/favicon.svg',
     '/favicon-dark.svg',
     '/favicon-light.svg',
+    '/favicon-terminal.svg',
     '/apple-touch-icon.png',
     '/resume.pdf',
     '/robots.txt',

@@ -8,6 +8,7 @@
 //                                (scripts/og/icon-svg.ts), no browser involved
 //   public/favicon-dark.svg      Task 2.21a: the same outlines in the dark colors only, no <style>
 //   public/favicon-light.svg     and in the light colors only (the site's theme choice picks one, src/lib/theme.ts)
+//   public/favicon-terminal.svg  Task 2.21b: ">_" in the same font and geometry, terminal colors, for terminal view
 //
 // Each size is rendered at its real pixel size. Every PNG carries the source hash (tEXt "icon-source-sha256"), the SVG
 // its own in a comment; tests/site-icons.test.ts fails when one is stale. Before writing, it checks that JetBrains Mono
@@ -37,6 +38,8 @@ import {
   FIXED_SVG_FILES,
   SCHEMES,
   SVG_GEOMETRY,
+  TERMINAL_ICON_TEXT,
+  TERMINAL_SVG_FILE,
   faviconSvg,
   fixedFaviconSvg,
   fixedIconSvgSourceHash,
@@ -44,9 +47,11 @@ import {
   jetBrainsMonoFile,
   layoutGlyphs,
   readGlyphs,
+  terminalFaviconSvg,
+  terminalIconSvgSourceHash,
 } from './icon-svg.ts';
 import { withPngText } from './png.ts';
-import { readDarkTokens, readLightTokens } from './tokens.ts';
+import { readDarkTokens, readLightTokens, readTerminalTokens } from './tokens.ts';
 
 const fontCss = readFontCss();
 const initials = initialsOf(getResume().basics.name);
@@ -62,16 +67,26 @@ const outlines = readGlyphs(jetBrainsMonoFile(fontCss, DIST), initials);
 if (!outlines.familyName.startsWith('JetBrains Mono')) {
   problems.push(`favicon.svg: the outlines come from ${outlines.familyName}, not JetBrains Mono`);
 }
-const { box } = layoutGlyphs(outlines);
 const svgPad = Math.round(SVG_GEOMETRY.size * 0.08);
-if (
-  box.left < svgPad ||
-  box.top < svgPad ||
-  box.right > SVG_GEOMETRY.size - svgPad ||
-  box.bottom > SVG_GEOMETRY.size - svgPad
-) {
+const outsidePadding = ({ left, top, right, bottom }: ReturnType<typeof layoutGlyphs>['box']) =>
+  left < svgPad || top < svgPad || right > SVG_GEOMETRY.size - svgPad || bottom > SVG_GEOMETRY.size - svgPad;
+const { box } = layoutGlyphs(outlines);
+if (outsidePadding(box)) {
   problems.push(`favicon.svg: the initials leave the ${svgPad}px padding (${JSON.stringify(box)})`);
 }
+// Terminal view's ">_" (Task 2.21b): the same font file, its ink centered, inside the same padding.
+const terminalOutlines = readGlyphs(jetBrainsMonoFile(fontCss, DIST), TERMINAL_ICON_TEXT);
+if (!terminalOutlines.familyName.startsWith('JetBrains Mono')) {
+  problems.push(`favicon-terminal.svg: the outlines come from ${terminalOutlines.familyName}, not JetBrains Mono`);
+}
+const terminalBox = layoutGlyphs(terminalOutlines, 'ink').box;
+if (outsidePadding(terminalBox)) {
+  problems.push(
+    `favicon-terminal.svg: "${TERMINAL_ICON_TEXT}" leaves the ${svgPad}px padding (${JSON.stringify(terminalBox)})`,
+  );
+}
+const terminalTokens = readTerminalTokens();
+const terminalSvg = terminalFaviconSvg(terminalTokens, terminalOutlines, terminalIconSvgSourceHash(terminalTokens));
 const svg = faviconSvg(initials, tokens, light, outlines, iconSvgSourceHash(initials, tokens, light));
 // The fixed variants (Task 2.21a): the same outlines, each scheme's tokens.
 const schemeTokens = { dark: tokens, light };
@@ -133,11 +148,13 @@ fs.writeFileSync(FAVICON_FILE, ico);
 fs.writeFileSync(APPLE_TOUCH_ICON_FILE, apple);
 fs.writeFileSync(FAVICON_SVG_FILE, svg);
 for (const [file, text] of fixedSvgs) fs.writeFileSync(file, text);
+fs.writeFileSync(TERMINAL_SVG_FILE, terminalSvg);
 const written: [file: string, bytes: number][] = [
   [FAVICON_FILE, ico.length],
   [APPLE_TOUCH_ICON_FILE, apple.length],
   [FAVICON_SVG_FILE, Buffer.byteLength(svg)],
   ...fixedSvgs.map(([file, text]): [string, number] => [file, Buffer.byteLength(text)]),
+  [TERMINAL_SVG_FILE, Buffer.byteLength(terminalSvg)],
 ];
 for (const [file, bytes] of written) {
   console.log(`Wrote ${path.relative(ROOT, file)} (${bytes} bytes).`);

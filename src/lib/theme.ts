@@ -15,8 +15,8 @@
 // The same script starts the Inter preloads (Task 3.4a, src/lib/font-preloads.ts): unless terminal view is on, it moves
 // the links in BaseLayout's inert <template data-font-preloads> into <head>, which starts their downloads.
 //
-// It also sets the tab icon (Task 2.21a, faviconFor()): with a saved theme or terminal view it points the SVG icon link
-// at the fixed variant for what <html> now says; with no choice (or blocked storage) the link keeps /favicon.svg, which
+// It also sets the tab icon (Task 2.21a, faviconFor()): with a saved theme it points the SVG icon link at that theme's
+// fixed variant, in terminal view at the ">_" icon (Task 2.21b); with no choice (or blocked storage) the link keeps /favicon.svg, which
 // follows the browser's scheme like the site does. BaseLayout puts the icon links before this script so it can find
 // them. The theme toggle sets the icon the same way on every click.
 
@@ -46,12 +46,12 @@ export const TERMINAL: ViewStyle = 'terminal';
 export const FAVICON_LINK_SELECTOR = `link[rel="icon"][type="${SITE_ICONS.svg.type}"]`;
 
 /**
- * The SVG icon for what <html> says (Task 2.21a): terminal view is always dark, so the dark variant; a chosen theme
- * gets its variant; otherwise /favicon.svg, which follows the browser's scheme. The head script makes the same choice
- * (tests/theme-init.test.ts checks they agree).
+ * The SVG icon for what <html> says (Task 2.21a): terminal view gets its own ">_" icon (Task 2.21b), whatever the
+ * theme; a chosen theme gets its variant; otherwise /favicon.svg, which follows the browser's scheme. The head script
+ * makes the same choice (tests/theme-init.test.ts checks they agree).
  */
 export function faviconFor(dataTheme: string | undefined, dataStyle: string | undefined): string {
-  if (dataStyle === TERMINAL) return SITE_ICONS.svgFixed.dark;
+  if (dataStyle === TERMINAL) return SITE_ICONS.svgTerminal;
   if (isTheme(dataTheme)) return SITE_ICONS.svgFixed[dataTheme];
   return SITE_ICONS.svg.path;
 }
@@ -82,7 +82,7 @@ export const themeInitScript = `(function () {
   try {
     const { theme, style } = document.documentElement.dataset;
     const icons = ${JSON.stringify(SITE_ICONS.svgFixed)};
-    const icon = style === ${JSON.stringify(TERMINAL)} ? icons.dark : ${JSON.stringify(THEMES)}.includes(theme) ? icons[theme] : null;
+    const icon = style === ${JSON.stringify(TERMINAL)} ? ${JSON.stringify(SITE_ICONS.svgTerminal)} :${JSON.stringify(THEMES)}.includes(theme) ? icons[theme] : null;
     if (icon) document.querySelector(${JSON.stringify(FAVICON_LINK_SELECTOR)}).setAttribute("href", icon);
   } catch {
     // No choice applied, or no icon link: /favicon.svg, which follows the browser.

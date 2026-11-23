@@ -214,8 +214,13 @@ for (const path of PAGES) {
 
 // Task 2.21: the SVG is a plain static file. Only the /* rule applies: no X-Clue (that's favicon.ico's, F.2) and no
 // long cache (its name has no content hash). favicon.ico's X-Clue is checked by tests/e2e/ctf.spec.ts. The fixed
-// variants (Task 2.21a) are served the same way.
-for (const svgPath of [SITE_ICONS.svg.path, SITE_ICONS.svgFixed.dark, SITE_ICONS.svgFixed.light]) {
+// variants (Task 2.21a) and the terminal icon (Task 2.21b) are served the same way.
+for (const svgPath of [
+  SITE_ICONS.svg.path,
+  SITE_ICONS.svgFixed.dark,
+  SITE_ICONS.svgFixed.light,
+  SITE_ICONS.svgTerminal,
+]) {
   test(`${svgPath} answers 200 as image/svg+xml, without X-Clue or a long cache`, async ({ request }) => {
     const svg = await request.get(svgPath);
     expect(svg.status()).toBe(200);
@@ -228,8 +233,8 @@ for (const svgPath of [SITE_ICONS.svg.path, SITE_ICONS.svgFixed.dark, SITE_ICONS
 }
 
 // --- The tab icon follows the site's choice (Task 2.21a) ---
-// The head script points the SVG icon link at the chosen theme's fixed variant before first paint (dark in terminal
-// view); with no choice it stays /favicon.svg. Every click on the theme toggle or the terminal view switch changes it at
+// The head script points the SVG icon link at the chosen theme's fixed variant before first paint, or in terminal view at
+// the ">_" icon (Task 2.21b); with no choice it stays /favicon.svg. Every click on the theme toggle or the terminal view switch changes it at
 // once. Headless browsers don't fetch favicons themselves, so each test fetches the href it ends on.
 
 const iconLink = (page: Page) => page.locator(`head ${FAVICON_LINK_SELECTOR}`);
@@ -274,11 +279,16 @@ const SAVED_CASES = [
   { name: 'nothing saved', values: {}, icon: SITE_ICONS.svg.path },
   { name: 'a saved light theme', values: { [THEME_STORAGE_KEY]: 'light' }, icon: SITE_ICONS.svgFixed.light },
   { name: 'a saved dark theme', values: { [THEME_STORAGE_KEY]: 'dark' }, icon: SITE_ICONS.svgFixed.dark },
-  { name: 'terminal view', values: { [STYLE_STORAGE_KEY]: TERMINAL }, icon: SITE_ICONS.svgFixed.dark },
+  { name: 'terminal view', values: { [STYLE_STORAGE_KEY]: TERMINAL }, icon: SITE_ICONS.svgTerminal },
   {
     name: 'terminal view over a saved light theme',
     values: { [STYLE_STORAGE_KEY]: TERMINAL, [THEME_STORAGE_KEY]: 'light' },
-    icon: SITE_ICONS.svgFixed.dark,
+    icon: SITE_ICONS.svgTerminal,
+  },
+  {
+    name: 'terminal view over a saved dark theme',
+    values: { [STYLE_STORAGE_KEY]: TERMINAL, [THEME_STORAGE_KEY]: 'dark' },
+    icon: SITE_ICONS.svgTerminal,
   },
 ] as const;
 
@@ -328,23 +338,34 @@ for (const path of PAGES) {
       await expectIcon(page, SITE_ICONS.svgFixed.dark);
     });
 
-    test('a saved theme: terminal view gives the dark variant, and turning it off restores the theme', async ({
-      page,
-    }) => {
-      await page.addInitScript((key) => {
-        if (!sessionStorage.getItem('seeded')) {
-          localStorage.setItem(key, 'light');
-          sessionStorage.setItem('seeded', '1');
-        }
-      }, THEME_STORAGE_KEY);
-      await page.goto(path);
-      await styleToggle(page).click();
-      await expectIcon(page, SITE_ICONS.svgFixed.dark);
-      await styleToggle(page).click();
-      await expectIcon(page, SITE_ICONS.svgFixed.light);
-    });
+    for (const theme of ['light', 'dark'] as const) {
+      test(`a saved ${theme} theme: terminal view gives the terminal icon, and turning it off restores the theme's`, async ({
+        page,
+      }) => {
+        const securityErrors = await watchSecurityErrors(page);
+        const failed = watchIconRequests(page);
+        await page.addInitScript(
+          ([key, value]) => {
+            if (!sessionStorage.getItem('seeded')) {
+              localStorage.setItem(key, value);
+              sessionStorage.setItem('seeded', '1');
+            }
+          },
+          [THEME_STORAGE_KEY, theme] as const,
+        );
+        await page.goto(path);
+        await expectIcon(page, SITE_ICONS.svgFixed[theme]);
+        await styleToggle(page).click();
+        await expectIcon(page, SITE_ICONS.svgTerminal);
+        await styleToggle(page).click();
+        await expectIcon(page, SITE_ICONS.svgFixed[theme]);
+        expect(await cspViolations(page)).toEqual([]);
+        expect(securityErrors).toEqual([]);
+        expect(failed).toEqual([]);
+      });
+    }
 
-    test('no saved theme: terminal on gives dark, off brings back /favicon.svg, also after a reload', async ({
+    test('no saved theme: terminal on gives the terminal icon, off brings back /favicon.svg, also after a reload', async ({
       page,
     }) => {
       const failed = watchIconRequests(page);
@@ -352,9 +373,9 @@ for (const path of PAGES) {
       await expectIcon(page, SITE_ICONS.svg.path);
 
       await styleToggle(page).click();
-      await expectIcon(page, SITE_ICONS.svgFixed.dark);
+      await expectIcon(page, SITE_ICONS.svgTerminal);
       await page.reload();
-      await expectIcon(page, SITE_ICONS.svgFixed.dark);
+      await expectIcon(page, SITE_ICONS.svgTerminal);
 
       await styleToggle(page).click();
       await expectIcon(page, SITE_ICONS.svg.path);
