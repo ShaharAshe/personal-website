@@ -1680,6 +1680,46 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
     - Tests: `npm test` 732 → 734. e2e 451 on Windows and on Linux (`npm run test:e2e:linux`), 1 worker.
     - Open: none. No screenshots taken: nothing visible changed.
 
+- [x] **2.23 Make the first-frame tab-icon recorder reliable** — On main's CI run after 2.22, `seo.spec.ts` "tab icon
+  on /resume › a saved light theme: … before first paint" failed once: `firstFrameIcon(page)` returned `undefined`. It
+  passed in the PR run, in the rerun and live. Test harness only; nothing visitors see changes.
+  - Depends on: 2.21a (the recorder), 2.22.
+  - Files: `tests/e2e/seo.spec.ts`; this entry.
+  - **Done (2026-11-25).**
+    - **Cause (from the CI trace):** the reader read before the recorder had recorded. The recorder's init script
+      set a plain variable inside a `requestAnimationFrame` callback. The reader ran once, right after `page.goto`,
+      which resolves on `load`. Nothing makes Chromium's first rendering update come before `load`.
+      - In the trace, `load` came about 91 ms after navigation and the read 10 ms after that.
+      - The DOM snapshot taken right after `goto` already had `data-theme="light"` and the link at
+        `/favicon-light.svg`.
+      - The only screencast frame was the `about:blank` one: no frame of /resume had been drawn yet.
+      - Rejected explanations: an init script that didn't run (the localStorage seed, added the same way, did), a
+        navigation or reload race (one `goto`, one navigation), and a View Transition (none from `about:blank`; no
+        clicks).
+    - **Not a hidden bug:** a missing value fails the test, so a late icon could never pass this way. The head script
+      (inline, parser-blocking, before any stylesheet) is unchanged.
+    - **Fix:** the recorder stores a promise that the first frame resolves with the link's href (or "(no icon link)",
+      no longer the same `undefined` as "not recorded yet"). The reader evaluates that promise, so it waits for the
+      frame it reads. A missing recorder throws. Still the value from the first frame, with the same strict `toBe`,
+      no retry and no new timeout (the test's own timeout applies).
+    - **Proof:** a new test per page, "the first-frame recorder waits for the frame: read right at commit", reads
+      right after `goto(…, { waitUntil: 'commit' })`, before the page can have rendered. This is the order CI hit,
+      made deterministic.
+      - **Against the old reader, it failed** with `Received: undefined`: 15/15 on Linux and 13/15 on Windows
+        (`--repeat-each=5`).
+      - With the fix, it passes.
+    - **Repeat runs** (`npm run test:e2e:linux -- tests/e2e/seo.spec.ts --grep "tab icon" --repeat-each=10`):
+      - Old recorder: 330 passed. The flake didn't show up by repetition alone, which is why the commit-time test
+        exists.
+      - New recorder: 360 passed. Windows once: 36 passed.
+    - Tests: `npm test` 734 (unchanged). e2e 451 → 454 on Windows and on Linux (`npm run test:e2e:linux`). `npm run
+      test:live` gains the same 3 (seo.spec.ts is in `LIVE_SPECS`; not run, the deployed site is unchanged).
+    - Note: `npm run check` ran out of memory in `astro check` while the untracked `ci-report-2-22/` folder (a
+      downloaded Playwright report) was in the repo. Lint and Prettier also flagged its files. The folder was deleted
+      (user decision); keep downloaded reports outside the repo.
+    - Open: `fonts.spec.ts` `recordFirstFrame` uses the same plain-variable pattern. Its readers wait first
+      (`document.fonts.ready`, `waitForFunction`), so it hasn't flaked. Not changed here (out of scope).
+
 ## Fun (after MVP)
 
 Small extras for curious visitors, added after the MVP is live (2.16) and before Milestone 3. None of them

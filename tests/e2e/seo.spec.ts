@@ -239,18 +239,36 @@ for (const svgPath of [
 
 const iconLink = (page: Page) => page.locator(`head ${FAVICON_LINK_SELECTOR}`);
 
-/** Records the icon link's href in the first animation frame, which runs before the first paint. */
-async function recordFirstFrameIcon(page: Page): Promise<void> {
-  await page.addInitScript((selector) => {
-    requestAnimationFrame(() => {
-      (window as unknown as { __firstFrameIcon?: string | null }).__firstFrameIcon = document
-        .querySelector(selector)
-        ?.getAttribute('href');
-    });
-  }, FAVICON_LINK_SELECTOR);
+declare global {
+  interface Window {
+    __firstFrameIcon?: Promise<string | null>;
+  }
 }
+
+const NO_ICON_LINK = '(no icon link)';
+
+/**
+ * Records the icon link's href in the first animation frame, which runs before the first paint. Stored as a promise
+ * that the frame resolves (Task 2.23): `page.goto` resolves on `load`, which can come before the first frame (once on
+ * CI), so a plain variable could still be unset when read.
+ */
+async function recordFirstFrameIcon(page: Page): Promise<void> {
+  await page.addInitScript(
+    ([selector, noLink]) => {
+      window.__firstFrameIcon = new Promise((resolve) => {
+        requestAnimationFrame(() => {
+          const link = document.querySelector(selector);
+          resolve(link ? link.getAttribute('href') : noLink);
+        });
+      });
+    },
+    [FAVICON_LINK_SELECTOR, NO_ICON_LINK] as const,
+  );
+}
+
+/** The href recorded in the first frame; waits for that frame if it hasn't happened yet (no timeout of its own). */
 const firstFrameIcon = (page: Page) =>
-  page.evaluate(() => (window as unknown as { __firstFrameIcon?: string | null }).__firstFrameIcon);
+  page.evaluate(() => window.__firstFrameIcon ?? Promise.reject(new Error('first-frame recorder not installed')));
 
 /** Fails the test on any icon request that fails or answers 400+. Call before page.goto. */
 function watchIconRequests(page: Page): string[] {
@@ -312,6 +330,15 @@ for (const path of PAGES) {
         expect(failed).toEqual([]);
       });
     }
+
+    // Task 2.23: the reader waits for the frame it reads. Read right at commit, before the page can have rendered
+    // (the order CI hit once, after `load`), it still gets the first frame's href, not "nothing recorded yet".
+    test('the first-frame recorder waits for the frame: read right at commit', async ({ page }) => {
+      await page.addInitScript((key) => localStorage.setItem(key, 'light'), THEME_STORAGE_KEY);
+      await recordFirstFrameIcon(page);
+      await page.goto(path, { waitUntil: 'commit' });
+      expect(await firstFrameIcon(page)).toBe(SITE_ICONS.svgFixed.light);
+    });
 
     test('the theme toggle switches the icon both ways, at once', async ({ page }) => {
       const failed = watchIconRequests(page);
