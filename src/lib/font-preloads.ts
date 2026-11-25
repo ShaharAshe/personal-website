@@ -6,7 +6,7 @@
 // a wasted download plus Chrome's "preloaded but not used" warning. So:
 // - JetBrains Mono, used in both styles, is a plain <link rel="preload"> (from <Font preload> in BaseLayout);
 // - the Inter preloads sit in an inert <template data-font-preloads> before the no-flash head script (nothing in a
-//   template is fetched), and that script (themeInitScript, src/lib/theme.ts) moves them into <head> unless terminal
+//   template is fetched), and that script (themeInitScript, src/lib/theme-init.ts) moves them into <head> unless terminal
 //   view is on. It's the first script in <head>, so they start at about the moment the preload scanner would have found
 //   them. Without JS there are no Inter preloads; the CSS still loads the fonts.
 // Every preload has crossorigin: fonts are fetched in CORS mode, and a preload without it is downloaded twice.

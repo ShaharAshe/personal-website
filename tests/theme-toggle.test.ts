@@ -1,13 +1,14 @@
 // Tests for the theme toggle and the terminal view switch (Task F.7): the pure logic in src/lib/theme.ts (current/next
 // theme and style, label, saving), then the built pages (dist/): the toggle button in the nav with both icons, the
-// icon animation only without reduced motion, the switch in every footer, one script wiring both, and the homepage JS
-// budget. The dist/ tests skip without a build.
+// icon animation only without reduced motion, the switch in every footer, one script wiring both, none of the head
+// script's text in it (Task 2.22), and the homepage JS budget. The dist/ tests skip without a build.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { CF_BEACON_SRC } from '../src/lib/analytics.ts';
+import { FONT_PRELOADS_ATTR } from '../src/lib/font-preloads.ts';
 import { SITE_ICONS } from '../src/lib/seo.ts';
 import { BEACON_GZIP_BYTES, pageJsGzipBytes, pageScripts } from './helpers/page-js.ts';
 import {
@@ -246,6 +247,32 @@ test('the page has one toggle script, wiring both switches (no shared chunk file
   assert.equal(toggles.length, 1, 'inline scripts wiring the theme toggle');
   assert.ok(toggles[0].includes('[data-style-toggle]'), 'the toggle script does not wire the style switch');
   assert.equal(scripts.filter((js) => js.includes('[data-style-toggle]')).length, 1, 'scripts wiring the switch');
+});
+
+// Task 2.22: the head script lives in src/lib/theme-init.ts, which only BaseLayout imports. While it lived in
+// src/lib/theme.ts, its template's JSON.stringify calls (side effects to the bundler) left a dead copy of it in the
+// toggle's client script.
+test("the toggle script carries none of the head script's text", { skip }, () => {
+  for (const file of PAGES) {
+    const page = fs.readFileSync(path.join(DIST, file), 'utf8');
+    const toggle = [...page.matchAll(/<script type="module">([\s\S]*?)<\/script>/g)]
+      .map(([, js]) => js)
+      .find((js) => js.includes('[data-theme-toggle]'));
+    assert.ok(toggle, `${file}: no toggle script`);
+    for (const piece of ['JSON.stringify', 'getItem', FONT_PRELOADS_ATTR, 'template[', 'preloads']) {
+      assert.ok(!toggle.includes(piece), `${file}: the toggle script contains ${JSON.stringify(piece)}`);
+    }
+  }
+});
+
+test('only BaseLayout imports the head script module, never a component', () => {
+  const importsInit = (file: string) => /from '[^']*\/lib\/theme-init(\.ts)?'/.test(fs.readFileSync(file, 'utf8'));
+  assert.ok(importsInit(path.join(ROOT, 'src/layouts/BaseLayout.astro')), 'BaseLayout does not import theme-init');
+  const components = fs.readdirSync(path.join(ROOT, 'src/components'), { recursive: true, encoding: 'utf8' });
+  const offenders = components.filter(
+    (name) => /\.(astro|tsx?)$/.test(name) && importsInit(path.join(ROOT, 'src/components', name)),
+  );
+  assert.deepEqual(offenders, []);
 });
 
 test('homepage JS stays under 30KB gzipped (CLAUDE.md quality target), the analytics beacon included', { skip }, () => {

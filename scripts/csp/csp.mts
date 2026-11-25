@@ -1,5 +1,5 @@
 // The Content-Security-Policy header (Task 2.14, design-doc §12). Astro inlines some scripts and styles into the
-// built HTML: the no-flash theme script (src/lib/theme.ts), small component scripts below Vite's inline limit
+// built HTML: the no-flash theme script (src/lib/theme-init.ts), small component scripts below Vite's inline limit
 // (ThemeToggle, CopyEmail), component <style> blocks and <Font />'s @font-face rules. Their text changes whenever the
 // code does, so their hashes are never written by hand: after every `astro build`, the cspHeaders() integration
 // (registered in astro.config.mjs) hashes every inline <script> and <style> in dist/ and writes one site-wide policy

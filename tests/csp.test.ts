@@ -30,7 +30,7 @@ import { consoleGreeting, consoleGreetingScript } from '../src/lib/console-greet
 import { CTF_CONSOLE_LINE } from '../src/lib/ctf.mts';
 import { getResume } from '../src/lib/resume.ts';
 import { OPEN_TO_WORK } from '../src/lib/site.ts';
-import { themeInitScript } from '../src/lib/theme.ts';
+import { themeInitScript } from '../src/lib/theme-init.ts';
 
 const ROOT = path.join(import.meta.dirname, '..');
 const DIST = path.join(ROOT, 'dist');

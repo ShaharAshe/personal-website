@@ -1582,8 +1582,8 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       `X-Clue`, no long cache.
     - Open: the toggle bundle carries a leftover of the head script's template (the `JSON.stringify` calls, which the
       bundler keeps as side effects), now also the whole `SITE_ICONS` object; this predates the task, and fixing it
-      (moving `themeInitScript` to its own module) is a small separate cleanup. Chrome and Firefox on the live site
-      not checked yet.
+      (moving `themeInitScript` to its own module) is a small separate cleanup (**done in 2.22**). Chrome and Firefox
+      on the live site not checked yet.
 
 - [x] **2.21b A `>_` tab icon for terminal view, and the /resume.pdf icon note** — Terminal view gets its own fixed
   SVG icon instead of borrowing `favicon-dark.svg`: `>_`, the prompt on the footer switch, in the terminal colors. A
@@ -1637,7 +1637,48 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       `/favicon.svg` with no saved theme, also after a reload; the file is served 200 `image/svg+xml`, without `X-Clue`
       or a long cache. `screenshots/icons.png` shows the terminal icon at 16/32/48 px on both strips.
     - Open: Chrome and Firefox on the live site not checked by eye (as in 2.21a). The toggle bundle's leftover copy of
-      the head script's template (2.21a's open item) is still there.
+      the head script's template (2.21a's open item) is still there. **Resolved by 2.22.**
+
+- [x] **2.22 Maintenance: the toggle bundle leftover, the deploy.yml comment, Playwright workers** — Nothing visitors
+  see changes.
+  - Depends on: 2.21a, 2.21b (the leftover), 2.20 (the Linux runner), 3.4a (the workers note).
+  - Files: new `src/lib/theme-init.ts`; `src/lib/theme.ts`, `src/layouts/BaseLayout.astro`; comments in
+    `src/lib/font-preloads.ts`, `scripts/csp/csp.mts`, `src/styles/global.css`, `.github/workflows/deploy.yml`; tests
+    (`theme-toggle`, `theme-init`, `base-layout`, `csp`, `font-preloads`: imports, +2 tests).
+  - **Done (2026-11-25).**
+    - **The leftover:** `themeInitScript` moved, text unchanged, from `src/lib/theme.ts` to its own module
+      `src/lib/theme-init.ts`, which only BaseLayout imports. In `theme.ts`, its template's `JSON.stringify` calls
+      (side effects to the bundler) had left a dead copy of the template, and `FONT_PRELOADS_ATTR`, in the toggle's
+      client script. The constants (keys, values, `FAVICON_LINK_SELECTOR`, `faviconFor`) stay in `theme.ts`.
+      - **Byte-identical head script:** the inlined text on `/`, `/resume` and the 404 page is identical to the
+        pre-change build, the same 1,183 characters with the same hash (`sha256-TYtCnOgM…T8XI=`). The only change in
+        `dist/_headers` is the toggle script's own hash (its text got shorter). **CSP line:** 787 characters before
+        and after (784 for the policy).
+      - **JS:** toggle script 2,030 → 1,728 bytes raw, 843 → 775 gzipped. Homepage 13.74 → 13.67 KB gzipped (site
+        2.74 → 2.67 KB, beacon 11.00 KB).
+      - **Left by decision (user):** the whole `SITE_ICONS` object stays in the toggle script, because `faviconFor()`
+        and `FAVICON_LINK_SELECTOR` read it. Dropping its unused entries (`favicon`, `appleTouch`, about 40–60 bytes
+        gzipped) would mean splitting it in `src/lib/seo.ts`. Not worth it.
+      - New tests (`theme-toggle.test.ts`): on every page, the toggle script contains none of the head script's text
+        (`JSON.stringify`, `getItem`, the preload attribute, `template[`, `preloads`), which fails on the old build;
+        only BaseLayout imports `theme-init`, and no component does.
+    - **Workers: kept at 1, everywhere (user decision).** `playwright.config.ts`, `playwright.live.config.ts` and the
+      README are unchanged.
+      - Stability run before any change: `npm run test:e2e:linux -- --workers=2 --repeat-each=3` gave 1,352 passed,
+        **1 failed** (13.8 min). The failure was `motion.spec.ts` "layout shift, light › /resume: no layout shift from first
+        paint", repeat 2 of 3. It recorded one shift (`ul`, 0.000124, at 296 ms).
+      - Cause, from the trace: with two browsers on one `wrangler dev`, the three Inter preloads waited 135–148 ms for
+        the server (JetBrains Mono: 49 ms) and arrived about 255 ms after navigation. That was after first paint, so
+        Inter swapped in at about 296 ms. The test caught a real late swap; it wasn't loosened.
+      - Peak memory in the container: 1.96 GiB with 2 workers, 1.56 GiB with 1 (cap 3 GB). Either fits.
+      - Decision: the ~2 min CI saving doesn't outweigh a test that fails about 1 in 18 runs under load. **Don't retry
+        `workers: 2` without a new reason** (e.g. a font setup that doesn't depend on the server's speed).
+      - Times with 1 worker: Linux runner 6.5 min (CI-like, before) and 6.7 min (after); Windows 6.1 min (before) and
+        7.7 min (after). Nothing in the change affects e2e timing; the Windows difference is machine noise.
+    - **deploy.yml:** the comment "A normal run takes 3–5 minutes" now says "about 6–8 minutes". Recent CI runs took
+      6.3–7.6 min. The job, its id and `timeout-minutes: 15` are unchanged.
+    - Tests: `npm test` 732 → 734. e2e 451 on Windows and on Linux (`npm run test:e2e:linux`), 1 worker.
+    - Open: none. No screenshots taken: nothing visible changed.
 
 ## Fun (after MVP)
 
@@ -2251,7 +2292,10 @@ Note: the `>_` favicon for terminal view was done as Task 2.21b.
       a section to `done`; not seen again in 300 runs of the chosen setup (150 per system).
     - The 3.4 entrance turned out to be timing-sensitive: if it ever misbehaves again, start from the bisect above.
   - Note (not done here): consider `workers: 2` in `playwright.config.ts` (CI 6.7 min → ~4.5 min; 1.55 GiB peak). Prove
-    it with the full suite `--repeat-each=5` on Linux first.
+    it with the full suite `--repeat-each=5` on Linux first. **Tried in 2.22 and rejected:** with
+    `--repeat-each=3` (as asked), 1 of 1,353 failed, the `motion.spec.ts` layout-shift test on `/resume` (light): the Inter preloads missed
+    first paint with two browsers on one `wrangler dev` (swap at ~296 ms). Peak 1.96 GiB. `workers: 1` stays; don't
+    retry without a new reason.
 
 - [ ] **3.5 Depth deploy + verification** — Same screenshot/Lighthouse pass as 2.16, plus new pages and contact form tested live.
   - Depends on: 3.1–3.4.
