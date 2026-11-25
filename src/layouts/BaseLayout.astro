@@ -12,7 +12,7 @@ import { getResume } from '../lib/resume';
 import { OPEN_TO_WORK } from '../lib/site';
 import { INTER_PRELOAD_WEIGHTS, MONO_PRELOAD_WEIGHTS } from '../lib/font-preloads';
 import { OG_IMAGE, SITE_ICONS, absoluteUrl, iconSizesAttr, ogImageAlt } from '../lib/seo';
-import { themeInitScript } from '../lib/theme';
+import { themeInitScript } from '../lib/theme-init';
 import '../styles/global.css';
 
 interface Props {
@@ -77,7 +77,7 @@ const greetingScript = greet
       ))}
     </template>
     {/* Must stay before any stylesheet: sets data-theme and data-style before first paint, and the tab icon
-        (src/lib/theme.ts). */}
+        (src/lib/theme-init.ts). */}
     <script is:inline set:html={themeInitScript} />
     <title>{title}</title>
     <meta name="description" content={description} />

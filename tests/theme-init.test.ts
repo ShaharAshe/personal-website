@@ -1,4 +1,4 @@
-// Tests for the no-flash theme script (themeInitScript in src/lib/theme.ts), run as-is in a sandbox with
+// Tests for the no-flash theme script (themeInitScript in src/lib/theme-init.ts), run as-is in a sandbox with
 // a fake document and localStorage: a saved "light"/"dark" sets <html data-theme>; nothing saved, an
 // invalid value, or blocked storage sets nothing, so global.css follows the OS setting. The same script sets
 // <html data-style="terminal"> for a saved terminal view (Task F.7), and nothing otherwise. Unless terminal view is on,
@@ -11,14 +11,8 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { FONT_PRELOADS_ATTR } from '../src/lib/font-preloads.ts';
 import { SITE_ICONS } from '../src/lib/seo.ts';
-import {
-  FAVICON_LINK_SELECTOR,
-  STYLE_STORAGE_KEY,
-  THEME_STORAGE_KEY,
-  THEMES,
-  faviconFor,
-  themeInitScript as script,
-} from '../src/lib/theme.ts';
+import { FAVICON_LINK_SELECTOR, STYLE_STORAGE_KEY, THEME_STORAGE_KEY, THEMES, faviconFor } from '../src/lib/theme.ts';
+import { themeInitScript as script } from '../src/lib/theme-init.ts';
 
 type Storage = { getItem(key: string): string | null };
 

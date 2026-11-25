@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { getResume } from '../src/lib/resume.ts';
-import { themeInitScript } from '../src/lib/theme.ts';
+import { themeInitScript } from '../src/lib/theme-init.ts';
 
 const ROOT = path.join(import.meta.dirname, '..');
 const htmlPath = path.join(ROOT, 'dist', 'index.html');

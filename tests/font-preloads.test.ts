@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { FONT_PRELOADS_ATTR, INTER_PRELOAD_WEIGHTS, MONO_PRELOAD_WEIGHTS } from '../src/lib/font-preloads.ts';
-import { themeInitScript } from '../src/lib/theme.ts';
+import { themeInitScript } from '../src/lib/theme-init.ts';
 
 const DIST = path.join(import.meta.dirname, '..', 'dist');
 const PAGES = ['index.html', path.join('resume', 'index.html'), '404.html'];

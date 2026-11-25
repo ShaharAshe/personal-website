@@ -6,21 +6,11 @@
 // Two separate choices: the theme (light | dark) and the style (regular | terminal). Terminal view is always dark: its
 // tokens in global.css win over every theme state, and the saved theme is kept for when terminal is turned off.
 //
-// BaseLayout inlines themeInitScript in <head> (is:inline, before any stylesheet), so it runs before
-// first paint: a saved "light" or "dark" sets <html data-theme>, a saved "terminal" sets <html data-style>. Nothing
-// saved, any other value, or blocked storage sets nothing, so global.css follows the OS setting
-// (prefers-color-scheme) in the regular style. It can't be an imported module: that would defer it and bring the
-// flash back. One script for both choices, so the CSP (Task 2.14) needs one hash of it as it appears in the built HTML.
-//
-// The same script starts the Inter preloads (Task 3.4a, src/lib/font-preloads.ts): unless terminal view is on, it moves
-// the links in BaseLayout's inert <template data-font-preloads> into <head>, which starts their downloads.
-//
-// It also sets the tab icon (Task 2.21a, faviconFor()): with a saved theme it points the SVG icon link at that theme's
-// fixed variant, in terminal view at the ">_" icon (Task 2.21b); with no choice (or blocked storage) the link keeps /favicon.svg, which
-// follows the browser's scheme like the site does. BaseLayout puts the icon links before this script so it can find
-// them. The theme toggle sets the icon the same way on every click.
+// The no-flash head script that applies a saved choice before first paint (themeInitScript) is built from these
+// constants in its own module, src/lib/theme-init.ts, which only BaseLayout imports (Task 2.22): kept here, its
+// template ended up in the toggle's client script. The tab icon (Task 2.21a, faviconFor()) is chosen the same way by
+// that script on load and by the theme toggle on every click.
 
-import { FONT_PRELOADS_ATTR } from './font-preloads.ts';
 import { SITE_ICONS } from './seo.ts';
 
 /** localStorage key holding the visitor's saved theme choice. Absent = follow the OS setting. */
@@ -48,46 +38,13 @@ export const FAVICON_LINK_SELECTOR = `link[rel="icon"][type="${SITE_ICONS.svg.ty
 /**
  * The SVG icon for what <html> says (Task 2.21a): terminal view gets its own ">_" icon (Task 2.21b), whatever the
  * theme; a chosen theme gets its variant; otherwise /favicon.svg, which follows the browser's scheme. The head script
- * makes the same choice (tests/theme-init.test.ts checks they agree).
+ * (src/lib/theme-init.ts) makes the same choice (tests/theme-init.test.ts checks they agree).
  */
 export function faviconFor(dataTheme: string | undefined, dataStyle: string | undefined): string {
   if (dataStyle === TERMINAL) return SITE_ICONS.svgTerminal;
   if (isTheme(dataTheme)) return SITE_ICONS.svgFixed[dataTheme];
   return SITE_ICONS.svg.path;
 }
-
-/** The no-flash script's text, built from the constants above at build time. */
-export const themeInitScript = `(function () {
-  try {
-    const theme = localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});
-    if (${JSON.stringify(THEMES)}.includes(theme)) document.documentElement.dataset.theme = theme;
-  } catch {
-    // Storage blocked: follow the OS setting.
-  }
-  try {
-    if (localStorage.getItem(${JSON.stringify(STYLE_STORAGE_KEY)}) === ${JSON.stringify(TERMINAL)}) {
-      document.documentElement.dataset.style = ${JSON.stringify(TERMINAL)};
-    }
-  } catch {
-    // Storage blocked: the regular style.
-  }
-  try {
-    if (document.documentElement.dataset.style !== ${JSON.stringify(TERMINAL)}) {
-      const preloads = document.querySelector(${JSON.stringify(`template[${FONT_PRELOADS_ATTR}]`)});
-      if (preloads) document.head.append(preloads.content);
-    }
-  } catch {
-    // No preloads: the CSS still loads the fonts.
-  }
-  try {
-    const { theme, style } = document.documentElement.dataset;
-    const icons = ${JSON.stringify(SITE_ICONS.svgFixed)};
-    const icon = style === ${JSON.stringify(TERMINAL)} ? ${JSON.stringify(SITE_ICONS.svgTerminal)} :${JSON.stringify(THEMES)}.includes(theme) ? icons[theme] : null;
-    if (icon) document.querySelector(${JSON.stringify(FAVICON_LINK_SELECTOR)}).setAttribute("href", icon);
-  } catch {
-    // No choice applied, or no icon link: /favicon.svg, which follows the browser.
-  }
-})();`;
 
 export function isTheme(value: unknown): value is Theme {
   return (THEMES as readonly unknown[]).includes(value);
