@@ -1,5 +1,5 @@
 ---
-// A resume date range as the PDF prints it, e.g. "Apr 2025 – Apr 2026" or "Jan 2024 – Present", with <time>
+// A resume date range as the PDF prints it, e.g. "Apr 2025 - Apr 2026" or "Jan 2024 - Present", with <time>
 // elements. Used by the homepage Experience section and the /resume page. Dates from src/lib/resume-dates.ts.
 import { PRESENT, type DateParts } from '../lib/resume-dates';
 
@@ -10,5 +10,5 @@ interface Props {
 const { dates } = Astro.props;
 ---
 
-<time datetime={dates.start.datetime}>{dates.start.label}</time> –{' '}
+<time datetime={dates.start.datetime}>{dates.start.label}</time> -{' '}
 {dates.end ? <time datetime={dates.end.datetime}>{dates.end.label}</time> : <span>{PRESENT}</span>}

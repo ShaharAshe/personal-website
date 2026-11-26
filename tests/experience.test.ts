@@ -45,8 +45,8 @@ test('formatDate and dateRange give the PDF format, including "Present"', () => 
   assert.equal(formatDate('2025-04'), 'Apr 2025');
   assert.equal(formatDate('2021'), '2021');
   assert.equal(formatDate(undefined), 'Present');
-  assert.equal(dateRange({ startDate: '2025-04', endDate: '2026-04' }), 'Apr 2025 – Apr 2026');
-  assert.equal(dateRange({ startDate: '2024-01' }), 'Jan 2024 – Present');
+  assert.equal(dateRange({ startDate: '2025-04', endDate: '2026-04' }), 'Apr 2025 - Apr 2026');
+  assert.equal(dateRange({ startDate: '2024-01' }), 'Jan 2024 - Present');
 });
 
 test('the site formats every date exactly like scripts/cv/format.js', () => {
@@ -83,7 +83,7 @@ test('experienceContent keeps only featured highlights, in YAML order, and lists
     {
       company: 'Example Corp',
       position: 'Software Engineer',
-      dates: { start: { datetime: '2024-01', label: 'Jan 2024' }, end: null, text: 'Jan 2024 – Present' },
+      dates: { start: { datetime: '2024-01', label: 'Jan 2024' }, end: null, text: 'Jan 2024 - Present' },
       highlights: ['Built a service that handles example requests'],
     },
     {
@@ -92,7 +92,7 @@ test('experienceContent keeps only featured highlights, in YAML order, and lists
       dates: {
         start: { datetime: '2023-06', label: 'Jun 2023' },
         end: { datetime: '2023-09', label: 'Sep 2023' },
-        text: 'Jun 2023 – Sep 2023',
+        text: 'Jun 2023 - Sep 2023',
       },
       highlights: [],
     },

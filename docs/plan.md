@@ -1762,6 +1762,65 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
         change: the rebuilt PDF's text and `/resume`'s HTML are identical to the previous build's.
     - Tests: `npm test` and `npm run check` pass. No src/ behavior change, so no e2e run.
 
+- [x] **2.25 Update the resume to the new CV (2026-11-26)** — The user generated a new CV in a claude.ai chat. Its
+  content moves into `resume.yaml` and its formatting into `create_cv.js`, keeping the architecture: content from the
+  YAML, the phone only from `CV_PHONE`, the email from the YAML, the same output paths. The user approved changing both
+  files (hard rules 1 and 3). The CV is a reference file outside the repo, with the phone and email replaced by
+  placeholders; it was never copied in.
+  - Depends on: 2.24.
+  - Files: `src/data/resume.yaml`, `src/data/resume.schema.ts`, `scripts/cv/create_cv.js`, `scripts/cv/format.js`,
+    `src/lib/resume-dates.ts`, `src/components/DateRange.astro`, `tests/cv-helpers.test.ts`,
+    `tests/cv-pipeline.test.ts`, `tests/experience.test.ts`, `tests/resume-schema.test.ts`,
+    `tests/fixtures/resume-valid.yaml`, `tests/fixtures/golden/{document,styles,numbering}.xml`,
+    `docs/design-doc.md` §7.2/§7.4/§7.9, `.claude/rules/resume.md`, this entry.
+  - **Rule for the task (user):** the CV is the single source of truth. The built resume must match it exactly,
+    character for character: wording, punctuation, bold terms, bullets, spacing and order. The only allowed difference
+    is font rendering (Liberation Sans for Arial in CI). Anything not in the CV stays as it is unless asked.
+  - **Done (2026-11-26).**
+    - **Content (`resume.yaml`):**
+      - New summary; position "Software Engineer Intern".
+      - Highlights 1, 2 and 4 reworded; 3, 5 and 6 unchanged. `featured` still on 1–4.
+      - New descriptions for both projects.
+      - Skills: + JUnit 5, + Redis, + GitHub Actions, − Airflow.
+      - Education: "B.Sc. in Computer Science", "Hadassah Academic College (now Jerusalem Multidisciplinary College)".
+      - "30–60" became "30-60", as in the CV.
+    - **Schema:** an optional `bold: [terms]` on work highlights. Each term must appear in the highlight's text, or
+      validation names `work.i.highlights.j.bold.k`. The site ignores it: highlights stay plain text there (user
+      decision).
+    - **Formatting (`create_cv.js`, `format.js`):**
+      - Real Word bullets: a "cv-bullets" numbering, left 360 / hanging 180, instead of a typed "• ".
+      - BulletPoint spacing after: 60 → 100.
+      - Bold terms through `boldSegments()`, a pure, unit-tested helper in `format.js`.
+      - Education: degree + dates on the title line, then the institution on its own line (spacing after 40).
+      - The dates' tab is a `Tab` element.
+      - Date ranges use a plain hyphen (`Apr 2025 - Apr 2026`).
+      - Document metadata: creator, title "<name> - CV", subject.
+      - Unchanged: page, margins, the other styles, section order, the contact line.
+    - **Site:** the date hyphen also goes into `resume-dates.ts` and `DateRange.astro`, because the site prints dates
+      exactly as the PDF does (tests enforce it). Text only, no layout change.
+    - **Tagline:** unchanged (user decision). It isn't in the CV and is still accurate. A proposed new wording was 3
+      lines on the OG image (`npm run og` allows 2), so it was reverted. `public/og-image.png` was not regenerated.
+    - **Proof of an exact match:** a read-only script in the session scratchpad, not in the repo, because the reference
+      lives outside it. It ran the reference in memory with the repo's `docx`, wrote its .docx to the scratchpad, and
+      compared it with ours:
+      - `document.xml` (hyperlink IDs normalized, the contact paragraph excluded): identical. So are `styles.xml`,
+        `numbering.xml`, `settings.xml`, `[Content_Types].xml` and `core.xml` (dates ignored).
+      - The contact paragraph is identical with its phone/email text masked.
+      - Bold runs: the five terms, both project names with their colon, the six skill categories, and the style-bold
+        titles. " | Taboola" is not bold; the dates are italic and not bold.
+      - PDF text of both, through soffice and `pdf-parse` (whitespace normalized, contact line dropped): 3026 = 3026
+        characters, identical. Both are 1 page.
+      - Nothing was printed from the contact line.
+    - **Confidentiality (flagged, kept by the user):** highlight 1 now says the legacy table was "limited to one
+      integration type" and covered "all bidder publishers". That's a bit more detail than before, with no names. The
+      user said to keep it (their own public CV).
+    - Tests: `npm test` 734 → 738 (+1 schema `bold`, +3 `boldSegments`). Changed: the date strings in
+      `cv-helpers`/`experience` (hyphen), the golden files (regenerated with `npm run test:update-golden`, diff
+      reviewed), `numbering.xml` added to the golden test, and one `bold` term in the fixture. e2e 454 → 454 on
+      Windows and 454 → 454 on Linux (`npm run test:e2e:linux`); no spec changed, so no `--repeat-each` run.
+    - README: the "pixel-identical to the original resume design" line now says the PDF matches the 2026-11-26 CV
+      (Task 2.25).
+
 ## Fun (after MVP)
 
 Small extras for curious visitors, added after the MVP is live (2.16) and before Milestone 3. None of them

@@ -69,7 +69,7 @@ function normalizeIds(xml: string) {
 
 test('create_cv.js output matches the golden Word XML (design unchanged)', () => {
   const { docx } = generateDocx('resume-valid.yaml', tempDir());
-  for (const entry of ['word/document.xml', 'word/styles.xml']) {
+  for (const entry of ['word/document.xml', 'word/styles.xml', 'word/numbering.xml']) {
     const golden = path.join(fixtures, 'golden', path.basename(entry));
     const actual = normalizeIds(readDocxEntry(docx, entry));
     if (process.env.UPDATE_GOLDEN) {

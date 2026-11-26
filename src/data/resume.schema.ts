@@ -1,4 +1,4 @@
-// Schema for src/data/resume.yaml (JSON Resume structure + a `featured` flag on work highlights).
+// Schema for src/data/resume.yaml (JSON Resume structure + `featured` and `bold` on work highlights).
 // Imports zod from `astro/zod`, not `astro:content`, so it also works outside the Astro build
 // (scripts/cv/validate-resume.ts). src/lib/resume.ts reuses it for the site.
 //
@@ -30,10 +30,25 @@ const basics = z.strictObject({
   profiles: z.array(profile).min(1),
 });
 
-const workHighlight = z.strictObject({
-  text,
-  featured: z.boolean().optional(),
-});
+// `bold`: terms printed in bold in the Word/PDF resume (every occurrence). Each must appear in `text`.
+// The site shows highlights as plain text.
+const workHighlight = z
+  .strictObject({
+    text,
+    featured: z.boolean().optional(),
+    bold: z.array(text).optional(),
+  })
+  .superRefine((highlight, ctx) => {
+    (highlight.bold ?? []).forEach((term, i) => {
+      if (!highlight.text.includes(term)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['bold', i],
+          message: `"${term}" does not appear in the highlight's text`,
+        });
+      }
+    });
+  });
 
 const work = z.strictObject({
   company: text,
