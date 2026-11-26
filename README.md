@@ -41,7 +41,7 @@ What the MVP contains:
   and a test enforces it.
 - **The published PDF is built only in CI.** CI runs on a pinned `ubuntu-24.04` with LibreOffice and
   Liberation fonts, and fails if `fc-match Arial` doesn't resolve to Liberation Sans. That makes the PDF
-  reproducible and pixel-identical to the original resume design.
+  reproducible, and it matches the 2026-11-26 CV (Task 2.25).
 
 The full reasoning behind these and every other decision is in [`docs/design-doc.md`](docs/design-doc.md).
 

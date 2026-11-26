@@ -31,7 +31,7 @@ export function formatDate(value?: string): string {
 }
 
 export function dateRange(item: DatedItem): string {
-  return `${formatDate(item.startDate)} – ${formatDate(item.endDate)}`;
+  return `${formatDate(item.startDate)} - ${formatDate(item.endDate)}`;
 }
 
 // The schema's "YYYY-MM" / "YYYY" values are already valid <time datetime> strings.

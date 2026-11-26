@@ -282,6 +282,10 @@ src/data/resume.yaml          ← the content, and only here
 ```
 
 - **The resume stays exactly as it is today:** the same script, the same fonts, colors and spacing. Only the text moves to the YAML.
+  - **Update (Task 2.25, 2026-11-26):** the design was changed once, on request, to match the new CV the user generated
+    in a claude.ai chat: real Word bullets, more space after bullets, bold terms in highlights, the institution on its
+    own line under the degree, and a plain hyphen in date ranges. The generated Word XML matches that CV exactly
+    except for the contact line. The design is otherwise not changed without asking.
 - **Everything is generated together on every build**, so the Word file, the PDF and the site are always from the same version.
 
 ### 7.3 The new way of working
@@ -316,12 +320,13 @@ basics:
 
 work:
   - company: Taboola
-    position: Software Engineer
+    position: Software Engineer Intern
     startDate: "2025-04"    # dates always in quotes: "YYYY-MM" or "YYYY"
     endDate: "2026-04"      # no endDate → "Present"
     highlights:
-      - text: Led the migration of a core publishers table to a single source of truth...
+      - text: Led the migration from a legacy publishers table ... with zero production incidents or rollbacks
         featured: true    # also shown on the homepage
+        bold: [zero production incidents or rollbacks]    # bold in the PDF only; each term must be in the text
       - text: ...
 
 projects:
@@ -336,14 +341,14 @@ skills:
   - ...
 
 education:
-  - institution: Hadassah Academic College, Jerusalem
-    degree: B.Sc. Computer Science
+  - institution: Hadassah Academic College (now Jerusalem Multidisciplinary College)
+    degree: B.Sc. in Computer Science
     startDate: "2021"
     endDate: "2024"
     highlights: ["GPA: 91.5/100"]
 ```
 
-The structure is based on the open [JSON Resume](https://jsonresume.org/schema) standard, with an extra `featured` field. The file is validated against a schema (`src/data/resume.schema.ts`, zod from `astro/zod`) right at the start of `npm run cv`, and again in Astro through `src/lib/resume.ts` (a validated module the components read from, not a content collection), so a missing, wrong or unknown field is caught in the build. The module returns `basics` without the email; the email is available only through `getEmailParts()` (user name and domain separately), for the Copy button that assembles it in the browser (§8.3).
+The structure is based on the open [JSON Resume](https://jsonresume.org/schema) standard, with extra `featured` and `bold` fields on work highlights. The file is validated against a schema (`src/data/resume.schema.ts`, zod from `astro/zod`) right at the start of `npm run cv`, and again in Astro through `src/lib/resume.ts` (a validated module the components read from, not a content collection), so a missing, wrong or unknown field is caught in the build. The module returns `basics` without the email; the email is available only through `getEmailParts()` (user name and domain separately), for the Copy button that assembles it in the browser (§8.3).
 
 > **Note:** the resume's Projects section stays in the YAML and isn't pulled from GitHub. A resume is a document you curate by hand, and the projects in it are worded especially for it.
 
@@ -379,7 +384,7 @@ The structure is based on the open [JSON Resume](https://jsonresume.org/schema) 
 - **A new PDF generated from an HTML template:** changes the resume's current design.
 
 ### 7.9 Recommended content updates (optional)
-- **Scam Reporting:** the resume says "Spring Boot, MySQL, responsive frontend". According to the README there's also **Spring Security with role-based permissions and WebSocket for real-time updates**, and they're worth adding.
+- ~~**Scam Reporting:** the resume says "Spring Boot, MySQL, responsive frontend". According to the README there's also **Spring Security with role-based permissions and WebSocket for real-time updates**, and they're worth adding.~~ **Done in Task 2.25** (the 2026-11-26 CV mentions role-based access control and real-time WebSocket updates).
 
 ---
 

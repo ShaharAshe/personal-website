@@ -12,8 +12,9 @@ basics:
   location: Israel
   summary: >-
     Software Engineer with production experience on real-time, high-throughput
-    ad-tech systems at Taboola. Skilled in Java, Spring Boot, and microservices.
-    Currently building an event-driven log analytics pipeline with Kafka.
+    distributed systems in ad tech at Taboola. Skilled in Java, Spring Boot, and
+    microservices. Currently building an event-driven pipeline with Kafka and Redis,
+    focused on failure handling and delivery guarantees.
   # One line for the website's Hero (not in the PDF).
   tagline: >-
     Production experience on real-time, high-throughput ad-tech systems at Taboola;
@@ -26,21 +27,25 @@ basics:
 
 work:
   - company: Taboola
-    position: Software Engineer
+    position: Software Engineer Intern
     startDate: "2025-04"
     endDate: "2026-04"
+    # `bold`: terms printed in bold in the PDF (not on the site). Each must appear in the text.
     highlights:
       - text: >-
-          Led the migration of a core publishers table to a single source of truth
-          across 6+ subsystems, using data backfill, a new cache, and per-subsystem
-          feature flags, with zero production incidents or rollbacks
+          Led the migration from a legacy publishers table limited to one integration
+          type to a single source of truth for all bidder publishers across 6+
+          subsystems, using data backfill, a new cache, and per-subsystem feature flags
+          for incremental rollout, with zero production incidents or rollbacks
         featured: true
+        bold: [zero production incidents or rollbacks, 6+ subsystems]
       - text: >-
-          Implemented features in a real-time bidding engine (Java) handling tens of
-          thousands of requests per second with millisecond-level latency, including
-          device-based request filtering and hot-path performance optimization of
-          locale targeting
+          Developed features and production fixes in a real-time bidding engine (Java)
+          handling tens of thousands of requests per second with millisecond-level
+          latency, including device-based request filtering and a hot-path performance
+          optimization of locale targeting
         featured: true
+        bold: [tens of thousands of requests per second, millisecond-level latency]
       - text: >-
           Owned and developed an internal publisher onboarding platform (Java + React),
           building REST APIs, a validation layer, and DB schema that replaced manual
@@ -49,9 +54,10 @@ work:
         featured: true
       - text: >-
           Built an isolated on-demand Kubernetes test environment for the onboarding
-          platform, preloaded with relevant DB data, cutting setup time from 30–60
-          minutes to 5 minutes
+          platform, preloaded with relevant DB data, cutting setup time from 30-60
+          minutes to 5 minutes, adopted by the team
         featured: true
+        bold: [30-60 minutes to 5 minutes]
       - text: >-
           Improved production observability by replacing generic 500 errors with
           dedicated exception types and custom metrics, fixed a filter-precedence bug
@@ -66,24 +72,27 @@ projects:
   - name: Log Analytics Platform
     status: In Progress
     description: >-
-      Event-driven log pipeline with Spring Boot microservices, Kafka, and Docker,
-      featuring per-service partitioning, consumer-group processing with
-      at-least-once delivery, and documented architecture decisions
+      Event-driven log pipeline (Spring Boot microservices, Kafka, Redis, Docker) that
+      detects per-service error spikes and tracks incidents. Built for reliability:
+      per-service partitioning, at-least-once delivery, atomic error counters,
+      poison-pill handling, a dead letter topic, and failure classification.
+      Decisions documented as ADRs
     url: https://github.com/ShaharAshe/log-analytics-platform
   - name: Scam Reporting Application
     description: >-
-      Full-stack web platform with Spring Boot backend, MySQL database, and
-      responsive frontend for reporting and tracking online scams
+      Full-stack web platform for reporting and tracking online scams, with Spring
+      Boot and MySQL, featuring login, role-based access control, and real-time
+      WebSocket updates
 
 skills:
   - category: Languages
     items: [Java, JavaScript, SQL, C++, Python]
   - category: Frameworks & Architecture
-    items: [Spring Boot, Kafka, React, Microservices, REST APIs, OpenRTB]
+    items: [Spring Boot, Kafka, React, Microservices, REST APIs, OpenRTB, JUnit 5]
   - category: Databases
-    items: [MySQL, PostgreSQL, Vertica, Kusto (Azure Data Explorer)]
+    items: [MySQL, PostgreSQL, Redis, Vertica, Kusto (Azure Data Explorer)]
   - category: DevOps & Tools
-    items: [Kubernetes, Docker, Jenkins, Git, CI/CD, Grafana, Kibana, Airflow, Linux]
+    items: [Kubernetes, Docker, Jenkins, GitHub Actions, Git, CI/CD, Grafana, Kibana, Linux]
   - category: AI Tools
     items: [Claude Code, Cursor]
 
@@ -94,8 +103,8 @@ languages:
     fluency: Fluent
 
 education:
-  - institution: Hadassah Academic College, Jerusalem
-    degree: B.Sc. Computer Science
+  - institution: Hadassah Academic College (now Jerusalem Multidisciplinary College)
+    degree: B.Sc. in Computer Science
     startDate: "2021"
     endDate: "2024"
     highlights:

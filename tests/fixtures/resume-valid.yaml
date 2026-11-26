@@ -1,5 +1,6 @@
 # Test fixture: a small, valid resume with made-up content. Covers every field the generator uses:
-# a project with and without status/url, an open-ended job (no endDate), languages, education highlights.
+# a project with and without status/url, an open-ended job (no endDate), languages, education highlights,
+# and a bold term in a highlight.
 
 basics:
   name: Jane Example
@@ -21,6 +22,7 @@ work:
     highlights:
       - text: Built a service that handles example requests
         featured: true
+        bold: [example requests]
       - text: Fixed a bug in an example pipeline
   - company: Sample Ltd
     position: Intern

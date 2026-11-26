@@ -16,12 +16,14 @@ const {
   ExternalHyperlink,
   BorderStyle,
   TabStopType,
+  Tab,
+  LevelFormat,
 } = require('docx');
 const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
 const { RESUME_YAML, RESUME_DOCX } = require('./paths');
-const { dateRange, displayUrl } = require('./format');
+const { dateRange, displayUrl, boldSegments } = require('./format');
 
 const inputPath = process.argv[2] || RESUME_YAML;
 const outputPath = process.argv[3] || RESUME_DOCX;
@@ -50,19 +52,25 @@ function sectionHeader(title) {
   return new Paragraph({ style: 'SectionHeader', children: [new TextRun(title)] });
 }
 
+// Title, an optional " | subtitle" (not bold), then the dates (italic) at the right tab stop.
 function titleLine(title, subtitle, dates) {
-  return new Paragraph({
-    style: 'JobTitle',
-    children: [
-      new TextRun(title),
-      new TextRun({ text: ` | ${subtitle}`, bold: false }),
-      new TextRun({ text: `\t${dates}`, bold: false, italics: true }),
-    ],
-  });
+  const children = [new TextRun(title)];
+  if (subtitle) children.push(new TextRun({ text: ` | ${subtitle}`, bold: false }));
+  children.push(new TextRun({ children: [new Tab(), dates], bold: false, italics: true }));
+  return new Paragraph({ style: 'JobTitle', children });
 }
 
-function bullet(text) {
-  return new Paragraph({ style: 'BulletPoint', children: [new TextRun(`• ${text}`)] });
+const BULLETS = { reference: 'cv-bullets', level: 0 };
+
+// A bulleted paragraph; `boldTerms` are printed in bold wherever they appear in the text.
+function bullet(text, boldTerms) {
+  return new Paragraph({
+    style: 'BulletPoint',
+    numbering: BULLETS,
+    children: boldSegments(text, boldTerms).map((s) =>
+      s.bold ? new TextRun({ text: s.text, bold: true }) : new TextRun(s.text),
+    ),
+  });
 }
 
 // ---------- sections ----------
@@ -88,7 +96,7 @@ function experience(work) {
     sectionHeader('EXPERIENCE'),
     ...work.flatMap((job) => [
       titleLine(job.position, job.company, dateRange(job)),
-      ...job.highlights.map((h) => bullet(h.text)),
+      ...job.highlights.map((h) => bullet(h.text, h.bold)),
     ]),
   ];
 }
@@ -99,12 +107,11 @@ function projects(list) {
     ...list.map((project) => {
       const name = project.status ? `${project.name} (${project.status})` : project.name;
       const children = [
-        new TextRun('• '),
         new TextRun({ text: `${name}: `, bold: true }),
         new TextRun(project.url ? `${project.description} | ` : project.description),
       ];
       if (project.url) children.push(link(project.url));
-      return new Paragraph({ style: 'BulletPoint', children });
+      return new Paragraph({ style: 'BulletPoint', numbering: BULLETS, children });
     }),
   ];
 }
@@ -130,15 +137,20 @@ function education(list) {
   return [
     sectionHeader('EDUCATION'),
     ...list.flatMap((edu) => [
-      titleLine(edu.degree, edu.institution, dateRange(edu)),
-      ...(edu.highlights || []).map(bullet),
+      titleLine(edu.degree, null, dateRange(edu)),
+      new Paragraph({ spacing: { after: 40 }, children: [new TextRun(edu.institution)] }),
+      ...(edu.highlights || []).map((h) => bullet(h)),
     ]),
   ];
 }
 
-// ---------- document (design unchanged from the original create_cv.js) ----------
+// ---------- document (design of the 2026-11-26 CV, Task 2.25) ----------
 
 const doc = new Document({
+  creator: resume.basics.name,
+  lastModifiedBy: resume.basics.name,
+  title: `${resume.basics.name} - CV`,
+  subject: 'Curriculum Vitae',
   styles: {
     default: {
       document: {
@@ -192,7 +204,7 @@ const doc = new Document({
         name: 'Bullet Point',
         basedOn: 'Normal',
         run: { size: 22, font: 'Arial' },
-        paragraph: { spacing: { after: 60 }, indent: { left: 360, hanging: 180 } },
+        paragraph: { spacing: { after: 100 }, indent: { left: 360, hanging: 180 } },
       },
       {
         id: 'SkillCategory',
@@ -200,6 +212,22 @@ const doc = new Document({
         basedOn: 'Normal',
         run: { size: 22, font: 'Arial' },
         paragraph: { spacing: { after: 60 }, indent: { left: 180 } },
+      },
+    ],
+  },
+  numbering: {
+    config: [
+      {
+        reference: BULLETS.reference,
+        levels: [
+          {
+            level: 0,
+            format: LevelFormat.BULLET,
+            text: '•',
+            alignment: AlignmentType.LEFT,
+            style: { paragraph: { indent: { left: 360, hanging: 180 } } },
+          },
+        ],
       },
     ],
   },

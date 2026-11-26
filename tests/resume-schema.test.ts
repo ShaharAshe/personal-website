@@ -55,6 +55,21 @@ test('rejects a resume without basics.tagline, naming the field', () => {
   assert.match(z.prettifyError(result.error!), /→ at basics\.tagline/);
 });
 
+test('accepts bold terms that appear in the highlight, rejects one that does not, naming the path', () => {
+  type Fixture = { work: { highlights: { text: string; bold?: string[] }[] }[] };
+  const resume = load(path.join(fixtures, 'resume-valid.yaml')) as Fixture;
+  resume.work[1].highlights[0].bold = ['example tests'];
+  assert.ok(resumeSchema.safeParse(resume).success);
+
+  resume.work[1].highlights[0].bold = ['example tests', 'not in the text'];
+  const result = resumeSchema.safeParse(resume);
+  assert.equal(result.success, false);
+  assert.deepEqual(
+    result.error!.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`),
+    ['work.1.highlights.0.bold.1: "not in the text" does not appear in the highlight\'s text'],
+  );
+});
+
 test('rejects a malformed date string', () => {
   const resume = load(path.join(fixtures, 'resume-valid.yaml')) as { work: { startDate: string }[] };
   resume.work[0].startDate = '2024-13';
