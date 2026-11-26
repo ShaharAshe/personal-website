@@ -612,13 +612,18 @@ All of it was built in task 3.4. How:
 ### Personal information
 - **Phone:** only in the Word/PDF. Not on the site (including an automatic check in the build).
 - **Email:** shown on the site, but assembled only in the browser, to reduce harvesting by bots.
+  - **One real address everywhere (decided 2026-11-25):** the site, `resume.yaml` and the PDF use the same real
+    address on purpose, and there's no separate `contact@<domain>`. So the old commits that carry it as author email
+    (before the switch to GitHub's noreply address on 2026-11-02) were not rewritten: a rewrite would hide nothing
+    and would need a force push to `main`. The only domain address planned is `security@<domain>` for security.txt
+    (F.6).
 - **Location:** "Israel" only.
 
 ### Confidentiality toward Taboola
 - No code, screenshots of internal systems, table names or internal service names, or unpublished business numbers.
 - Describe **problems, approaches and decisions** in general terms.
 - Rule of thumb: if you wouldn't say it in an interview at a competing company, it doesn't go on the site.
-- It's worth checking what your confidentiality agreement says.
+- If unsure whether something is OK to publish, ask before publishing.
 
 ### Security
 - **Form:** server-side validation, rate limiting, honeypot, Turnstile.
