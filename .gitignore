@@ -1,6 +1,8 @@
 # Local secrets — never commit. See .env.example for the expected keys.
 .env
 .env.*.local
+# Claude Code's per-machine settings (the shared .claude/settings.json stays tracked)
+.claude/settings.local.json
 
 # Dependencies
 node_modules/

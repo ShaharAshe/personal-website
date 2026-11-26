@@ -93,10 +93,10 @@ Reality check performed before this plan:
 | 8 | Decide contact-form email provider: Cloudflare Email Routing vs Resend; provide its secret/API key as a Cloudflare secret | Milestone 3, Task 3.3 |
 | 9 | Choose and purchase the domain via Cloudflare Registrar | Milestone 4, Task 4.1 |
 | 10 | Create a local `.env` (from `.env.example`) with your real `CV_PHONE`; add `CV_PHONE` as a GitHub Actions secret | Before Milestone 1, Task 1.2 (local), and Task 1.5 (CI secret) |
-| 11 | Before making the repo public: delete the stale remote branch `ci/deploy`; then change the repo visibility to public | Task 2.16 (user decision in 2.5: make it public once the MVP is live; the pre-commit hook from 2.4c is already in place). `ci/deploy` is already gone (checked in 2.16); going public waits for #13 |
+| 11 | Before making the repo public: delete the stale remote branch `ci/deploy`; then change the repo visibility to public | Task 2.16 (user decision in 2.5: make it public once the MVP is live; the pre-commit hook from 2.4c is already in place). `ci/deploy` is already gone (checked in 2.16). **Unblocked (2.24):** #13 and #14 are decided and the pre-public audit is done; nothing else waits |
 | 12 | Right after making it public: enable secret scanning + push protection and Dependabot alerts; confirm the `main` ruleset from Task 2.17 now shows as enforced (created by the user in 2.17: a PR is required, the `build` check must pass, the branch must be up to date, and force pushes and deletion are blocked; this deliberately reverses the earlier "no required PRs, no required status checks" wording, since direct pushes to `main` are no longer the workflow); check that PRs from forks need approval before they run Actions (Settings → Actions → General) | Task 2.16 (right after #11) |
-| 13 | Email privacy: git now uses the GitHub noreply address for new commits (set on 2026-11-02; GitHub Settings → Emails: keep email private and block command-line pushes that expose it are on). Decide whether to rewrite the existing commits' author email, and whether to switch `resume.yaml` to a `contact@<domain>` address first (see #14), before the repo goes public | Task 2.16 (before making the repo public, #11). Audit in 2.16: 23 of 37 commits (2026-10-17 to 2026-11-01) carry the personal address; it's also in `resume.yaml`'s history by design. No phone, no secrets. Once the repo is public, consider adding a repo link to the console greeting (F.1, `src/lib/console-greeting.ts`) |
-| 14 | Consider a `contact@<domain>` address via Cloudflare Email Routing for `resume.yaml` and the PDF, so the personal Gmail isn't public anywhere. If wanted before the repo goes public, buy the domain (#9) before going public (#11) | Milestone 4, Task 4.2 |
+| 13 | Email privacy: git now uses the GitHub noreply address for new commits (set on 2026-11-02; GitHub Settings → Emails: keep email private and block command-line pushes that expose it are on). Decide whether to rewrite the existing commits' author email, and whether to switch `resume.yaml` to a `contact@<domain>` address first (see #14), before the repo goes public | Task 2.16 (before making the repo public, #11). Audit in 2.16: 23 of 37 commits (2026-10-17 to 2026-11-01) carry the personal address; it's also in `resume.yaml`'s history by design. No phone, no secrets. **Decided (user, 2026-11-25; recorded in 2.24): no history rewrite.** The old commits keep their author email. The same address is on the site, in `resume.yaml` and in the PDF on purpose, so a rewrite would hide nothing and would need a force push to `main`. New commits use the noreply address (since 2026-11-02). Once the repo is public, consider adding a repo link to the console greeting (F.1, `src/lib/console-greeting.ts`) |
+| 14 | Consider a `contact@<domain>` address via Cloudflare Email Routing for `resume.yaml` and the PDF, so the personal Gmail isn't public anywhere. If wanted before the repo goes public, buy the domain (#9) before going public (#11) | Milestone 4, Task 4.2. **Decided (user, 2026-11-25; recorded in 2.24): no `contact@<domain>`.** The site, `resume.yaml` and the PDF keep the real address (still never as plain text in `dist/` HTML; hard rule 8 unchanged). The only domain address planned is `security@<domain>` for F.6 |
 
 ## New dependencies introduced by this plan
 
@@ -1720,6 +1720,48 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
     - Open: `fonts.spec.ts` `recordFirstFrame` uses the same plain-variable pattern. Its readers wait first
       (`document.fonts.ready`, `waitForFunction`), so it hasn't flaked. Not changed here (out of scope).
 
+- [x] **2.24 Email decisions + pre-public audit** — Record the user's decisions on action items #13 and #14, and audit
+  every tracked file and the whole history before the repo goes public (#11).
+  - Depends on: 2.16 (the earlier audit), 2.23.
+  - Files: this file (#11, #13, #14, F.1, F.6, this entry), `docs/design-doc.md` §12, `.gitignore`,
+    `src/data/resume.yaml` (one comment, approved by the user).
+  - **Done (2026-11-26).**
+    - **Decisions (user, 2026-11-25):**
+      - #13: no history rewrite. The old commits keep their author email. Why: the same address is on the site, in
+        `resume.yaml` and in the PDF on purpose, so a rewrite would hide nothing and would need a force push to
+        `main`. New commits use the noreply address (since 2026-11-02).
+      - #14: no `contact@<domain>`. The site, `resume.yaml` and the PDF keep the real address. Hard rule 8 is
+        unchanged.
+      - F.6 unchanged: `Contact:` will be `security@<domain>` via Cloudflare Email Routing, after the domain. Its
+        "Depends on" no longer names #14.
+      - #11 is unblocked.
+      - Recorded in the #11, #13 and #14 rows, F.1, F.6 and design-doc §12 (Personal information → Email).
+    - **Audit (read-only, no value printed):** the 238 tracked files, all 55 commits on every local ref, all commit
+      messages, and the 19 extra commits held only by GitHub's 17 `refs/pull/N/head` refs (public once the repo is;
+      all present locally).
+      - Phone: in no file, version or commit message. The 9-digit matching rule from `scripts/checks/phone.ts` was
+        used, checked first on a formatted sample.
+      - Email: 23 of 55 commits (2026-10-17 to 2026-11-01) and 1 PR-head commit have it as author/committer. It's in
+        the history of `src/data/resume.yaml` and in 22 old versions of `docs/design-doc.md`. Accepted by #13.
+      - Secrets: no token or private-key patterns. `.env` was never committed, and `.env.example` always had empty
+        values. The 32-hex string in `src/lib/analytics.ts` is the Web Analytics beacon token, public by design
+        (it's in every page's HTML).
+      - `.claude/`: only `settings.json` (a git commit/push deny list) and the three rules files are tracked. All
+        fine to publish.
+      - Taboola: mentions only match the public resume. A word diff of every historical version against HEAD found
+        no internal names. The old Hebrew versions of the design doc and `tests/design-tokens.test.ts` hold nothing
+        beyond that.
+      - Other people: only `example.com`/`example.org` addresses (tests). No local paths, no rude words or job-search
+        notes, no AI trailers in commit messages.
+    - **Fixes (approved):**
+      - `.gitignore` ignores `.claude/settings.local.json`. Claude Code writes per-machine settings there; it was
+        never committed.
+      - Design-doc §12: "It's worth checking what your confidentiality agreement says" (it read as an unchecked
+        to-do) became "If unsure whether something is OK to publish, ask before publishing".
+      - `src/data/resume.yaml`: the comment "this repo will go public" became "this repo is public". No content
+        change: the rebuilt PDF's text and `/resume`'s HTML are identical to the previous build's.
+    - Tests: `npm test` and `npm run check` pass. No src/ behavior change, so no e2e run.
+
 ## Fun (after MVP)
 
 Small extras for curious visitors, added after the MVP is live (2.16) and before Milestone 3. None of them
@@ -1729,8 +1771,8 @@ one is its own task (one at a time, plan first, tests + e2e + screenshots as usu
 Note: the `>_` favicon for terminal view was done as Task 2.21b.
 
 - [x] **F.1 Console greeting** — A friendly message for people who open DevTools: an ASCII "SA", an "Open to
-  work" line with a link to LinkedIn, and a line with a link to the GitHub profile (the repo is still private, so
-  no repo link yet; see action item #13).
+  work" line with a link to LinkedIn, and a line with a link to the GitHub profile (no repo link: the repo was
+  private when F.1 was built; a repo link can be added once it's public, action item #11).
   - Decided: no red "self-XSS" warning. The site has no accounts or sessions to steal, and the audience is
     engineers, so a warning would only be noise.
   - Depends on: 2.16.
@@ -2123,16 +2165,16 @@ Note: the `>_` favicon for terminal view was done as Task 2.21b.
 
 - [ ] **F.6 `/.well-known/security.txt`**
   - Note for planning: `Contact:` can't be the email in plain text (hard rule 8; `no-email-in-dist` scans
-    `.txt` files in `dist/`). Options: a URL (e.g. the Contact section), or a `contact@<domain>` address if
-    action item #14 happens and the rule is updated. `Expires:` is required; the daily build can keep it
-    current.
+    `.txt` files in `dist/`). Options were a URL (e.g. the Contact section) or a domain address with the rule
+    updated (action item #14's `contact@<domain>` was declined on 2026-11-25; see the decision below for
+    `security@<domain>`). `Expires:` is required; the daily build can keep it current.
   - Decided (2026-11-17): `Contact:` will be `mailto:security@<domain>`, through Cloudflare Email Routing (it
     forwards to the user's inbox). This needs hard rule 8 in `CLAUDE.md` updated to allow the domain address
     while still banning the real one.
   - Decided (2026-11-17): no PGP. A static site has nothing sensitive to report. Key upkeep and the risk of
     losing the key outweigh the benefit. Signing would need the private key in CI, since `Expires:` changes
     daily. Revisit only with a real need.
-  - Depends on: 4.2 and action item #14.
+  - Depends on: 4.2 (the domain) and Cloudflare Email Routing set up for `security@<domain>`.
 
 - [x] **F.7 Terminal view** — A second visual style for the whole site, switched by a click and remembered,
   like light/dark. Same pages, same content, same layout; only the look changes.

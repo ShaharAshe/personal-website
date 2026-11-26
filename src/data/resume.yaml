@@ -7,7 +7,7 @@ basics:
   name: Shahar Asher
   label: Software Engineer, Backend & Distributed Systems
   email: shaharas30@gmail.com
-  # Phone is intentionally not stored here — this repo will go public. It's supplied to
+  # Phone is intentionally not stored here — this repo is public. It's supplied to
   # create_cv.js via the CV_PHONE environment variable instead (see scripts/cv/create_cv.js, .env.example).
   location: Israel
   summary: >-
