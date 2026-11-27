@@ -149,7 +149,8 @@ same run on `main` repeats them and then deploys to Cloudflare (see [Contributin
 
 Prerequisites:
 
-- **Node 22** (see `.nvmrc`; `package.json` requires `>=22.22.0 <23`)
+- **Node 22.23.4+** (see `.nvmrc`; `package.json` requires `>=22.23.4 <23`, because Astro 7.4.4+ refuses to start on
+  older Node)
 - **LibreOffice 24.2+**. `npm run cv` looks for `soffice` in this order: the `SOFFICE_PATH` env var,
   then `C:\Program Files\LibreOffice\program\soffice.exe`, then `soffice` on the `PATH`
 - **Microsoft Edge**, for the e2e tests and screenshots (local runs use the installed Edge, while CI

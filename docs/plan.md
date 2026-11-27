@@ -107,7 +107,8 @@ Reality check performed before this plan:
 (dev), ~~`tsx`~~ (dropped in Task 1.2: Node 22 runs the `.ts` scripts natively), `eslint` + `typescript-eslint` +
 `eslint-plugin-astro`, `prettier` + `prettier-plugin-astro` + `prettier-plugin-tailwindcss`,
 `@astrojs/check` (added in Task 1.4, needed by `astro check`), `wrangler` (dev, added in Task 1.5 for the Cloudflare deploy), `@playwright/test` (dev, added in Task 2.3a for e2e tests and review screenshots), `fontkitten` (dev, added in Task 2.21 to read the JetBrains Mono glyph outlines for `public/favicon.svg`; already installed as Astro's own dependency). `@astrojs/cloudflare` is added
-later, only in Milestone 3 when the contact form needs a server-rendered route.
+later, only in Milestone 3 when the contact form needs a server-rendered route. Transitive, approved in Task 2.26:
+`@isaacs/nonrecursive-glob-match` (dev, via `minimatch` 11, which `eslint` 10.15 and `typescript-eslint` 8.73 require).
 
 ---
 
@@ -127,7 +128,8 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
     - **`package.json` has no `"type": "module"`** so `scripts/cv/create_cv.js` (CommonJS, `require`)
       keeps working in Task 1.2. Astro config is `.mjs`, so it's ESM regardless. New `.ts` scripts are
       unaffected (run via `tsx`).
-    - `engines.node`: `>=22.22.0 <23` (Astro 7 needs ≥ 22.22.0).
+    - `engines.node`: `>=22.22.0 <23` (Astro 7 needs ≥ 22.22.0). Raised to `>=22.23.4 <23` in Task 2.26 (Astro
+      7.4.4+ refuses to start on older Node).
     - Scripts for now: `dev`, `build` (`astro build` only), `preview`. `build` gains `cv` + `projects`
       in Tasks 1.2/1.3; `check` is added in Task 1.4.
     - `.gitignore` also ignores `.generated/`, `*.docx`, `*.pdf` (generated resume files).
@@ -1820,6 +1822,52 @@ later, only in Milestone 3 when the contact form needs a server-rendered route.
       Windows and 454 → 454 on Linux (`npm run test:e2e:linux`); no spec changed, so no `--repeat-each` run.
     - README: the "pixel-identical to the original resume design" line now says the PDF matches the 2026-11-26 CV
       (Task 2.25).
+
+- [x] **2.26 Close the open Dependabot alerts** — The repo is public since 2.24 and Dependabot alerts are on (security
+  update PRs are off by decision, so fixes go through tasks). 8 alerts were open: astro ×2 (low, medium), minimatch ×1
+  (medium), undici ×5 (4 high, 1 medium). Fix them with the smallest safe dependency updates: no majors of our own
+  dependencies, no overrides, no new direct dependencies.
+  - Depends on: 2.25.
+  - Files: `package.json`, `package-lock.json`, `README.md` (Node prerequisite), this file (this entry, the
+    `engines.node` note in 1.1, "New dependencies").
+  - **Done (2026-11-27).**
+    - **Fixes** (each target is the first patched release; the `package.json` floor was raised to it, so a fresh resolve
+      can't fall back to a vulnerable version):
+      - `astro` 7.4.0 → 7.4.7 (`^7.4.7`): GHSA-mh32-jxcr-mh9f (XSS via dynamic tag names, fixed in 7.4.5) and
+        GHSA-r3h5-4585-7x3w (`@astrojs/node` image endpoint, fixed in 7.4.7).
+      - `wrangler` 4.151.3 → 4.153.0 (`^4.153.0`): its `miniflare` pins `undici` exactly, and 4.153.0 is the first
+        version whose `miniflare` (5.20261023.0-beta) pins 7.30.1. `undici` 7.29.1 → 7.30.1 closes the 5 alerts (and 3
+        more advisories in the same range that `npm audit` listed). Only `workerd`/`miniflare`/`undici` moved with it.
+      - `eslint` 10.13.0 → 10.15.0 (`^10.15.0`) and `typescript-eslint` 8.72.0 → 8.73.0 (`^8.73.0`, all
+        `@typescript-eslint/*` with it): the first versions that depend on `minimatch` ^11. `minimatch` 10.2.6 →
+        11.0.9 closes GHSA-g3hv-75wg-m249 (fixed only in 11.0.1, there is no 10.x patch). The new optional peer
+        `@typescript/native` is not installed; `typescript` 6.0.3 is still in range (`<6.1.0`).
+    - **Forced by the update:**
+      - **Node:** `astro` ≥ 7.4.4 refuses to start below Node 22.23.4 (a hard check in `bin/astro.mjs`). `engines.node`
+        `>=22.22.0 <23` → `>=22.23.4 <23`. The user upgraded local Node to 22.23.5. `.nvmrc` stays `22`: CI's
+        setup-node and the e2e Docker image already resolve to 22.23.5.
+      - **One vite, one rolldown:** `astro` 7.4.7 needs `vite` ^8.3.5, but the lockfile's 8.3.4 still satisfied
+        `@astrojs/react`, so npm nested a second vite (8.4.0) under astro. Pinned to one `vite` 8.3.5 + one `rolldown`
+        1.2.19 instead (user decision: the smallest version that satisfies every range, and no new package; 8.4.0 would
+        have added the optional `napi-windows-process-start-time`). It was done with temporary root entries
+        (`npm install vite@8.3.5 rolldown@1.2.19 --save-dev`, the two lines removed again, `npm install`), so
+        `package.json` lists neither. A later `npm update` may move them; that's fine as long as they stay single.
+      - Other transitive moves are astro 7.4.7's own dependency bumps: `@astrojs/markdown-satteri` 0.4.4 → 0.4.7
+        (`satteri` 0.10.5 → 0.11.7), `@astrojs/prism`, `@astrojs/telemetry`, `@astrojs/internal-helpers`,
+        `p-queue` 9 → 10 (drops `p-timeout`, `eventemitter3`), `magic-string`, `postcss`, `tinyps`, `ci-info`,
+        `source-map-js`, `ignore`, `@oxc-project/types`, `@napi-rs/wasm-runtime`. New in the lockfile: only
+        `@isaacs/nonrecursive-glob-match` 1.1.0 (via `minimatch` 11, approved) and `@emnapi/*` 2.0.0-beta entries that
+        belong to `@rolldown/binding-wasm32-wasi` (optional, only installed on wasm32 hosts).
+    - **Reachability** (the fixes went in anyway): none of the alerts reaches the deployed site. It's a static build
+      with no SSR and no dynamic tag names, and `@astrojs/node` isn't installed. `minimatch` only runs in lint, on our
+      own globs. `undici` only runs in `wrangler dev` (local and CI e2e, a loopback server for our own `dist/`).
+    - **`npm audit`:** 13 vulnerabilities (12 moderate, 1 high) → 0.
+    - **Build output unchanged:** the CSP line is 784/2000 before and after (838 on a doodle day), with identical hashes.
+      Homepage JS is 13.67 KB gzipped before and after (`/resume` 12.93, 404 13.21; 14.46 on a doodle day). The resume
+      PDF text is identical (3123 characters, 1 page). Screenshots match.
+    - Tests: `npm test` 738 → 738, e2e 454 → 454 on Windows, 454 → 454 on Linux (`npm run test:e2e:linux`). No spec
+      changed, so there was no `--repeat-each` run.
+    - After the merge: the user checks that GitHub closes the 8 alerts.
 
 ## Fun (after MVP)
 
